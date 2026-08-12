@@ -12,12 +12,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey:            "PEGA_AQUI_TU_API_KEY",
-  authDomain:        "PEGA_AQUI_TU_AUTH_DOMAIN",
-  projectId:         "PEGA_AQUI_TU_PROJECT_ID",
-  storageBucket:     "PEGA_AQUI_TU_STORAGE_BUCKET",
-  messagingSenderId: "PEGA_AQUI_TU_MESSAGING_SENDER_ID",
-  appId:             "PEGA_AQUI_TU_APP_ID"
+  apiKey:            "AIzaSyAmU2l0p_o1JGeDkereu3uUFDhAVpEYlAw",
+  authDomain:        "planning-with-ai-7a738.firebaseapp.com",
+  projectId:         "planning-with-ai-7a738",
+  storageBucket:     "planning-with-ai-7a738.firebasestorage.app",
+  messagingSenderId: "686867753267",
+  appId:             "1:686867753267:web:1c3b67cd135494b711f646"
 };
 
 // ─────────────────────────────────────────────
