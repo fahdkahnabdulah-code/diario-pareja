@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nuestro diario</title>
+  <meta name="theme-color" content="#fbeaf0" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="screen-login" class="screen active">
+    <div class="login-card">
+      <div class="login-icon">♡</div>
+      <h1>Nuestro diario</h1>
+      <p class="subtitle">Un espacio solo para vosotros</p>
+      <input id="login-email" type="email" placeholder="correo@ejemplo.com" autocomplete="email" />
+      <input id="login-password" type="password" placeholder="Contraseña" autocomplete="current-password" />
+      <button id="btn-login" class="btn-primary">Entrar</button>
+      <button id="btn-register" class="btn-secondary">Crear cuenta</button>
+      <p id="login-error" class="error-msg"></p>
+    </div>
+  </div>
+
+  <!-- APP PRINCIPAL -->
+  <div id="screen-app" class="screen">
+
+    <header>
+      <div class="header-inner">
+        <span class="header-title">♡ Nuestro diario</span>
+        <button id="btn-logout" class="btn-icon" title="Cerrar sesión">✕</button>
+      </div>
+    </header>
+
+    <nav class="tab-bar">
+      <button class="tab active" data-tab="nueva">Nueva entrada</button>
+      <button class="tab" data-tab="historial">Historial</button>
+    </nav>
+
+    <!-- TAB: NUEVA ENTRADA -->
+    <div id="tab-nueva" class="tab-content active">
+      <div class="container">
+
+        <div class="date-row">
+          <label for="entry-date">📅</label>
+          <input type="date" id="entry-date" />
+        </div>
+
+        <div class="cols">
+          <!-- Persona 1 -->
+          <div class="person-col">
+            <div class="person-header p1">
+              <div class="avatar" id="av1">?</div>
+              <input class="name-input" id="name1" type="text" placeholder="Tu nombre" maxlength="20" />
+            </div>
+            <div class="field">
+              <label>¿Cómo me siento?</label>
+              <textarea id="p1_sentimiento" placeholder="Esta semana me siento..."></textarea>
+            </div>
+            <div class="field">
+              <label>Te agradezco...</label>
+              <textarea id="p1_gracias" placeholder="Gracias por..."></textarea>
+            </div>
+            <div class="field">
+              <label>Algo que quiero decirte</label>
+              <textarea id="p1_pendiente" placeholder="Hay algo que quiero hablar..."></textarea>
+            </div>
+          </div>
+
+          <!-- Persona 2 -->
+          <div class="person-col">
+            <div class="person-header p2">
+              <div class="avatar" id="av2">?</div>
+              <input class="name-input" id="name2" type="text" placeholder="Su nombre" maxlength="20" />
+            </div>
+            <div class="field">
+              <label>¿Cómo me siento?</label>
+              <textarea id="p2_sentimiento" placeholder="Esta semana me siento..."></textarea>
+            </div>
+            <div class="field">
+              <label>Te agradezco...</label>
+              <textarea id="p2_gracias" placeholder="Gracias por..."></textarea>
+            </div>
+            <div class="field">
+              <label>Algo que quiero decirte</label>
+              <textarea id="p2_pendiente" placeholder="Hay algo que quiero hablar..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección compartida -->
+        <div class="shared-section">
+          <div class="shared-title">Juntos</div>
+          <div class="shared-grid">
+            <div class="field">
+              <label>Qué nos gustaría hacer</label>
+              <textarea id="shared_hacer" placeholder="Un plan, una escapada..."></textarea>
+            </div>
+            <div class="field">
+              <label>Recuerdo favorito reciente</label>
+              <textarea id="shared_recuerdo" placeholder="Ese momento que nos gustó..."></textarea>
+            </div>
+            <div class="field">
+              <label>Nuevo sueño / meta</label>
+              <textarea id="shared_sueno" placeholder="Algo que queremos construir..."></textarea>
+            </div>
+            <div class="field">
+              <label>Objetivo cumplido</label>
+              <textarea id="shared_logro" placeholder="Lo que logramos..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="btn-save" class="btn-primary">Guardar entrada</button>
+          <button id="btn-export" class="btn-secondary">Exportar texto</button>
+        </div>
+        <p id="save-msg" class="save-msg"></p>
+
+      </div>
+    </div>
+
+    <!-- TAB: HISTORIAL -->
+    <div id="tab-historial" class="tab-content">
+      <div class="container">
+        <div id="history-list">
+          <p class="empty-state">Aún no hay entradas guardadas.</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screen-app -->
+
+  <!-- Firebase SDKs -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
