@@ -1,6 +1,5 @@
 // ─────────────────────────────────────────────
-// PASO 1: Pega aquí tu configuración de Firebase
-// (la encontrarás en Firebase Console → Configuración del proyecto → Tu app web)
+// Configuración de Firebase
 // ─────────────────────────────────────────────
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -8,7 +7,8 @@ import {
   signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, setDoc, getDocs, query, orderBy
+  getFirestore, collection, doc, setDoc, addDoc, deleteDoc,
+  getDocs, getDoc, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -20,12 +20,20 @@ const firebaseConfig = {
   appId:             "1:686867753267:web:1c3b67cd135494b711f646"
 };
 
-// ─────────────────────────────────────────────
-// Inicialización Firebase
-// ─────────────────────────────────────────────
 const firebaseApp = initializeApp(firebaseConfig);
 const auth        = getAuth(firebaseApp);
 const db          = getFirestore(firebaseApp);
+
+// ─────────────────────────────────────────────
+// Roles fijos — solo estos correos tienen acceso
+// ─────────────────────────────────────────────
+const EMAIL_ROLES = {
+  'ciliagomezalba@gmail.com':  { role: 'cilia', partner: 'fahd',  parejaId: 'nuestra-pareja', displayName: 'Cilia' },
+  'fahdkahnabdulah@gmail.com': { role: 'fahd',  partner: 'cilia', parejaId: 'nuestra-pareja', displayName: 'Fahd' },
+  'prueba@test.com':           { role: 'fahd',  partner: 'cilia', parejaId: 'demo',           displayName: 'Cuenta de prueba' }
+};
+
+let currentRole = null; // se rellena en onAuthStateChanged
 
 // ─────────────────────────────────────────────
 // Utilidades DOM
@@ -43,6 +51,7 @@ function showTab(name) {
   document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
   $(`tab-${name}`).classList.add('active');
   if (name === 'historial') loadHistory();
+  if (name === 'deseos') loadMyWishes();
 }
 
 function setMsg(id, text, color = 'var(--text-muted)') {
@@ -56,8 +65,12 @@ function setMsg(id, text, color = 'var(--text-muted)') {
 // Autenticación
 // ─────────────────────────────────────────────
 $('btn-login').addEventListener('click', async () => {
-  const email = $('login-email').value.trim();
+  const email = $('login-email').value.trim().toLowerCase();
   const pass  = $('login-password').value;
+  if (!EMAIL_ROLES[email]) {
+    setMsg('login-error', 'Este correo no tiene acceso a esta app.', '#a32d2d');
+    return;
+  }
   try {
     await signInWithEmailAndPassword(auth, email, pass);
   } catch (e) {
@@ -66,13 +79,17 @@ $('btn-login').addEventListener('click', async () => {
 });
 
 $('btn-register').addEventListener('click', async () => {
-  const email = $('login-email').value.trim();
+  const email = $('login-email').value.trim().toLowerCase();
   const pass  = $('login-password').value;
+  if (!EMAIL_ROLES[email]) {
+    setMsg('login-error', 'Este correo no tiene acceso a esta app.', '#a32d2d');
+    return;
+  }
   if (pass.length < 6) { setMsg('login-error', 'La contraseña debe tener al menos 6 caracteres.', '#a32d2d'); return; }
   try {
     await createUserWithEmailAndPassword(auth, email, pass);
   } catch (e) {
-    setMsg('login-error', 'No se pudo crear la cuenta. ¿El correo ya existe?', '#a32d2d');
+    setMsg('login-error', 'No se pudo crear la cuenta. ¿Ya existe?', '#a32d2d');
   }
 });
 
@@ -80,9 +97,19 @@ $('btn-logout').addEventListener('click', () => signOut(auth));
 
 onAuthStateChanged(auth, user => {
   if (user) {
+    const email = (user.email || '').toLowerCase();
+    const roleInfo = EMAIL_ROLES[email];
+    if (!roleInfo) {
+      // Correo no autorizado — se cierra sesión inmediatamente
+      signOut(auth);
+      setMsg('login-error', 'Este correo no tiene acceso a esta app.', '#a32d2d');
+      return;
+    }
+    currentRole = roleInfo;
     showScreen('app');
     initApp();
   } else {
+    currentRole = null;
     showScreen('login');
   }
 });
@@ -90,11 +117,14 @@ onAuthStateChanged(auth, user => {
 // ─────────────────────────────────────────────
 // Inicialización de la app tras login
 // ─────────────────────────────────────────────
-function initApp() {
+async function initApp() {
   setTodayDate();
   setupAvatars();
   setupTabs();
   setupSaveExport();
+  setupWishes();
+  if (currentRole.parejaId === 'demo') await seedDemoData();
+  loadRecommendation();
 }
 
 // ─────────────────────────────────────────────
@@ -128,7 +158,7 @@ function setupTabs() {
 }
 
 // ─────────────────────────────────────────────
-// Recoger datos del formulario
+// Recoger datos del formulario de entrada
 // ─────────────────────────────────────────────
 function getFormData() {
   return {
@@ -158,14 +188,13 @@ function getFormData() {
 }
 
 // ─────────────────────────────────────────────
-// Guardar en Firestore
+// Guardar entrada en Firestore (espacio compartido)
 // ─────────────────────────────────────────────
 async function saveEntry() {
   const data = getFormData();
   if (!data.date) { setMsg('save-msg', 'Selecciona una fecha primero.', '#a32d2d'); return; }
   try {
-    const user  = auth.currentUser;
-    const ref   = doc(db, 'parejas', user.uid, 'entradas', data.date);
+    const ref = doc(db, 'parejas', currentRole.parejaId, 'entradas', data.date);
     await setDoc(ref, data, { merge: true });
     setMsg('save-msg', '✓ Entrada guardada y sincronizada', '#0f6e56');
     setTimeout(() => setMsg('save-msg', ''), 3000);
@@ -222,8 +251,7 @@ async function loadHistory() {
   const list = $('history-list');
   list.innerHTML = '<p class="empty-state">Cargando...</p>';
   try {
-    const user = auth.currentUser;
-    const ref  = collection(db, 'parejas', user.uid, 'entradas');
+    const ref  = collection(db, 'parejas', currentRole.parejaId, 'entradas');
     const q    = query(ref, orderBy('date', 'desc'));
     const snap = await getDocs(q);
 
@@ -255,9 +283,6 @@ async function loadHistory() {
   }
 }
 
-// ─────────────────────────────────────────────
-// Cargar entrada en el formulario
-// ─────────────────────────────────────────────
 function loadEntry(e) {
   $('entry-date').value       = e.date || '';
   $('name1').value            = e.names?.n1 || '';
@@ -275,6 +300,128 @@ function loadEntry(e) {
   $('shared_sueno').value     = e.shared?.sueno || '';
   $('shared_logro').value     = e.shared?.logro || '';
   showTab('nueva');
+}
+
+// ─────────────────────────────────────────────
+// BUZÓN DE DESEOS
+// ─────────────────────────────────────────────
+function wishesRef() {
+  return collection(db, 'parejas', currentRole.parejaId, 'deseos');
+}
+
+async function addWish() {
+  const texto = $('wish-input').value.trim();
+  if (!texto) return;
+  try {
+    await addDoc(wishesRef(), {
+      autor: currentRole.role,
+      texto,
+      creado: new Date().toISOString()
+    });
+    $('wish-input').value = '';
+    loadMyWishes();
+  } catch (e) {
+    // silencioso — se reintenta al recargar
+  }
+}
+
+async function loadMyWishes() {
+  const list = $('wish-list');
+  list.innerHTML = '<p class="empty-state">Cargando...</p>';
+  try {
+    const snap = await getDocs(wishesRef());
+    const mine = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.autor === currentRole.role) mine.push({ id: d.id, ...data });
+    });
+    if (mine.length === 0) {
+      list.innerHTML = '<p class="empty-state">Aún no has añadido nada.</p>';
+      return;
+    }
+    mine.sort((a, b) => (b.creado || '').localeCompare(a.creado || ''));
+    list.innerHTML = '';
+    mine.forEach(w => {
+      const card = document.createElement('div');
+      card.className = 'wish-card';
+      card.innerHTML = `<span class="wish-text">${escapeHtml(w.texto)}</span>
+        <button class="btn-delete" title="Eliminar">✕</button>`;
+      card.querySelector('.btn-delete').addEventListener('click', async () => {
+        await deleteDoc(doc(db, 'parejas', currentRole.parejaId, 'deseos', w.id));
+        loadMyWishes();
+      });
+      list.appendChild(card);
+    });
+  } catch (e) {
+    list.innerHTML = '<p class="empty-state">Error al cargar.</p>';
+  }
+}
+
+function setupWishes() {
+  $('btn-wish-add').addEventListener('click', addWish);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ─────────────────────────────────────────────
+// RECOMENDACIÓN CRUZADA
+// ─────────────────────────────────────────────
+async function loadRecommendation() {
+  try {
+    const snap = await getDocs(wishesRef());
+    const partnerWishes = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.autor === currentRole.partner) partnerWishes.push(data.texto);
+    });
+    const card = $('recommendation-card');
+    if (partnerWishes.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+    const pick = partnerWishes[Math.floor(Math.random() * partnerWishes.length)];
+    $('rec-text').textContent = pick;
+    card.style.display = 'flex';
+  } catch (e) {
+    $('recommendation-card').style.display = 'none';
+  }
+}
+
+$('btn-rec-refresh')?.addEventListener('click', loadRecommendation);
+
+// ─────────────────────────────────────────────
+// DATOS DE PRUEBA (solo cuenta demo)
+// ─────────────────────────────────────────────
+async function seedDemoData() {
+  try {
+    const snap = await getDocs(wishesRef());
+    if (!snap.empty) return; // ya tiene datos, no volver a sembrar
+
+    const ejemplos = [
+      'Ir a ver una peli al cine un finde',
+      'Que me traigas el desayuno un domingo',
+      'Una escapada de un fin de semana a la montaña'
+    ];
+    for (const texto of ejemplos) {
+      await addDoc(wishesRef(), { autor: 'cilia', texto, creado: new Date().toISOString() });
+    }
+
+    const entryRef = doc(db, 'parejas', currentRole.parejaId, 'entradas', new Date().toISOString().slice(0, 10));
+    await setDoc(entryRef, {
+      date: new Date().toISOString().slice(0, 10),
+      names: { n1: 'Fahd', n2: 'Cilia' },
+      p1: { sentimiento: 'Contento, con ganas de plan', gracias: 'Por escucharme ayer', pendiente: '' },
+      p2: { sentimiento: 'Cansada pero bien', gracias: 'Por la sorpresa del café', pendiente: '' },
+      shared: { hacer: 'Cenar fuera este finde', recuerdo: 'El paseo del sábado', sueno: 'Viajar juntos el año que viene', logro: 'Terminar de montar la app' },
+      savedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch (e) {
+    // si falla el sembrado no bloqueamos el resto de la app
+  }
 }
 
 // ─────────────────────────────────────────────

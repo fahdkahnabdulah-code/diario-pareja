@@ -36,13 +36,21 @@
     </header>
 
     <nav class="tab-bar">
-      <button class="tab active" data-tab="nueva">Nueva entrada</button>
+      <button class="tab active" data-tab="nueva">Entrada</button>
+      <button class="tab" data-tab="deseos">Deseos</button>
       <button class="tab" data-tab="historial">Historial</button>
     </nav>
 
     <!-- TAB: NUEVA ENTRADA -->
     <div id="tab-nueva" class="tab-content active">
       <div class="container">
+
+        <!-- Recomendación cruzada -->
+        <div id="recommendation-card" class="recommendation-card" style="display:none">
+          <div class="rec-label">Idea para esta semana</div>
+          <div class="rec-text" id="rec-text">—</div>
+          <button id="btn-rec-refresh" class="btn-text-small">Ver otra idea</button>
+        </div>
 
         <div class="date-row">
           <label for="entry-date">📅</label>
@@ -119,6 +127,26 @@
           <button id="btn-export" class="btn-secondary">Exportar texto</button>
         </div>
         <p id="save-msg" class="save-msg"></p>
+
+      </div>
+    </div>
+
+    <!-- TAB: DESEOS -->
+    <div id="tab-deseos" class="tab-content">
+      <div class="container">
+
+        <div class="field">
+          <label>Añade algo que te gustaría (un plan, un detalle, lo que sea)</label>
+          <textarea id="wish-input" placeholder="Escribe un deseo..."></textarea>
+        </div>
+        <button id="btn-wish-add" class="btn-primary">Guardar deseo</button>
+
+        <p class="hint-text">Tu pareja no ve esta lista directamente — de vez en cuando le llegará una idea suelta, sin saber que salió de aquí.</p>
+
+        <div class="wishes-section">
+          <div class="shared-title">Tus deseos guardados</div>
+          <div id="wish-list"><p class="empty-state">Aún no has añadido nada.</p></div>
+        </div>
 
       </div>
     </div>
