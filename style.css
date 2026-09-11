@@ -47,6 +47,7 @@
   .cal-cell-event { background: #3a2f14; }
   .cal-cell-today { background: #3a1a26; }
   .cal-cell-event.cal-cell-today { background: linear-gradient(135deg, #3a1a26, #3a2f14); }
+  .dias-juntos-card { background: linear-gradient(135deg, #3a1a26, #3a2f14); }
 }
 
 html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; color: var(--text); background: #f9f7f4; -webkit-font-smoothing: antialiased; }
@@ -174,6 +175,12 @@ header { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom:
 .fecha-info { display: flex; flex-direction: column; gap: 2px; }
 .fecha-nombre { font-size: 14px; font-weight: 600; }
 .fecha-detalle { font-size: 12px; color: var(--text-muted); }
+
+/* DIAS JUNTOS */
+.dias-juntos-card { border-radius: var(--radius); padding: 20px; background: linear-gradient(135deg, var(--pink-light), var(--gold-light)); text-align: center; display: flex; flex-direction: column; gap: 4px; }
+.dias-juntos-numero { font-size: 40px; font-weight: 700; color: var(--pink-dark); line-height: 1; }
+.dias-juntos-label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.dias-juntos-detalle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
 /* CALENDARIO DE FECHAS IMPORTANTES */
 .calendar-card { background: #fff; border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
