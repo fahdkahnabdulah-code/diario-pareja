@@ -1,7 +1,7 @@
 {
-  "name": "Nuestro diario",
-  "short_name": "Diario ♡",
-  "description": "Un espacio privado para conectar cada semana",
+  "name": "+Dopamina",
+  "short_name": "+Dopamina",
+  "description": "Diario de Alba y Abdu",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fbeaf0",
