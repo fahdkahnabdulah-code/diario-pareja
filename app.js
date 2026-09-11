@@ -53,7 +53,7 @@ function showTab(name) {
   $(`tab-${name}`).classList.add('active');
   if (name === 'historial') loadHistory();
   if (name === 'deseos') loadMyWishes();
-  if (name === 'fechas') { calMonthOffset = 0; renderCalendar(); loadFechasImportantes(); }
+  if (name === 'fechas') { calMonthOffset = 0; renderDiasJuntos(); renderCalendar(); loadFechasImportantes(); }
 }
 
 function setMsg(id, text, color = 'var(--text-muted)') {
@@ -538,6 +538,46 @@ function diasHasta(fecha) {
 
 function fmtFecha(fecha) {
   return fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+}
+
+// ─────────────────────────────────────────────
+// DÍAS JUNTOS — contador desde el inicio de la relación
+// ─────────────────────────────────────────────
+const INICIO_RELACION = new Date(2024, 1, 10); // 10 de febrero de 2024
+
+function calcularTiempoJuntos() {
+  const hoy = new Date();
+  const inicio = INICIO_RELACION;
+  const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  const inicioSinHora = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+  const totalDias = Math.round((hoySinHora - inicioSinHora) / 86400000);
+
+  let years = hoy.getFullYear() - inicio.getFullYear();
+  let months = hoy.getMonth() - inicio.getMonth();
+  let days = hoy.getDate() - inicio.getDate();
+  if (days < 0) {
+    months--;
+    const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    days += mesAnterior.getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  return { totalDias, years, months, days };
+}
+
+function renderDiasJuntos() {
+  const numEl = $('dias-juntos-numero');
+  const detEl = $('dias-juntos-detalle');
+  if (!numEl || !detEl) return;
+  const t = calcularTiempoJuntos();
+  numEl.textContent = t.totalDias.toLocaleString('es-ES');
+  const partes = [];
+  if (t.years > 0) partes.push(`${t.years} año${t.years === 1 ? '' : 's'}`);
+  if (t.months > 0) partes.push(`${t.months} mes${t.months === 1 ? '' : 'es'}`);
+  if (t.days > 0 || partes.length === 0) partes.push(`${t.days} día${t.days === 1 ? '' : 's'}`);
+  detEl.textContent = partes.join(', ');
 }
 
 // ─────────────────────────────────────────────
