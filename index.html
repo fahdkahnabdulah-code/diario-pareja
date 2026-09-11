@@ -31,7 +31,11 @@
     <header>
       <div class="header-inner">
         <span class="header-title">♡ Nuestro diario</span>
-        <button id="btn-logout" class="btn-icon" title="Cerrar sesión">✕</button>
+        <span id="racha-indicador" class="racha-badge" style="display:none"></span>
+        <div class="header-actions">
+          <button id="btn-poke" class="btn-icon" title="Pensando en ti">💌</button>
+          <button id="btn-logout" class="btn-icon" title="Cerrar sesión">✕</button>
+        </div>
       </div>
     </header>
 
@@ -39,6 +43,7 @@
       <button class="tab active" data-tab="nueva">Entrada</button>
       <button class="tab" data-tab="deseos">Deseos</button>
       <button class="tab" data-tab="historial">Historial</button>
+      <button class="tab" data-tab="fechas">Fechas</button>
     </nav>
 
     <!-- TAB: NUEVA ENTRADA -->
@@ -156,6 +161,15 @@
       <div class="container">
         <div id="history-list">
           <p class="empty-state">Aún no hay entradas guardadas.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: FECHAS IMPORTANTES -->
+    <div id="tab-fechas" class="tab-content">
+      <div class="container">
+        <div id="fechas-list">
+          <p class="empty-state">Cargando...</p>
         </div>
       </div>
     </div>
