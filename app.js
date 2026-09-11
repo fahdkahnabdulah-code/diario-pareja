@@ -356,6 +356,23 @@ function isoWeekKey(d) {
   return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
+// La mascota va creciendo según las semanas seguidas de racha
+const ETAPAS_MASCOTA = [
+  { min: 0,  emoji: '🌱', nombre: 'Semilla' },
+  { min: 2,  emoji: '🌿', nombre: 'Brote' },
+  { min: 4,  emoji: '🌷', nombre: 'Capullo' },
+  { min: 8,  emoji: '🌸', nombre: 'Flor' },
+  { min: 12, emoji: '🌳', nombre: 'Árbol' },
+];
+
+function mascotaRacha(racha) {
+  let etapa = ETAPAS_MASCOTA[0];
+  for (const e of ETAPAS_MASCOTA) {
+    if (racha >= e.min) etapa = e;
+  }
+  return etapa;
+}
+
 async function loadRacha() {
   const el = $('racha-indicador');
   if (!el) return;
@@ -375,7 +392,14 @@ async function loadRacha() {
       racha++;
       cursor.setDate(cursor.getDate() - 7);
     }
-    el.textContent = racha > 0 ? `🔥 ${racha} semana${racha === 1 ? '' : 's'} seguida${racha === 1 ? '' : 's'}` : '';
+    if (racha > 0) {
+      const etapa = mascotaRacha(racha);
+      el.textContent = `${etapa.emoji} ${racha} semana${racha === 1 ? '' : 's'} seguida${racha === 1 ? '' : 's'}`;
+      el.title = `${etapa.nombre} — vuestra mascota crece con cada semana seguida`;
+    } else {
+      el.textContent = '';
+      el.title = '';
+    }
     el.style.display = racha > 0 ? 'inline-flex' : 'none';
   } catch (e) {
     el.style.display = 'none';
@@ -500,7 +524,7 @@ function setupPoke() {
     const nombre = EMAIL_ROLES[Object.keys(EMAIL_ROLES).find(k => EMAIL_ROLES[k].role === data.de)]?.displayName || 'Tu pareja';
     showPokeToast(`💕 ${nombre} está pensando en ti`);
     if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-      new Notification('Diario en Dúo', { body: `💕 ${nombre} está pensando en ti`, icon: '/icon-192.png' });
+      new Notification('+Dopamina', { body: `💕 ${nombre} está pensando en ti`, icon: '/icon-192.png' });
     }
   });
 }
