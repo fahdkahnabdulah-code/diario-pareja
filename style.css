@@ -95,7 +95,9 @@ textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
 /* HEADER */
 header { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid var(--border); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; gap: 10px; }
+.header-title-group { display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
 .header-title { font-size: 16px; font-weight: 600; }
+.header-subtitle { font-size: 10px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
 .header-actions { display: flex; align-items: center; gap: 2px; }
 .racha-badge { font-size: 12px; font-weight: 600; color: var(--gold-dark); background: var(--gold-light); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 
