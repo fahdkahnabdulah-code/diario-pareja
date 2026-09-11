@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nuestro diario</title>
+  <title>Diario en Dúo</title>
   <meta name="theme-color" content="#fbeaf0" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
@@ -15,7 +15,7 @@
   <div id="screen-login" class="screen active">
     <div class="login-card">
       <div class="login-icon">♡</div>
-      <h1>Nuestro diario</h1>
+      <h1>Diario en Dúo</h1>
       <p class="subtitle">Un espacio solo para vosotros</p>
       <input id="login-email" type="email" placeholder="correo@ejemplo.com" autocomplete="email" />
       <input id="login-password" type="password" placeholder="Contraseña" autocomplete="current-password" />
@@ -30,7 +30,7 @@
 
     <header>
       <div class="header-inner">
-        <span class="header-title">♡ Nuestro diario</span>
+        <span class="header-title">♡ Diario en Dúo</span>
         <span id="racha-indicador" class="racha-badge" style="display:none"></span>
         <div class="header-actions">
           <button id="btn-poke" class="btn-icon" title="Pensando en ti">💌</button>
@@ -168,9 +168,24 @@
     <!-- TAB: FECHAS IMPORTANTES -->
     <div id="tab-fechas" class="tab-content">
       <div class="container">
+
+        <div class="calendar-card">
+          <div class="calendar-header">
+            <button id="cal-prev" class="btn-icon" aria-label="Mes anterior">‹</button>
+            <div id="cal-month-label" class="calendar-month-label">—</div>
+            <button id="cal-next" class="btn-icon" aria-label="Mes siguiente">›</button>
+          </div>
+          <div class="calendar-weekdays">
+            <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+
+        <div class="shared-title">Próximas fechas</div>
         <div id="fechas-list">
           <p class="empty-state">Cargando...</p>
         </div>
+
       </div>
     </div>
 
