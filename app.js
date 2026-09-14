@@ -57,7 +57,6 @@ function showTab(name) {
   document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
   $(`tab-${name}`).classList.add('active');
   if (name === 'historial') loadHistory();
-  if (name === 'deseos') loadMyWishes();
   if (name === 'fechas') {
     calMonthOffset = 0;
     renderDiasJuntos();
@@ -138,6 +137,7 @@ async function initApp() {
   setupTabs();
   setupSaveExport();
   setupWishes();
+  setupWishesModal();
   setupPoke();
   setupCalendar();
   setupEventos();
@@ -336,6 +336,7 @@ async function loadHistory() {
       list.innerHTML = '<p class="empty-state">Aún no hay entradas guardadas.</p>';
       return;
     }
+
     list.innerHTML = '';
     snap.forEach(docSnap => {
       const e = docSnap.data();
@@ -581,6 +582,23 @@ function setupWishes() {
   $('btn-wish-add').addEventListener('click', addWish);
 }
 
+// El buzón de deseos vive en un modal (no una pestaña propia) — se abre desde
+// el icono 💭 del header y se puede cerrar con la X o tocando fuera de la tarjeta.
+function setupWishesModal() {
+  const modal = $('modal-deseos');
+  $('btn-wishes')?.addEventListener('click', () => {
+    if (!modal) return;
+    modal.hidden = false;
+    loadMyWishes();
+  });
+  $('btn-close-deseos')?.addEventListener('click', () => {
+    if (modal) modal.hidden = true;
+  });
+  modal?.addEventListener('click', (ev) => {
+    if (ev.target === modal) modal.hidden = true;
+  });
+}
+
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
@@ -673,6 +691,7 @@ async function loadEventosCustom() {
 function eventosVisiblesParaMi() {
   return eventosCustomCache.filter(ev => ev.visibilidad !== 'propio' || ev.autor === currentRole.role);
 }
+
 // Días del mes (year, month) en los que cae un evento personalizado, según su frecuencia
 function diasDelEventoEnMes(ev, year, month) {
   if (!ev.fecha) return [];
@@ -839,10 +858,16 @@ function renderCalendar() {
     let clases = 'cal-cell';
     if (esHoy) clases += ' cal-cell-today';
     if (evs) clases += ' cal-cell-event';
-    const puntos = evs
-      ? `<div class="cal-day-events">${evs.map(e => `<span class="cal-dot" title="${e.nombre}">${e.emoji}</span>`).join('')}</div>`
-      : '';
-    html += `<div class="${clases}"><span class="cal-day-num">${d}</span>${puntos}</div>`;
+    let contenido = '';
+    let tituloAttr = '';
+    if (evs) {
+      const principal = evs[0];
+      const extra = evs.length - 1;
+      const tooltip = evs.map(e => e.nombre).join(' · ');
+      tituloAttr = ` title="${tooltip.replace(/"/g, '&quot;')}"`;
+      contenido = `<div class="cal-day-events"><span class="cal-event-chip"><span class="cal-event-emoji">${principal.emoji}</span><span class="cal-event-text">${escapeHtml(principal.nombre)}</span></span>${extra > 0 ? `<span class="cal-event-extra">+${extra}</span>` : ''}</div>`;
+    }
+    html += `<div class="${clases}"${tituloAttr}><span class="cal-day-num">${d}</span>${contenido}</div>`;
   }
   grid.innerHTML = html;
 }
