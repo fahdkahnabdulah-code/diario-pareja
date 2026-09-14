@@ -29,6 +29,7 @@
 
   <!-- APP PRINCIPAL -->
   <div id="screen-app" class="screen">
+   <div class="app-shell">
 
     <header>
       <div class="header-inner">
@@ -38,6 +39,7 @@
         </div>
         <span id="racha-indicador" class="racha-badge" style="display:none"></span>
         <div class="header-actions">
+          <button id="btn-wishes" class="btn-icon" title="Buzón de deseos">💭</button>
           <button id="btn-poke" class="btn-icon" title="Pensando en ti">💌</button>
           <button id="btn-logout" class="btn-icon" title="Cerrar sesión">✕</button>
         </div>
@@ -45,10 +47,9 @@
     </header>
 
     <nav class="tab-bar">
-      <button class="tab active" data-tab="nueva">Entrada</button>
-      <button class="tab" data-tab="deseos">Deseos</button>
-      <button class="tab" data-tab="historial">Historial</button>
-      <button class="tab" data-tab="fechas">Fechas</button>
+      <button class="tab active" data-tab="nueva"><span class="tab-icon">📝</span>Entrada</button>
+      <button class="tab" data-tab="historial"><span class="tab-icon">🕰️</span>Historial</button>
+      <button class="tab" data-tab="fechas"><span class="tab-icon">📅</span>Fechas</button>
     </nav>
 
     <!-- TAB: NUEVA ENTRADA -->
@@ -141,26 +142,6 @@
       </div>
     </div>
 
-    <!-- TAB: DESEOS -->
-    <div id="tab-deseos" class="tab-content">
-      <div class="container">
-
-        <div class="field">
-          <label>Añade algo que te gustaría (un plan, un detalle, lo que sea)</label>
-          <textarea id="wish-input" placeholder="Escribe un deseo..."></textarea>
-        </div>
-        <button id="btn-wish-add" class="btn-primary">Guardar deseo</button>
-
-        <p class="hint-text">Tu pareja no ve esta lista directamente — de vez en cuando le llegará una idea suelta, sin saber que salió de aquí.</p>
-
-        <div class="wishes-section">
-          <div class="shared-title">Tus deseos guardados</div>
-          <div id="wish-list"><p class="empty-state">Aún no has añadido nada.</p></div>
-        </div>
-
-      </div>
-    </div>
-
     <!-- TAB: HISTORIAL -->
     <div id="tab-historial" class="tab-content">
       <div class="container">
@@ -225,6 +206,30 @@
           <p class="empty-state">Cargando...</p>
         </div>
 
+      </div>
+    </div>
+
+   </div><!-- /app-shell -->
+
+    <!-- MODAL: DESEOS -->
+    <div id="modal-deseos" class="modal-overlay" hidden>
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-title">💭 Deseos</span>
+          <button id="btn-close-deseos" class="btn-icon" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label>Añade algo que te gustaría (un plan, un detalle, lo que sea)</label>
+            <textarea id="wish-input" placeholder="Escribe un deseo..."></textarea>
+          </div>
+          <button id="btn-wish-add" class="btn-primary">Guardar deseo</button>
+          <p class="hint-text">Tu pareja no ve esta lista directamente — de vez en cuando le llegará una idea suelta, sin saber que salió de aquí.</p>
+          <div class="wishes-section">
+            <div class="shared-title">Tus deseos guardados</div>
+            <div id="wish-list"><p class="empty-state">Aún no has añadido nada.</p></div>
+          </div>
+        </div>
       </div>
     </div>
 
