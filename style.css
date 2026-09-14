@@ -42,6 +42,8 @@
   .wish-card { background: #242422; }
   .recommendation-card { background: linear-gradient(135deg, #3a1a26, #04342c); }
   .fecha-card { background: #242422; }
+  .evento-form-card { background: #242422; }
+  .evento-form-row select { background: #242422 !important; color: var(--text) !important; }
   .racha-badge { background: #3a2f14; color: #e3bf6c; }
   .calendar-card { background: #242422; }
   .cal-cell-event { background: #3a2f14; }
@@ -70,8 +72,8 @@ input[type="text"], input[type="email"], input[type="password"], input[type="dat
   border-radius: var(--radius-sm); font-size: 14px; color: var(--text);
   background: #fff; font-family: inherit; outline: none; transition: border-color .2s;
 }
-input:focus, textarea:focus { border-color: var(--pink-dark); }
-textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
+input:focus, textarea:focus { border-color: var(--pink-dark); box-shadow: 0 0 0 3px rgba(153,53,86,0.12); }
+textarea { min-height: 72px; resize: vertical; line-height: 1.5; transition: height .15s ease, border-color .2s, box-shadow .2s; }
 
 /* BUTTONS */
 .btn-primary {
@@ -132,10 +134,13 @@ header { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom:
 @media (max-width: 520px) { .cols { grid-template-columns: 1fr; } }
 
 /* PERSON COLUMN */
-.person-col { background: #fff; border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border); }
+.person-col { background: #fff; border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border); border-left-width: 3px; transition: box-shadow .2s; }
+.person-col.self { border-left-color: var(--pink-dark); }
+.person-col.partner { border-left-color: var(--teal-dark); }
+.person-col:focus-within { box-shadow: 0 2px 14px rgba(0,0,0,0.06); }
 .person-header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-.person-header.p1 .avatar { background: var(--pink-light); color: var(--pink-dark); }
-.person-header.p2 .avatar { background: var(--teal-light); color: var(--teal-dark); }
+.person-col.self .avatar { background: var(--pink-light); color: var(--pink-dark); }
+.person-col.partner .avatar { background: var(--teal-light); color: var(--teal-dark); }
 .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
 .name-input { border: none !important; font-weight: 600; font-size: 15px; padding: 0 !important; background: transparent !important; }
 .name-input:focus { outline: none; }
@@ -179,11 +184,21 @@ header { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom:
 .reaction-btn:hover { opacity: 1; background: var(--pink-light); }
 
 /* FECHAS IMPORTANTES */
+.shared-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .fecha-card { background: #fff; border-radius: var(--radius); padding: 14px 16px; border: 1px solid var(--border); border-left: 3px solid var(--gold-mid); display: flex; align-items: center; gap: 12px; }
 .fecha-emoji { font-size: 24px; flex-shrink: 0; }
-.fecha-info { display: flex; flex-direction: column; gap: 2px; }
+.fecha-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .fecha-nombre { font-size: 14px; font-weight: 600; }
 .fecha-detalle { font-size: 12px; color: var(--text-muted); }
+.fecha-tag { font-size: 10px; font-weight: 600; color: var(--gold-dark); background: var(--gold-light); padding: 1px 6px; border-radius: 999px; margin-left: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.btn-delete-evento { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 4px; flex-shrink: 0; }
+.btn-delete-evento:hover { color: #a32d2d; }
+
+/* AÑADIR EVENTO */
+.evento-form-card { background: #fff; border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.evento-form-row { display: flex; gap: 8px; }
+.evento-form-row select { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; color: var(--text); background: #fff; font-family: inherit; flex: 1; }
+#evento-emoji { width: 56px; text-align: center; flex: 0 0 56px; }
 
 /* DIAS JUNTOS */
 .dias-juntos-card { border-radius: var(--radius); padding: 20px; background: linear-gradient(135deg, var(--pink-light), var(--gold-light)); text-align: center; display: flex; flex-direction: column; gap: 4px; }
