@@ -356,21 +356,68 @@ function isoWeekKey(d) {
   return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
-// La mascota va creciendo según las semanas seguidas de racha
+// La mascota va evolucionando con las semanas seguidas de racha (estilo "Pou")
 const ETAPAS_MASCOTA = [
-  { min: 0,  emoji: '🌱', nombre: 'Semilla' },
-  { min: 2,  emoji: '🌿', nombre: 'Brote' },
-  { min: 4,  emoji: '🌷', nombre: 'Capullo' },
-  { min: 8,  emoji: '🌸', nombre: 'Flor' },
-  { min: 12, emoji: '🌳', nombre: 'Árbol' },
+  { min: 0,  nombre: 'Recién nacido' },
+  { min: 2,  nombre: 'Despierto' },
+  { min: 4,  nombre: 'Feliz' },
+  { min: 8,  nombre: 'Enamorado' },
+  { min: 12, nombre: 'Alma gemela' },
 ];
 
 function mascotaRacha(racha) {
-  let etapa = ETAPAS_MASCOTA[0];
-  for (const e of ETAPAS_MASCOTA) {
-    if (racha >= e.min) etapa = e;
+  let idx = 0;
+  ETAPAS_MASCOTA.forEach((e, i) => { if (racha >= e.min) idx = i; });
+  return { ...ETAPAS_MASCOTA[idx], idx };
+}
+
+// ── Dibujo de la mascota en SVG (sin imágenes externas, evoluciona por etapas) ──
+function mascotaCorazon(cx, cy, s, color) {
+  const w = s, h = s;
+  return `<path d="M ${cx} ${(cy + h * 0.35).toFixed(2)} C ${(cx - w).toFixed(2)} ${(cy - h * 0.55).toFixed(2)} ${(cx - w * 1.5).toFixed(2)} ${(cy + h * 0.45).toFixed(2)} ${cx} ${(cy + h * 1.3).toFixed(2)} C ${(cx + w * 1.5).toFixed(2)} ${(cy + h * 0.45).toFixed(2)} ${(cx + w).toFixed(2)} ${(cy - h * 0.55).toFixed(2)} ${cx} ${(cy + h * 0.35).toFixed(2)} Z" fill="${color}"/>`;
+}
+
+function mascotaFlor(cx, cy, scale, petalo, borde, centro) {
+  const pts = [[0, -3.6], [3.42, -1.11], [2.12, 2.91], [-2.12, 2.91], [-3.42, -1.11]];
+  const rPetalo = (3 * scale).toFixed(2);
+  const rCentro = (2.2 * scale).toFixed(2);
+  const petalos = pts.map(([dx, dy]) =>
+    `<circle cx="${(cx + dx * scale).toFixed(2)}" cy="${(cy + dy * scale).toFixed(2)}" r="${rPetalo}" fill="${petalo}" stroke="${borde}" stroke-width="0.6"/>`
+  ).join('');
+  return `${petalos}<circle cx="${cx}" cy="${cy}" r="${rCentro}" fill="${centro}"/>`;
+}
+
+function mascotaOjosAbiertos(color) {
+  return `<g class="mascota-ojos"><circle cx="24" cy="31" r="3.1" fill="${color}"/><circle cx="25" cy="29.8" r="1" fill="#fff"/><circle cx="40" cy="31" r="3.1" fill="${color}"/><circle cx="41" cy="29.8" r="1" fill="#fff"/></g>`;
+}
+
+function mascotaOjosCorazon(color) {
+  return `<g class="mascota-ojos">${mascotaCorazon(24, 30, 2.6, color)}${mascotaCorazon(40, 30, 2.6, color)}</g>`;
+}
+
+function mascotaSVG(idx) {
+  const cuerpos = ['#f6d9e3', '#f2c2d4', '#eba9c4', '#e08cae', '#cf6a91'];
+  const bordes  = ['#e3a9c2', '#d1789f', '#b8567f', '#993556', '#7a1f3d'];
+  let fondo = '', cara = '', decoracion = '';
+
+  if (idx === 0) {
+    cara = `<path d="M19 30 q5 5 10 0" stroke="#99415f" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M35 30 q5 5 10 0" stroke="#99415f" stroke-width="2.4" fill="none" stroke-linecap="round"/><ellipse cx="32" cy="42" rx="2" ry="1.6" fill="#99415f" opacity=".5"/>`;
+  } else if (idx === 1) {
+    cara = `${mascotaOjosAbiertos('#5b2233')}<path d="M27 41 Q32 45 37 41" stroke="#7a2e46" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+  } else if (idx === 2) {
+    cara = `<ellipse cx="19" cy="39" rx="4" ry="2.5" fill="#ffb3c6" opacity=".6"/><ellipse cx="45" cy="39" rx="4" ry="2.5" fill="#ffb3c6" opacity=".6"/>${mascotaOjosAbiertos('#5b2233')}<path d="M25 41 Q32 47 39 41" stroke="#7a2e46" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+    decoracion = `<line x1="32" y1="19" x2="32" y2="13" stroke="#6fae6f" stroke-width="2" stroke-linecap="round"/><circle cx="32" cy="11" r="3.4" fill="#e78fb0" stroke="#c9698f" stroke-width="1"/>`;
+  } else if (idx === 3) {
+    cara = `<ellipse cx="18" cy="39" rx="4.3" ry="2.7" fill="#ff9dbd" opacity=".7"/><ellipse cx="46" cy="39" rx="4.3" ry="2.7" fill="#ff9dbd" opacity=".7"/>${mascotaOjosAbiertos('#5b2233')}<path d="M24 41 Q32 48 40 41" stroke="#7a2e46" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+    decoracion = `<line x1="32" y1="18" x2="32" y2="12" stroke="#6fae6f" stroke-width="2" stroke-linecap="round"/>${mascotaFlor(32, 10, 1, '#ffd9e6', '#c9698f', '#f5c451')}${mascotaCorazon(53, 20, 2.6, '#e0607f')}`;
+  } else {
+    fondo = `<circle cx="32" cy="38" r="24" fill="#f5c451" opacity=".28" class="mascota-brillo" style="filter:blur(4px)"/>`;
+    cara = `<ellipse cx="17" cy="40" rx="4.6" ry="2.9" fill="#ff7fa8" opacity=".75"/><ellipse cx="47" cy="40" rx="4.6" ry="2.9" fill="#ff7fa8" opacity=".75"/>${mascotaOjosCorazon('#7a1f3d')}<path d="M23 41 Q32 49 41 41" stroke="#5c1530" stroke-width="2.3" fill="none" stroke-linecap="round"/>`;
+    decoracion = `<line x1="18" y1="17" x2="16" y2="11" stroke="#6fae6f" stroke-width="1.8" stroke-linecap="round"/><line x1="46" y1="17" x2="48" y2="11" stroke="#6fae6f" stroke-width="1.8" stroke-linecap="round"/><line x1="32" y1="16" x2="32" y2="9" stroke="#6fae6f" stroke-width="1.8" stroke-linecap="round"/>${mascotaFlor(16, 9, 0.75, '#ffd9e6', '#c9698f', '#f5c451')}${mascotaFlor(32, 7, 0.85, '#ffd9e6', '#c9698f', '#f5c451')}${mascotaFlor(48, 9, 0.75, '#ffd9e6', '#c9698f', '#f5c451')}${mascotaCorazon(55, 24, 2.4, '#e0607f')}${mascotaCorazon(9, 24, 2.2, '#e0607f')}`;
   }
-  return etapa;
+
+  const cuerpo = `<ellipse cx="32" cy="38" rx="22" ry="19" fill="${cuerpos[idx]}" stroke="${bordes[idx]}" stroke-width="2"/>`;
+  return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">${fondo}${cuerpo}${cara}${decoracion}</svg>`;
 }
 
 async function loadRacha() {
@@ -394,10 +441,10 @@ async function loadRacha() {
     }
     if (racha > 0) {
       const etapa = mascotaRacha(racha);
-      el.textContent = `${etapa.emoji} ${racha} semana${racha === 1 ? '' : 's'} seguida${racha === 1 ? '' : 's'}`;
+      el.innerHTML = `<span class="mascota-icon">${mascotaSVG(etapa.idx)}</span><span class="mascota-texto">${racha} semana${racha === 1 ? '' : 's'} seguida${racha === 1 ? '' : 's'}</span>`;
       el.title = `${etapa.nombre} — vuestra mascota crece con cada semana seguida`;
     } else {
-      el.textContent = '';
+      el.innerHTML = '';
       el.title = '';
     }
     el.style.display = racha > 0 ? 'inline-flex' : 'none';
