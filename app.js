@@ -28,10 +28,15 @@ const db = getFirestore(firebaseApp);
 // Roles fijos — solo estos correos tienen acceso
 // ─────────────────────────────────────────────
 const EMAIL_ROLES = {
-  'ciliagomezalba@gmail.com': { role: 'cilia', partner: 'fahd', parejaId: 'nuestra-pareja', displayName: 'Cilia' },
-  'fahdkahnabdulah@gmail.com': { role: 'fahd', partner: 'cilia', parejaId: 'nuestra-pareja', displayName: 'Fahd' },
+  'ciliagomezalba@gmail.com': { role: 'cilia', partner: 'fahd', parejaId: 'nuestra-pareja', displayName: 'Alba' },
+  'fahdkahnabdulah@gmail.com': { role: 'fahd', partner: 'cilia', parejaId: 'nuestra-pareja', displayName: 'Abdu' },
   'prueba@test.com': { role: 'fahd', partner: 'cilia', parejaId: 'demo', displayName: 'Cuenta de prueba' }
 };
+
+function nombrePorRol(rol) {
+  const info = Object.values(EMAIL_ROLES).find(r => r.role === rol);
+  return info?.displayName || '';
+}
 
 let currentRole = null; // se rellena en onAuthStateChanged
 let pokeUnsub = null; // desuscriptor del listener de pokes
@@ -53,7 +58,13 @@ function showTab(name) {
   $(`tab-${name}`).classList.add('active');
   if (name === 'historial') loadHistory();
   if (name === 'deseos') loadMyWishes();
-  if (name === 'fechas') { calMonthOffset = 0; renderDiasJuntos(); renderCalendar(); loadFechasImportantes(); }
+  if (name === 'fechas') {
+    calMonthOffset = 0;
+    renderDiasJuntos();
+    renderCalendar();
+    loadFechasImportantes();
+    loadEventosCustom().then(() => { renderCalendar(); loadFechasImportantes(); });
+  }
 }
 
 function setMsg(id, text, color = 'var(--text-muted)') {
@@ -122,16 +133,45 @@ onAuthStateChanged(auth, user => {
 // ─────────────────────────────────────────────
 async function initApp() {
   setTodayDate();
+  prefillNames();
   setupAvatars();
   setupTabs();
   setupSaveExport();
   setupWishes();
   setupPoke();
   setupCalendar();
+  setupEventos();
+  setupAutoGrowTextareas();
   requestNotificationPermission();
   if (currentRole.parejaId === 'demo') await seedDemoData();
   loadRecommendation();
   loadRacha();
+}
+
+// ─────────────────────────────────────────────
+// Nombres por defecto según la cuenta (tú siempre a la izquierda)
+// ─────────────────────────────────────────────
+function prefillNames() {
+  const nombreSelf = currentRole.displayName || '';
+  const nombrePartner = nombrePorRol(currentRole.partner);
+  $('name-self').value = nombreSelf;
+  $('name-partner').value = nombrePartner;
+  $('avatar-self').textContent = nombreSelf ? nombreSelf[0].toUpperCase() : '?';
+  $('avatar-partner').textContent = nombrePartner ? nombrePartner[0].toUpperCase() : '?';
+}
+
+// ─────────────────────────────────────────────
+// Textareas que crecen solas con el contenido
+// ─────────────────────────────────────────────
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(el.scrollHeight, 72) + 'px';
+}
+
+function setupAutoGrowTextareas() {
+  document.querySelectorAll('textarea').forEach(t => {
+    t.addEventListener('input', () => autoGrow(t));
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -146,8 +186,8 @@ function setTodayDate() {
 // Avatares dinámicos según nombre
 // ─────────────────────────────────────────────
 function setupAvatars() {
-  ['name1', 'name2'].forEach(id => {
-    const avId = id === 'name1' ? 'av1' : 'av2';
+  ['name-self', 'name-partner'].forEach(id => {
+    const avId = id === 'name-self' ? 'avatar-self' : 'avatar-partner';
     $(id).addEventListener('input', () => {
       const val = $(id).value.trim();
       $(avId).textContent = val ? val[0].toUpperCase() : '?';
@@ -170,19 +210,17 @@ function setupTabs() {
 function getFormData() {
   return {
     date: $('entry-date').value,
-    names: {
-      n1: $('name1').value.trim(),
-      n2: $('name2').value.trim()
+    nombreSelf: $('name-self').value.trim(),
+    nombrePartner: $('name-partner').value.trim(),
+    self: {
+      sentimiento: $('self_sentimiento').value,
+      gracias: $('self_gracias').value,
+      pendiente: $('self_pendiente').value
     },
-    p1: {
-      sentimiento: $('p1_sentimiento').value,
-      gracias: $('p1_gracias').value,
-      pendiente: $('p1_pendiente').value
-    },
-    p2: {
-      sentimiento: $('p2_sentimiento').value,
-      gracias: $('p2_gracias').value,
-      pendiente: $('p2_pendiente').value
+    partner: {
+      sentimiento: $('partner_sentimiento').value,
+      gracias: $('partner_gracias').value,
+      pendiente: $('partner_pendiente').value
     },
     shared: {
       hacer: $('shared_hacer').value,
@@ -194,6 +232,29 @@ function getFormData() {
   };
 }
 
+// Datos de una entrada (nueva o antigua) vistos desde el rol actual:
+// siempre devuelve { nombreSelf, nombrePartner, self, partner } sin importar
+// qué cuenta guardó qué — así cada uno ve siempre su lado a la izquierda.
+function entradaSegunRol(e) {
+  const selfRole = currentRole.role;
+  const partnerRole = currentRole.partner;
+  if (e.respuestas) {
+    return {
+      nombreSelf: e.autores?.[selfRole] || nombrePorRol(selfRole),
+      nombrePartner: e.autores?.[partnerRole] || nombrePorRol(partnerRole),
+      self: e.respuestas[selfRole] || {},
+      partner: e.respuestas[partnerRole] || {}
+    };
+  }
+  // Formato antiguo (posición fija p1/p2, sin rol) — se muestra tal cual quedó guardado
+  return {
+    nombreSelf: e.names?.n1 || '',
+    nombrePartner: e.names?.n2 || '',
+    self: e.p1 || {},
+    partner: e.p2 || {}
+  };
+}
+
 // ─────────────────────────────────────────────
 // Guardar entrada en Firestore (espacio compartido)
 // ─────────────────────────────────────────────
@@ -202,7 +263,15 @@ async function saveEntry() {
   if (!data.date) { setMsg('save-msg', 'Selecciona una fecha primero.', '#a32d2d'); return; }
   try {
     const ref = doc(db, 'parejas', currentRole.parejaId, 'entradas', data.date);
-    await setDoc(ref, data, { merge: true });
+    // Solo se escribe el propio lado (y lo compartido) para no pisar lo que
+    // haya guardado ya la otra persona en esta misma fecha.
+    await setDoc(ref, {
+      date: data.date,
+      autores: { [currentRole.role]: data.nombreSelf },
+      respuestas: { [currentRole.role]: data.self },
+      shared: data.shared,
+      savedAt: data.savedAt
+    }, { merge: true });
     setMsg('save-msg', '✓ Entrada guardada y sincronizada', '#0f6e56');
     setTimeout(() => setMsg('save-msg', ''), 3000);
     loadRacha();
@@ -216,20 +285,20 @@ async function saveEntry() {
 // ─────────────────────────────────────────────
 function exportEntry() {
   const d = getFormData();
-  const n1 = d.names.n1 || 'Persona 1';
-  const n2 = d.names.n2 || 'Persona 2';
+  const n1 = d.nombreSelf || 'Persona 1';
+  const n2 = d.nombrePartner || 'Persona 2';
   const text = [
     `Diario de pareja — ${d.date}`,
     ``,
     `=== ${n1} ===`,
-    `Cómo me siento: ${d.p1.sentimiento || '—'}`,
-    `Te agradezco: ${d.p1.gracias || '—'}`,
-    `Algo que quiero decirte: ${d.p1.pendiente || '—'}`,
+    `Cómo me siento: ${d.self.sentimiento || '—'}`,
+    `Te agradezco: ${d.self.gracias || '—'}`,
+    `Algo que quiero decirte: ${d.self.pendiente || '—'}`,
     ``,
     `=== ${n2} ===`,
-    `Cómo me siento: ${d.p2.sentimiento || '—'}`,
-    `Te agradezco: ${d.p2.gracias || '—'}`,
-    `Algo que quiero decirte: ${d.p2.pendiente || '—'}`,
+    `Cómo me siento: ${d.partner.sentimiento || '—'}`,
+    `Te agradezco: ${d.partner.gracias || '—'}`,
+    `Algo que quiero decirte: ${d.partner.pendiente || '—'}`,
     ``,
     `=== Juntos ===`,
     `Qué nos gustaría hacer: ${d.shared.hacer || '—'}`,
@@ -267,16 +336,14 @@ async function loadHistory() {
       list.innerHTML = '<p class="empty-state">Aún no hay entradas guardadas.</p>';
       return;
     }
-
     list.innerHTML = '';
     snap.forEach(docSnap => {
       const e = docSnap.data();
       const card = document.createElement('div');
       card.className = 'entry-card';
 
-      const n1 = e.names?.n1 || '';
-      const n2 = e.names?.n2 || '';
-      const preview = e.p1?.sentimiento || e.shared?.hacer || '';
+      const { nombreSelf: n1, nombrePartner: n2, self } = entradaSegunRol(e);
+      const preview = self.sentimiento || e.shared?.hacer || '';
 
       card.innerHTML = `
         <div class="entry-date">${e.date}</div>
@@ -296,22 +363,24 @@ async function loadHistory() {
 }
 
 function loadEntry(e) {
+  const { nombreSelf, nombrePartner, self, partner } = entradaSegunRol(e);
   $('entry-date').value = e.date || '';
-  $('name1').value = e.names?.n1 || '';
-  $('name2').value = e.names?.n2 || '';
-  $('av1').textContent = e.names?.n1?.[0]?.toUpperCase() || '?';
-  $('av2').textContent = e.names?.n2?.[0]?.toUpperCase() || '?';
-  $('p1_sentimiento').value = e.p1?.sentimiento || '';
-  $('p1_gracias').value = e.p1?.gracias || '';
-  $('p1_pendiente').value = e.p1?.pendiente || '';
-  $('p2_sentimiento').value = e.p2?.sentimiento || '';
-  $('p2_gracias').value = e.p2?.gracias || '';
-  $('p2_pendiente').value = e.p2?.pendiente || '';
+  $('name-self').value = nombreSelf;
+  $('name-partner').value = nombrePartner;
+  $('avatar-self').textContent = nombreSelf?.[0]?.toUpperCase() || '?';
+  $('avatar-partner').textContent = nombrePartner?.[0]?.toUpperCase() || '?';
+  $('self_sentimiento').value = self.sentimiento || '';
+  $('self_gracias').value = self.gracias || '';
+  $('self_pendiente').value = self.pendiente || '';
+  $('partner_sentimiento').value = partner.sentimiento || '';
+  $('partner_gracias').value = partner.gracias || '';
+  $('partner_pendiente').value = partner.pendiente || '';
   $('shared_hacer').value = e.shared?.hacer || '';
   $('shared_recuerdo').value = e.shared?.recuerdo || '';
   $('shared_sueno').value = e.shared?.sueno || '';
   $('shared_logro').value = e.shared?.logro || '';
   showTab('nueva');
+  document.querySelectorAll('#tab-nueva textarea').forEach(autoGrow);
 }
 
 // ─────────────────────────────────────────────
@@ -583,6 +652,73 @@ const CUMPLEANOS = [
   // { nombre: 'Cumpleaños de Cilia', mes: 0, dia: 0 }, // pendiente de añadir
 ];
 
+// ── Eventos personalizados (creados desde la app, guardados en Firestore) ──
+let eventosCustomCache = [];
+
+function eventosRef() {
+  return collection(db, 'parejas', currentRole.parejaId, 'eventos');
+}
+
+async function loadEventosCustom() {
+  try {
+    const snap = await getDocs(eventosRef());
+    const propios = [];
+    snap.forEach(d => propios.push({ id: d.id, ...d.data() }));
+    eventosCustomCache = propios;
+  } catch (e) {
+    eventosCustomCache = [];
+  }
+}
+
+function eventosVisiblesParaMi() {
+  return eventosCustomCache.filter(ev => ev.visibilidad !== 'propio' || ev.autor === currentRole.role);
+}
+// Días del mes (year, month) en los que cae un evento personalizado, según su frecuencia
+function diasDelEventoEnMes(ev, year, month) {
+  if (!ev.fecha) return [];
+  const base = new Date(ev.fecha + 'T00:00:00');
+  const diasEnMes = new Date(year, month + 1, 0).getDate();
+  if (ev.frecuencia === 'unico') {
+    return (base.getFullYear() === year && base.getMonth() === month) ? [base.getDate()] : [];
+  }
+  if (ev.frecuencia === 'anual') {
+    return (base.getMonth() === month) ? [Math.min(base.getDate(), diasEnMes)] : [];
+  }
+  if (ev.frecuencia === 'mensual') {
+    return [Math.min(base.getDate(), diasEnMes)];
+  }
+  if (ev.frecuencia === 'semanal') {
+    const targetDow = base.getDay();
+    const dias = [];
+    for (let d = 1; d <= diasEnMes; d++) {
+      if (new Date(year, month, d).getDay() === targetDow) dias.push(d);
+    }
+    return dias;
+  }
+  return [];
+}
+
+// Próxima fecha (a partir de hoy) en la que cae un evento personalizado
+function proximaOcurrenciaEvento(ev) {
+  const base = new Date(ev.fecha + 'T00:00:00');
+  const hoy = new Date();
+  const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  if (ev.frecuencia === 'unico') return base;
+  if (ev.frecuencia === 'anual') return proximaFecha(base.getMonth(), base.getDate());
+  if (ev.frecuencia === 'mensual') {
+    let candidata = new Date(hoy.getFullYear(), hoy.getMonth(), base.getDate());
+    if (candidata < hoySinHora) candidata = new Date(hoy.getFullYear(), hoy.getMonth() + 1, base.getDate());
+    return candidata;
+  }
+  if (ev.frecuencia === 'semanal') {
+    const targetDow = base.getDay();
+    let candidata = new Date(hoySinHora);
+    while (candidata.getDay() !== targetDow) candidata.setDate(candidata.getDate() + 1);
+    return candidata;
+  }
+  return base;
+}
+
 function proximaFecha(mes, dia) {
   const hoy = new Date();
   const y = hoy.getFullYear();
@@ -664,6 +800,11 @@ function eventosDelMes(year, month) {
   CUMPLEANOS.forEach(c => {
     if (c.mes === month) eventos.push({ dia: c.dia, nombre: c.nombre, emoji: '🎂' });
   });
+  eventosVisiblesParaMi().forEach(ev => {
+    diasDelEventoEnMes(ev, year, month).forEach(dia => {
+      eventos.push({ dia, nombre: ev.nombre, emoji: ev.emoji || '⭐' });
+    });
+  });
   return eventos;
 }
 
@@ -720,19 +861,87 @@ function loadFechasImportantes() {
     { nombre: 'Día de las Flores Amarillas', fecha: proximaFecha(8, 21), emoji: '🌼' },
     ...CUMPLEANOS.map(c => ({ nombre: c.nombre, fecha: proximaFecha(c.mes, c.dia), emoji: '🎂' }))
   ];
+  eventosVisiblesParaMi().forEach(ev => {
+    const fecha = proximaOcurrenciaEvento(ev);
+    if (ev.frecuencia === 'unico' && diasHasta(fecha) < 0) return; // eventos puntuales ya pasados
+    eventos.push({
+      nombre: ev.nombre,
+      fecha,
+      emoji: ev.emoji || '⭐',
+      customId: ev.id,
+      propio: ev.visibilidad === 'propio'
+    });
+  });
   eventos.sort((a, b) => a.fecha - b.fecha);
   list.innerHTML = eventos.map(ev => {
     const d = diasHasta(ev.fecha);
     const cuando = d === 0 ? '¡Hoy!' : d === 1 ? 'Mañana' : `En ${d} días`;
+    const etiqueta = ev.propio ? ' <span class="fecha-tag">solo yo</span>' : '';
+    const borrar = ev.customId ? `<button class="btn-delete-evento" data-id="${ev.customId}" title="Eliminar evento">✕</button>` : '';
     return `
       <div class="fecha-card">
         <div class="fecha-emoji">${ev.emoji}</div>
         <div class="fecha-info">
-          <div class="fecha-nombre">${ev.nombre}</div>
+          <div class="fecha-nombre">${ev.nombre}${etiqueta}</div>
           <div class="fecha-detalle">${fmtFecha(ev.fecha)} · ${cuando}</div>
         </div>
+        ${borrar}
       </div>`;
   }).join('') || '<p class="empty-state">Sin fechas configuradas todavía.</p>';
+  wireEventoDeleteButtons();
+}
+
+function wireEventoDeleteButtons() {
+  document.querySelectorAll('.btn-delete-evento').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      if (!id) return;
+      try {
+        await deleteDoc(doc(db, 'parejas', currentRole.parejaId, 'eventos', id));
+        await loadEventosCustom();
+        renderCalendar();
+        loadFechasImportantes();
+      } catch (e) {
+        // silencioso
+      }
+    });
+  });
+}
+
+function setupEventos() {
+  $('btn-add-evento')?.addEventListener('click', () => {
+    const card = $('evento-form-card');
+    card.style.display = card.style.display === 'none' ? 'flex' : 'none';
+  });
+  $('btn-evento-cancelar')?.addEventListener('click', () => {
+    $('evento-form-card').style.display = 'none';
+  });
+  $('btn-evento-guardar')?.addEventListener('click', async () => {
+    const nombre = $('evento-nombre').value.trim();
+    const fecha = $('evento-fecha').value;
+    if (!nombre || !fecha) return;
+    const frecuencia = $('evento-frecuencia').value;
+    const visibilidad = $('evento-visibilidad').value;
+    const emoji = $('evento-emoji').value.trim() || '⭐';
+    try {
+      await addDoc(eventosRef(), {
+        nombre, fecha, frecuencia, visibilidad, emoji,
+        autor: currentRole.role,
+        creado: new Date().toISOString()
+      });
+      $('evento-nombre').value = '';
+      $('evento-fecha').value = '';
+      $('evento-emoji').value = '';
+      $('evento-frecuencia').value = 'unico';
+      $('evento-visibilidad').value = 'compartido';
+      $('evento-form-card').style.display = 'none';
+      await loadEventosCustom();
+      renderCalendar();
+      loadFechasImportantes();
+    } catch (e) {
+      // silencioso
+    }
+  });
 }
 
 // ─────────────────────────────────────────────
