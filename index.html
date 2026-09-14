@@ -6,6 +6,8 @@
   <title>+Dopamina</title>
   <meta name="theme-color" content="#fbeaf0" />
   <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -66,43 +68,43 @@
         </div>
 
         <div class="cols">
-          <!-- Persona 1 -->
-          <div class="person-col">
-            <div class="person-header p1">
-              <div class="avatar" id="av1">?</div>
-              <input class="name-input" id="name1" type="text" placeholder="Tu nombre" maxlength="20" />
+          <!-- Yo -->
+          <div class="person-col self">
+            <div class="person-header">
+              <div class="avatar" id="avatar-self">?</div>
+              <input class="name-input" id="name-self" type="text" placeholder="Tu nombre" maxlength="20" />
             </div>
             <div class="field">
-              <label>¿Cómo me siento?</label>
-              <textarea id="p1_sentimiento" placeholder="Esta semana me siento..."></textarea>
+              <label>🌤️ ¿Cómo me siento?</label>
+              <textarea id="self_sentimiento" placeholder="Esta semana me siento..."></textarea>
             </div>
             <div class="field">
-              <label>Te agradezco...</label>
-              <textarea id="p1_gracias" placeholder="Gracias por..."></textarea>
+              <label>🙏 Te agradezco...</label>
+              <textarea id="self_gracias" placeholder="Gracias por..."></textarea>
             </div>
             <div class="field">
-              <label>Algo que quiero decirte</label>
-              <textarea id="p1_pendiente" placeholder="Hay algo que quiero hablar..."></textarea>
+              <label>💬 Algo que quiero decirte</label>
+              <textarea id="self_pendiente" placeholder="Hay algo que quiero hablar..."></textarea>
             </div>
           </div>
 
-          <!-- Persona 2 -->
-          <div class="person-col">
-            <div class="person-header p2">
-              <div class="avatar" id="av2">?</div>
-              <input class="name-input" id="name2" type="text" placeholder="Su nombre" maxlength="20" />
+          <!-- Pareja -->
+          <div class="person-col partner">
+            <div class="person-header">
+              <div class="avatar" id="avatar-partner">?</div>
+              <input class="name-input" id="name-partner" type="text" placeholder="Su nombre" maxlength="20" />
             </div>
             <div class="field">
-              <label>¿Cómo me siento?</label>
-              <textarea id="p2_sentimiento" placeholder="Esta semana me siento..."></textarea>
+              <label>🌤️ ¿Cómo me siento?</label>
+              <textarea id="partner_sentimiento" placeholder="Esta semana me siento..."></textarea>
             </div>
             <div class="field">
-              <label>Te agradezco...</label>
-              <textarea id="p2_gracias" placeholder="Gracias por..."></textarea>
+              <label>🙏 Te agradezco...</label>
+              <textarea id="partner_gracias" placeholder="Gracias por..."></textarea>
             </div>
             <div class="field">
-              <label>Algo que quiero decirte</label>
-              <textarea id="p2_pendiente" placeholder="Hay algo que quiero hablar..."></textarea>
+              <label>💬 Algo que quiero decirte</label>
+              <textarea id="partner_pendiente" placeholder="Hay algo que quiero hablar..."></textarea>
             </div>
           </div>
         </div>
@@ -112,19 +114,19 @@
           <div class="shared-title">Juntos</div>
           <div class="shared-grid">
             <div class="field">
-              <label>Qué nos gustaría hacer</label>
+              <label>🗓️ Qué nos gustaría hacer</label>
               <textarea id="shared_hacer" placeholder="Un plan, una escapada..."></textarea>
             </div>
             <div class="field">
-              <label>Recuerdo favorito reciente</label>
+              <label>✨ Recuerdo favorito reciente</label>
               <textarea id="shared_recuerdo" placeholder="Ese momento que nos gustó..."></textarea>
             </div>
             <div class="field">
-              <label>Nuevo sueño / meta</label>
+              <label>🌱 Nuevo sueño / meta</label>
               <textarea id="shared_sueno" placeholder="Algo que queremos construir..."></textarea>
             </div>
             <div class="field">
-              <label>Objetivo cumplido</label>
+              <label>🏆 Objetivo cumplido</label>
               <textarea id="shared_logro" placeholder="Lo que logramos..."></textarea>
             </div>
           </div>
@@ -190,7 +192,35 @@
           <div id="calendar-grid" class="calendar-grid"></div>
         </div>
 
-        <div class="shared-title">Próximas fechas</div>
+        <div class="shared-title-row">
+          <div class="shared-title">Próximas fechas</div>
+          <button id="btn-add-evento" class="btn-text-small">+ Añadir evento</button>
+        </div>
+
+        <div id="evento-form-card" class="evento-form-card" style="display:none">
+          <input id="evento-nombre" type="text" placeholder="Nombre del evento" maxlength="40" />
+          <div class="evento-form-row">
+            <input id="evento-fecha" type="date" />
+            <select id="evento-frecuencia">
+              <option value="unico">Solo una vez</option>
+              <option value="anual">Cada año</option>
+              <option value="mensual">Cada mes</option>
+              <option value="semanal">Cada semana</option>
+            </select>
+          </div>
+          <div class="evento-form-row">
+            <select id="evento-visibilidad">
+              <option value="compartido">Para los dos</option>
+              <option value="propio">Solo para mí</option>
+            </select>
+            <input id="evento-emoji" type="text" maxlength="2" placeholder="⭐" />
+          </div>
+          <div class="actions">
+            <button id="btn-evento-guardar" class="btn-primary">Guardar evento</button>
+            <button id="btn-evento-cancelar" class="btn-secondary">Cancelar</button>
+          </div>
+        </div>
+
         <div id="fechas-list">
           <p class="empty-state">Cargando...</p>
         </div>
