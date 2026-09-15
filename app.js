@@ -38,6 +38,46 @@ function nombrePorRol(rol) {
   return info?.displayName || '';
 }
 
+function emailPorRol(rol) {
+  const entrada = Object.entries(EMAIL_ROLES).find(([, info]) => info.role === rol);
+  return entrada?.[0] || null;
+}
+
+// ─────────────────────────────────────────────
+// EmailJS — avisa por correo a la pareja en cuanto completas tu parte
+// de una entrada. TODO (Abdu): rellenar con tu clave pública de EmailJS
+// y el ID de la plantilla que quieras usar para este aviso (puede ser
+// una nueva, distinta de la de recordatorios semanales).
+// ─────────────────────────────────────────────
+const EMAILJS_PUBLIC_KEY = 'PON_AQUI_TU_PUBLIC_KEY';
+const EMAILJS_SERVICE_ID = 'service_lizki0i';
+const EMAILJS_TEMPLATE_AVISO = 'PON_AQUI_TU_TEMPLATE_ID';
+
+function emailjsListo() {
+  return !!window.emailjs && EMAILJS_PUBLIC_KEY && !EMAILJS_PUBLIC_KEY.startsWith('PON_AQUI') &&
+    EMAILJS_TEMPLATE_AVISO && !EMAILJS_TEMPLATE_AVISO.startsWith('PON_AQUI');
+}
+
+if (window.emailjs && EMAILJS_PUBLIC_KEY && !EMAILJS_PUBLIC_KEY.startsWith('PON_AQUI')) {
+  window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
+
+async function avisarParejaPorEmail(fecha) {
+  if (!emailjsListo()) return; // aún sin configurar — no hace nada
+  const toEmail = emailPorRol(currentRole.partner);
+  if (!toEmail) return;
+  try {
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_AVISO, {
+      to_email: toEmail,
+      to_name: nombrePorRol(currentRole.partner),
+      from_name: currentRole.displayName,
+      fecha
+    });
+  } catch (e) {
+    // un fallo al enviar el correo nunca debe bloquear el guardado de la entrada
+  }
+}
+
 let currentRole = null; // se rellena en onAuthStateChanged
 let pokeUnsub = null; // desuscriptor del listener de pokes
 
@@ -131,13 +171,15 @@ onAuthStateChanged(auth, user => {
 // Inicialización de la app tras login
 // ─────────────────────────────────────────────
 async function initApp() {
-  setTodayDate();
   prefillNames();
   setupAvatars();
   setupTabs();
   setupSaveExport();
+  setupEntryDateReload();
+  setupVolverHoy();
   setupWishes();
   setupWishesModal();
+  setupBloqueadaModal();
   setupPoke();
   setupCalendar();
   setupEventos();
@@ -146,6 +188,7 @@ async function initApp() {
   if (currentRole.parejaId === 'demo') await seedDemoData();
   loadRecommendation();
   loadRacha();
+  await enterComposeForDate(todayISO());
 }
 
 // ─────────────────────────────────────────────
@@ -177,9 +220,12 @@ function setupAutoGrowTextareas() {
 // ─────────────────────────────────────────────
 // Fecha de hoy
 // ─────────────────────────────────────────────
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function setTodayDate() {
-  const today = new Date().toISOString().slice(0, 10);
-  $('entry-date').value = today;
+  $('entry-date').value = todayISO();
 }
 
 // ─────────────────────────────────────────────
@@ -200,8 +246,41 @@ function setupAvatars() {
 // ─────────────────────────────────────────────
 function setupTabs() {
   document.querySelectorAll('.tab').forEach(btn => {
-    btn.addEventListener('click', () => showTab(btn.dataset.tab));
+    btn.addEventListener('click', () => {
+      showTab(btn.dataset.tab);
+      // Al pulsar la pestaña "Entrada" desde el menú (no al ver una entrada
+      // pasada desde el Historial) siempre volvemos al modo de escribir hoy.
+      if (btn.dataset.tab === 'nueva') enterComposeForDate(todayISO());
+    });
   });
+}
+
+function setupEntryDateReload() {
+  $('entry-date')?.addEventListener('change', () => {
+    if (!$('tab-nueva').classList.contains('viewing-full')) {
+      enterComposeForDate($('entry-date').value || todayISO());
+    }
+  });
+}
+
+function setupVolverHoy() {
+  $('btn-volver-hoy')?.addEventListener('click', () => {
+    showTab('nueva');
+    enterComposeForDate(todayISO());
+  });
+}
+
+function setupBloqueadaModal() {
+  const modal = $('modal-bloqueada');
+  $('btn-close-bloqueada')?.addEventListener('click', () => { if (modal) modal.hidden = true; });
+  modal?.addEventListener('click', (ev) => { if (ev.target === modal) modal.hidden = true; });
+}
+
+function mostrarBloqueada(msg) {
+  const modal = $('modal-bloqueada');
+  if (!modal) return;
+  $('bloqueada-msg').textContent = msg;
+  modal.hidden = false;
 }
 
 // ─────────────────────────────────────────────
@@ -255,6 +334,16 @@ function entradaSegunRol(e) {
   };
 }
 
+// ¿Quién ha completado ya su parte de esta entrada? Las entradas del
+// formato antiguo (sin "respuestas"/"completado") vienen siempre con las
+// dos partes ya escritas de una sola vez, así que se tratan como completas.
+function estadoCompletado(e) {
+  if (!e.respuestas) return { self: true, partner: true, ambos: true };
+  const self = !!e.completado?.[currentRole.role];
+  const partner = !!e.completado?.[currentRole.partner];
+  return { self, partner, ambos: self && partner };
+}
+
 // ─────────────────────────────────────────────
 // Guardar entrada en Firestore (espacio compartido)
 // ─────────────────────────────────────────────
@@ -263,18 +352,27 @@ async function saveEntry() {
   if (!data.date) { setMsg('save-msg', 'Selecciona una fecha primero.', '#a32d2d'); return; }
   try {
     const ref = doc(db, 'parejas', currentRole.parejaId, 'entradas', data.date);
+    // Miramos si ya estaba marcada como completada por mi parte ANTES de
+    // guardar, para solo avisar por correo la primera vez que la completo
+    // (y no cada vez que vuelvo a guardar/editar el mismo día).
+    const antes = await getDoc(ref);
+    const yaCompletadaAntes = !!antes.data()?.completado?.[currentRole.role];
+
     // Solo se escribe el propio lado (y lo compartido) para no pisar lo que
     // haya guardado ya la otra persona en esta misma fecha.
     await setDoc(ref, {
       date: data.date,
       autores: { [currentRole.role]: data.nombreSelf },
       respuestas: { [currentRole.role]: data.self },
+      completado: { [currentRole.role]: true },
       shared: data.shared,
       savedAt: data.savedAt
     }, { merge: true });
     setMsg('save-msg', '✓ Entrada guardada y sincronizada', '#0f6e56');
     setTimeout(() => setMsg('save-msg', ''), 3000);
+    if (!yaCompletadaAntes) avisarParejaPorEmail(data.date);
     loadRacha();
+    enterComposeForDate(data.date); // refresca el banner de estado con los datos ya guardados
   } catch (e) {
     setMsg('save-msg', 'Error al guardar. Comprueba tu conexión.', '#a32d2d');
   }
@@ -344,18 +442,40 @@ async function loadHistory() {
       card.className = 'entry-card';
 
       const { nombreSelf: n1, nombrePartner: n2, self } = entradaSegunRol(e);
-      const preview = self.sentimiento || e.shared?.hacer || '';
+      const { self: yo, ambos } = estadoCompletado(e);
 
-      card.innerHTML = `
-        <div class="entry-date">${e.date}</div>
-        <div class="entry-names">${[n1, n2].filter(Boolean).join(' & ')}</div>
-        <div class="entry-preview">${preview || 'Sin texto'}</div>
-        <div class="entry-reactions" data-date="${e.date}">${renderReactions(e.reacciones)}</div>
-      `;
-      card.querySelector('.entry-date').addEventListener('click', () => loadEntry(e));
-      card.querySelector('.entry-names').addEventListener('click', () => loadEntry(e));
-      card.querySelector('.entry-preview').addEventListener('click', () => loadEntry(e));
-      wireReactionButtons(card.querySelector('.entry-reactions'), e.date, e.reacciones);
+      if (ambos) {
+        const preview = self.sentimiento || e.shared?.hacer || '';
+        card.innerHTML = `
+          <div class="entry-date">${e.date}</div>
+          <div class="entry-names">${[n1, n2].filter(Boolean).join(' & ')}</div>
+          <div class="entry-preview">${preview || 'Sin texto'}</div>
+          <div class="entry-reactions" data-date="${e.date}">${renderReactions(e.reacciones)}</div>
+        `;
+        card.querySelector('.entry-date').addEventListener('click', () => verEntradaCompleta(e));
+        card.querySelector('.entry-names').addEventListener('click', () => verEntradaCompleta(e));
+        card.querySelector('.entry-preview').addEventListener('click', () => verEntradaCompleta(e));
+        wireReactionButtons(card.querySelector('.entry-reactions'), e.date, e.reacciones);
+      } else {
+        // Bloqueada: hasta que los dos hayan escrito su parte, nadie ve el
+        // contenido del otro (ni siquiera un avance en la vista previa).
+        card.classList.add('blocked');
+        const texto = yo
+          ? `🔒 Esperando a que ${n2 || 'tu pareja'} complete su parte`
+          : `📝 Te toca completar tu parte`;
+        card.innerHTML = `
+          <div class="entry-date">${e.date}</div>
+          <div class="entry-lock actionable">${texto}</div>
+        `;
+        card.querySelector('.entry-lock').addEventListener('click', () => {
+          if (yo) {
+            mostrarBloqueada(`Ya escribiste tu parte del ${e.date}. En cuanto ${n2 || 'tu pareja'} complete la suya, os llegará un aviso y podréis leerla los dos.`);
+          } else {
+            showTab('nueva');
+            enterComposeForDate(e.date);
+          }
+        });
+      }
       list.appendChild(card);
     });
   } catch (err) {
@@ -363,7 +483,73 @@ async function loadHistory() {
   }
 }
 
-function loadEntry(e) {
+// ─────────────────────────────────────────────
+// Pestaña "Entrada" — dos modos:
+//  · compose: solo se ve tu propia columna, para escribir/editar tu parte
+//    de una fecha (por defecto, hoy).
+//  · vista completa: una entrada ya cerrada por los dos, de solo lectura,
+//    con las dos columnas visibles (se abre desde el Historial).
+// ─────────────────────────────────────────────
+async function enterComposeForDate(dateStr) {
+  const fecha = dateStr || todayISO();
+  $('entry-date').value = fecha;
+
+  const tab = $('tab-nueva');
+  tab.classList.remove('viewing-full');
+  document.querySelectorAll('#tab-nueva .person-col').forEach(col => col.classList.remove('readonly'));
+  document.querySelectorAll('#tab-nueva input, #tab-nueva textarea').forEach(el => { el.disabled = false; });
+  $('btn-save').hidden = false;
+  $('btn-volver-hoy').hidden = true;
+
+  prefillNames();
+  ['self_sentimiento', 'self_gracias', 'self_pendiente',
+   'partner_sentimiento', 'partner_gracias', 'partner_pendiente',
+   'shared_hacer', 'shared_recuerdo', 'shared_sueno', 'shared_logro'].forEach(id => { $(id).value = ''; });
+
+  let e = null;
+  try {
+    const ref = doc(db, 'parejas', currentRole.parejaId, 'entradas', fecha);
+    const snap = await getDoc(ref);
+    if (snap.exists()) e = snap.data();
+  } catch (err) {
+    // si falla la carga, se deja el formulario en blanco listo para escribir
+  }
+
+  if (e) {
+    const { self } = entradaSegunRol(e);
+    $('self_sentimiento').value = self.sentimiento || '';
+    $('self_gracias').value = self.gracias || '';
+    $('self_pendiente').value = self.pendiente || '';
+    $('shared_hacer').value = e.shared?.hacer || '';
+    $('shared_recuerdo').value = e.shared?.recuerdo || '';
+    $('shared_sueno').value = e.shared?.sueno || '';
+    $('shared_logro').value = e.shared?.logro || '';
+  }
+
+  pintarBannerEstado(e, fecha);
+  document.querySelectorAll('#tab-nueva textarea').forEach(autoGrow);
+}
+
+function pintarBannerEstado(e, dateStr) {
+  const banner = $('entry-status-banner');
+  if (!banner) return;
+  banner.classList.remove('status-done');
+  if (!e) { banner.hidden = true; return; }
+  const { self, ambos } = estadoCompletado(e);
+  const cuando = dateStr === todayISO() ? 'de hoy' : `del ${dateStr}`;
+  if (ambos) {
+    banner.textContent = `✓ Esta entrada ${cuando} ya está completa por los dos — puedes verla en Historial.`;
+    banner.classList.add('status-done');
+    banner.hidden = false;
+  } else if (self) {
+    banner.textContent = `✓ Ya escribiste tu parte ${cuando}. Te avisaremos cuando ${nombrePorRol(currentRole.partner)} complete la suya.`;
+    banner.hidden = false;
+  } else {
+    banner.hidden = true;
+  }
+}
+
+function verEntradaCompleta(e) {
   const { nombreSelf, nombrePartner, self, partner } = entradaSegunRol(e);
   $('entry-date').value = e.date || '';
   $('name-self').value = nombreSelf;
@@ -380,6 +566,15 @@ function loadEntry(e) {
   $('shared_recuerdo').value = e.shared?.recuerdo || '';
   $('shared_sueno').value = e.shared?.sueno || '';
   $('shared_logro').value = e.shared?.logro || '';
+
+  const tab = $('tab-nueva');
+  tab.classList.add('viewing-full');
+  document.querySelectorAll('#tab-nueva .person-col').forEach(col => col.classList.add('readonly'));
+  document.querySelectorAll('#tab-nueva input, #tab-nueva textarea').forEach(el => { el.disabled = true; });
+  $('btn-save').hidden = true;
+  $('btn-volver-hoy').hidden = false;
+  $('entry-status-banner').hidden = true;
+
   showTab('nueva');
   document.querySelectorAll('#tab-nueva textarea').forEach(autoGrow);
 }
