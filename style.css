@@ -173,11 +173,18 @@ header { position: sticky; top: 0; z-index: 10; background: var(--surface); bord
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 520px) { .cols { grid-template-columns: 1fr; } }
 
-/* PERSON COLUMN */
+/* PERSON COLUMN — por privacidad, la columna de la pareja está oculta por
+   defecto: solo se ve tu propio registro mientras lo rellenas. #tab-nueva
+   gana la clase .viewing-full cuando se abre una entrada ya completada por
+   los dos (modo lectura), momento en el que se revela también su columna. */
 .person-col { background: var(--surface); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border); border-left-width: 3px; box-shadow: var(--shadow-card); transition: box-shadow .2s; }
 .person-col.self { border-left-color: var(--pink-dark); }
-.person-col.partner { border-left-color: var(--teal-dark); }
+.person-col.partner { border-left-color: var(--teal-dark); display: none; }
+#tab-nueva.viewing-full .cols { grid-template-columns: 1fr 1fr; }
+#tab-nueva.viewing-full .person-col.partner { display: flex; }
+@media (max-width: 520px) { #tab-nueva.viewing-full .cols { grid-template-columns: 1fr; } }
 .person-col:focus-within { box-shadow: 0 2px 14px rgba(0,0,0,0.1); }
+.person-col.readonly textarea, .person-col.readonly input { opacity: .8; pointer-events: none; }
 .person-header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .person-col.self .avatar { background: var(--pink-light); color: var(--pink-dark); }
 .person-col.partner .avatar { background: var(--teal-light); color: var(--teal-dark); }
@@ -209,11 +216,20 @@ header { position: sticky; top: 0; z-index: 10; background: var(--surface); bord
 /* HISTORY */
 .entry-card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; border: 1px solid var(--border); box-shadow: var(--shadow-card); transition: border-color .2s, box-shadow .2s; display: flex; flex-direction: column; gap: 4px; }
 .entry-card:hover { border-color: var(--pink-dark); }
-.entry-card .entry-date, .entry-card .entry-names, .entry-card .entry-preview { cursor: pointer; }
+.entry-card .entry-date, .entry-card .entry-names, .entry-card .entry-preview, .entry-card .entry-lock { cursor: pointer; }
 .entry-card .entry-date { font-size: 14px; font-weight: 600; }
 .entry-card .entry-names { font-size: 12px; color: var(--text-muted); }
 .entry-card .entry-preview { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .empty-state { font-size: 14px; color: var(--text-muted); text-align: center; padding: 32px 0; }
+
+/* Tarjetas bloqueadas (entrada aún no completada por los dos) */
+.entry-card.blocked { border-left: 3px solid var(--gold-mid); }
+.entry-card .entry-lock { font-size: 13px; color: var(--gold-dark); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.entry-card .entry-lock.actionable:hover { text-decoration: underline; }
+
+/* Banner de estado en Nueva Entrada */
+.entry-status-banner { border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; font-weight: 500; text-align: center; background: var(--gold-light); color: var(--gold-dark); }
+.entry-status-banner.status-done { background: var(--teal-light); color: var(--teal-dark); }
 
 /* REACCIONES */
 .entry-reactions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
