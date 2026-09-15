@@ -63,6 +63,9 @@
           <button id="btn-rec-refresh" class="btn-text-small">Ver otra idea</button>
         </div>
 
+        <!-- Estado de la entrada de hoy: completada / esperando a la pareja / viendo una entrada ya cerrada -->
+        <div id="entry-status-banner" class="entry-status-banner" hidden></div>
+
         <div class="date-row">
           <label for="entry-date">📅</label>
           <input type="date" id="entry-date" />
@@ -136,6 +139,7 @@
         <div class="actions">
           <button id="btn-save" class="btn-primary">Guardar entrada</button>
           <button id="btn-export" class="btn-secondary">Exportar texto</button>
+          <button id="btn-volver-hoy" class="btn-secondary" hidden>← Volver a hoy</button>
         </div>
         <p id="save-msg" class="save-msg"></p>
 
@@ -233,7 +237,23 @@
       </div>
     </div>
 
+    <!-- MODAL: ENTRADA BLOQUEADA -->
+    <div id="modal-bloqueada" class="modal-overlay" hidden>
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-title">🔒 Entrada bloqueada</span>
+          <button id="btn-close-bloqueada" class="btn-icon" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <p id="bloqueada-msg" class="hint-text"></p>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /screen-app -->
+
+  <!-- EmailJS (para avisar por correo cuando la pareja completa su parte) -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <!-- Firebase SDKs -->
   <script type="module" src="app.js"></script>
