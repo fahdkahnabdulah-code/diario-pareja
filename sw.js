@@ -1,4 +1,4 @@
-const CACHE = 'diario-pareja-v3';
+const CACHE = 'diario-pareja-v4';
 const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -23,5 +23,33 @@ self.addEventListener('fetch', e => {
                     return res;
           })
           .catch(() => caches.match(e.request))
+  );
+});
+
+// ────────────────────────────────────────────
+// PUSH REAL — recibe el aviso aunque la app esté cerrada y lo muestra
+// como notificación del sistema (poke, entrada completada, etc.)
+// ─────────────────────────────────────────────
+self.addEventListener('push', e => {
+  let data = { title: '+Dopamina', body: 'Tienes una novedad en tu diario' };
+  try { if (e.data) data = { ...data, ...e.data.json() }; } catch (err) {}
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.tag || 'dopamina'
+    })
+  );
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientsArr => {
+      const existente = clientsArr.find(c => 'focus' in c);
+      if (existente) return existente.focus();
+      return self.clients.openWindow('/');
+    })
   );
 });
