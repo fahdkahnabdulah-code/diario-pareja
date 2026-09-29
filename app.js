@@ -38,46 +38,6 @@ function nombrePorRol(rol) {
   return info?.displayName || '';
 }
 
-function emailPorRol(rol) {
-  const entrada = Object.entries(EMAIL_ROLES).find(([, info]) => info.role === rol);
-  return entrada?.[0] || null;
-}
-
-// ─────────────────────────────────────────────
-// EmailJS — avisa por correo a la pareja en cuanto completas tu parte
-// de una entrada. TODO (Abdu): rellenar con tu clave pública de EmailJS
-// y el ID de la plantilla que quieras usar para este aviso (puede ser
-// una nueva, distinta de la de recordatorios semanales).
-// ─────────────────────────────────────────────
-const EMAILJS_PUBLIC_KEY = 'PON_AQUI_TU_PUBLIC_KEY';
-const EMAILJS_SERVICE_ID = 'service_lizki0i';
-const EMAILJS_TEMPLATE_AVISO = 'PON_AQUI_TU_TEMPLATE_ID';
-
-function emailjsListo() {
-  return !!window.emailjs && EMAILJS_PUBLIC_KEY && !EMAILJS_PUBLIC_KEY.startsWith('PON_AQUI') &&
-    EMAILJS_TEMPLATE_AVISO && !EMAILJS_TEMPLATE_AVISO.startsWith('PON_AQUI');
-}
-
-if (window.emailjs && EMAILJS_PUBLIC_KEY && !EMAILJS_PUBLIC_KEY.startsWith('PON_AQUI')) {
-  window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-}
-
-async function avisarParejaPorEmail(fecha) {
-  if (!emailjsListo()) return; // aún sin configurar — no hace nada
-  const toEmail = emailPorRol(currentRole.partner);
-  if (!toEmail) return;
-  try {
-    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_AVISO, {
-      to_email: toEmail,
-      to_name: nombrePorRol(currentRole.partner),
-      from_name: currentRole.displayName,
-      fecha
-    });
-  } catch (e) {
-    // un fallo al enviar el correo nunca debe bloquear el guardado de la entrada
-  }
-}
-
 let currentRole = null; // se rellena en onAuthStateChanged
 let pokeUnsub = null; // desuscriptor del listener de pokes
 
@@ -184,7 +144,7 @@ async function initApp() {
   setupCalendar();
   setupEventos();
   setupAutoGrowTextareas();
-  requestNotificationPermission();
+  pedirPermisoYSuscribirPush();
   if (currentRole.parejaId === 'demo') await seedDemoData();
   loadRecommendation();
   loadRacha();
@@ -353,7 +313,7 @@ async function saveEntry() {
   try {
     const ref = doc(db, 'parejas', currentRole.parejaId, 'entradas', data.date);
     // Miramos si ya estaba marcada como completada por mi parte ANTES de
-    // guardar, para solo avisar por correo la primera vez que la completo
+    // guardar, para solo avisar por push la primera vez que la completo
     // (y no cada vez que vuelvo a guardar/editar el mismo día).
     const antes = await getDoc(ref);
     const yaCompletadaAntes = !!antes.data()?.completado?.[currentRole.role];
@@ -370,7 +330,9 @@ async function saveEntry() {
     }, { merge: true });
     setMsg('save-msg', '✓ Entrada guardada y sincronizada', '#0f6e56');
     setTimeout(() => setMsg('save-msg', ''), 3000);
-    if (!yaCompletadaAntes) avisarParejaPorEmail(data.date);
+    if (!yaCompletadaAntes) {
+      enviarPush(currentRole.partner, '+Dopamina', `✓ ${currentRole.displayName} ya escribió su parte de hoy`, 'entrada-completada');
+    }
     loadRacha();
     enterComposeForDate(data.date); // refresca el banner de estado con los datos ya guardados
   } catch (e) {
@@ -803,13 +765,6 @@ function escapeHtml(str) {
 // ─────────────────────────────────────────────
 // POKE — "pensando en ti" en tiempo real (sin backend)
 // ─────────────────────────────────────────────
-function requestNotificationPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    // se pide en un gesto del usuario más adelante también, pero probamos ya por si acaso
-    Notification.requestPermission().catch(() => {});
-  }
-}
-
 function pokeDocRef() {
   return doc(db, 'parejas', currentRole.parejaId, 'pokes', 'latest');
 }
@@ -832,12 +787,11 @@ function setupPoke() {
   const btn = $('btn-poke');
   if (btn) {
     btn.addEventListener('click', async () => {
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().catch(() => {});
-      }
+      pedirPermisoYSuscribirPush(); // gesto del usuario — buen momento para pedir permiso si aún no lo dio
       try {
         await setDoc(pokeDocRef(), { de: currentRole.role, ts: Date.now() });
         showPokeToast('💌 Le has dicho que piensas en ella/él');
+        enviarPush(currentRole.partner, '+Dopamina', `💕 ${currentRole.displayName} está pensando en ti`, 'poke');
       } catch (e) {
         // silencioso
       }
@@ -852,10 +806,72 @@ function setupPoke() {
     if (Date.now() - data.ts > 15000) return; // ignora pokes viejos al cargar la app
     const nombre = EMAIL_ROLES[Object.keys(EMAIL_ROLES).find(k => EMAIL_ROLES[k].role === data.de)]?.displayName || 'Tu pareja';
     showPokeToast(`💕 ${nombre} está pensando en ti`);
-    if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-      new Notification('+Dopamina', { body: `💕 ${nombre} está pensando en ti`, icon: '/icon-192.png' });
-    }
+    // La notificación del sistema mientras la pestaña está en segundo plano ya
+    // llega por el push real (ver más abajo) — aquí solo queda el toast en
+    // pantalla para cuando la app está en primer plano.
   });
+}
+
+// ─────────────────────────────────────────────
+// PUSH REAL — notificaciones que llegan aunque la app esté cerrada.
+// Sustituye el antiguo aviso por email al completar una entrada, y
+// complementa el poke de arriba para cuando la pestaña no está abierta.
+// ─────────────────────────────────────────────
+const VAPID_PUBLIC_KEY = 'BE-d7ziVSPHsyvF1z5s9RhE7Iu2vrGQ3g1ZZXIAns0b9pEp9um5_KQH3NcnGSvvt9Gu9Bgpf-ksV_O29up3bCs4';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+function pushSubDocRef(rol) {
+  return doc(db, 'parejas', currentRole.parejaId, 'push_subs', rol);
+}
+
+async function suscribirsePush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    await setDoc(pushSubDocRef(currentRole.role), { sub: sub.toJSON(), actualizado: new Date().toISOString() });
+  } catch (e) {
+    // silencioso — puede fallar si el navegador no soporta push, el permiso
+    // se retiró, o (en iPhone) la app aún no está añadida a pantalla de inicio
+  }
+}
+
+async function pedirPermisoYSuscribirPush() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch (e) { return; }
+  }
+  if (Notification.permission === 'granted') await suscribirsePush();
+}
+
+async function enviarPush(rolDestino, title, body, tag) {
+  try {
+    const snap = await getDoc(pushSubDocRef(rolDestino));
+    const sub = snap.data()?.sub;
+    if (!sub) return; // esa persona aún no ha activado las notificaciones en su móvil
+    await fetch('/.netlify/functions/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub, title, body, tag })
+    });
+  } catch (e) {
+    // un fallo al enviar el push nunca debe bloquear la acción que lo disparó
+  }
 }
 
 // ─────────────────────────────────────────────
