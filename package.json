@@ -1,0 +1,8 @@
+{
+  "name": "diario-pareja",
+  "private": true,
+  "description": "Funciones de servidor (notificaciones push) para +Dopamina",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
