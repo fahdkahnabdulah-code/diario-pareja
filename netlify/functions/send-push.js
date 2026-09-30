@@ -9,7 +9,7 @@ const webpush = require('web-push');
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:abdulahfahdkhan@gmail.com';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:contacto@example.com';
 
 let vapidListo = false;
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
