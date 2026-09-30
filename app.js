@@ -10,6 +10,9 @@ import {
   getFirestore, collection, doc, setDoc, addDoc, deleteDoc,
   getDocs, getDoc, query, orderBy, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAmU2l0p_o1JGeDkereu3uUFDhAVpEYlAw",
@@ -23,6 +26,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
 
 // ─────────────────────────────────────────────
 // Roles fijos — solo estos correos tienen acceso
@@ -139,6 +143,7 @@ async function initApp() {
   setupVolverHoy();
   setupWishes();
   setupWishesModal();
+  setupCheckinModal();
   setupBloqueadaModal();
   setupPoke();
   setupCalendar();
@@ -148,6 +153,7 @@ async function initApp() {
   if (currentRole.parejaId === 'demo') await seedDemoData();
   loadDeseoSemanal();
   loadPartnerPendingCount();
+  loadCheckinBadge();
   loadRacha();
   await enterComposeForDate(todayISO());
 }
@@ -1358,6 +1364,217 @@ async function seedDemoData() {
   } catch (e) {
     // si falla el sembrado no bloqueamos el resto de la app
   }
+}
+
+
+// ─────────────────────────────────────────────
+// CHECK-IN DIARIO CON FOTO (estilo BeReal)
+// Una vez al día, a una hora aleatoria (la decide schedule-checkin.js en el
+// servidor), cada uno tiene una ventana de 2h para subir una foto (frontal +
+// trasera combinadas). No ves la foto de tu pareja hasta subir la tuya.
+// ─────────────────────────────────────────────
+let checkinStream = null;
+let checkinPaso = null; // 'frontal' | 'trasera'
+let checkinFotoFrontal = null;
+let checkinFotoTrasera = null;
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function checkinRef(dateKey = todayKey()) {
+  return doc(db, 'parejas', currentRole.parejaId, 'checkins', dateKey);
+}
+
+async function loadCheckinBadge() {
+  const badge = $('checkin-badge');
+  if (!badge) return;
+  try {
+    const snap = await getDoc(checkinRef());
+    const data = snap.data();
+    if (!data) { badge.style.display = 'none'; return; }
+    const ahora = new Date();
+    const momento = new Date(data.momento);
+    const yo = data[currentRole.role];
+    const pendiente = ahora >= momento && !(yo && yo.publicado);
+    badge.style.display = pendiente ? 'flex' : 'none';
+  } catch (e) {
+    badge.style.display = 'none';
+  }
+}
+
+async function abrirModalCheckin() {
+  $('modal-checkin').hidden = false;
+  await renderCheckinEstado();
+}
+
+function cerrarModalCheckin() {
+  pararStreamCamara();
+  checkinFotoFrontal = null;
+  checkinFotoTrasera = null;
+  $('modal-checkin').hidden = true;
+  loadCheckinBadge();
+}
+
+async function renderCheckinEstado() {
+  const body = $('checkin-body');
+  if (!body) return;
+  body.innerHTML = '<p class="hint-text">Cargando...</p>';
+  try {
+    const snap = await getDoc(checkinRef());
+    const data = snap.data();
+    if (!data) {
+      body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check-in. Os avisaremos con una notificación 📸</p>';
+      return;
+    }
+    const ahora = new Date();
+    const momento = new Date(data.momento);
+    const yo = data[currentRole.role];
+    const suya = data[currentRole.partner];
+
+    if (ahora < momento) {
+      body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check-in. Os avisaremos con una notificación 📸</p>';
+      return;
+    }
+    if (!yo || !yo.publicado) {
+      body.innerHTML = `
+        <p class="hint-text">¡Es la hora! Haz tu foto del día antes de ver la de ${escapeHtml(nombrePorRol(currentRole.partner))}.</p>
+        <button id="btn-checkin-empezar" class="btn-primary">📸 Hacer mi foto</button>
+      `;
+      $('btn-checkin-empezar')?.addEventListener('click', iniciarCapturaCheckin);
+      return;
+    }
+    if (!suya || !suya.publicado) {
+      body.innerHTML = `
+        <img src="${yo.fotoUrl}" class="checkin-photo-mine" alt="Tu foto" />
+        <p class="hint-text">Ya subiste la tuya${yo.tarde ? ' (un poco tarde 🕐)' : ''}. Esperando a que ${escapeHtml(nombrePorRol(currentRole.partner))} suba la suya...</p>
+      `;
+      return;
+    }
+    body.innerHTML = `
+      <div class="checkin-reveal">
+        <div class="checkin-reveal-item">
+          <img src="${yo.fotoUrl}" alt="Tu foto" />
+          <span>Tú${yo.tarde ? ' 🕐' : ''}</span>
+        </div>
+        <div class="checkin-reveal-item">
+          <img src="${suya.fotoUrl}" alt="Foto de ${escapeHtml(nombrePorRol(currentRole.partner))}" />
+          <span>${escapeHtml(nombrePorRol(currentRole.partner))}${suya.tarde ? ' 🕐' : ''}</span>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    body.innerHTML = '<p class="hint-text">No se pudo cargar el check-in de hoy.</p>';
+  }
+}
+
+async function iniciarCapturaCheckin() {
+  const body = $('checkin-body');
+  checkinPaso = 'frontal';
+  body.innerHTML = `
+    <div class="checkin-camera-wrap">
+      <video id="checkin-video" autoplay playsinline muted></video>
+      <p class="hint-text" id="checkin-step-label">Paso 1 de 2 — foto frontal (tu cara)</p>
+      <button id="btn-checkin-capturar" class="btn-primary">📸 Capturar</button>
+    </div>
+  `;
+  $('btn-checkin-capturar')?.addEventListener('click', capturarFotoCheckin);
+  await iniciarStreamCamara('user');
+}
+
+async function iniciarStreamCamara(facing) {
+  try {
+    checkinStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+    const video = $('checkin-video');
+    if (video) video.srcObject = checkinStream;
+  } catch (e) {
+    $('checkin-body').innerHTML = '<p class="hint-text">No se pudo acceder a la cámara. Revisa los permisos del navegador.</p>';
+  }
+}
+
+function pararStreamCamara() {
+  if (checkinStream) {
+    checkinStream.getTracks().forEach(t => t.stop());
+    checkinStream = null;
+  }
+}
+
+async function capturarFotoCheckin() {
+  const video = $('checkin-video');
+  if (!video || !video.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  pararStreamCamara();
+
+  if (checkinPaso === 'frontal') {
+    checkinFotoFrontal = canvas;
+    checkinPaso = 'trasera';
+    const label = $('checkin-step-label');
+    if (label) label.textContent = 'Paso 2 de 2 — foto trasera (lo que ves)';
+    await iniciarStreamCamara('environment');
+  } else {
+    checkinFotoTrasera = canvas;
+    await componerYSubirCheckin();
+  }
+}
+
+async function componerYSubirCheckin() {
+  $('checkin-body').innerHTML = '<p class="hint-text">Subiendo tu foto...</p>';
+  try {
+    const final = document.createElement('canvas');
+    final.width = checkinFotoTrasera.width;
+    final.height = checkinFotoTrasera.height;
+    const ctx = final.getContext('2d');
+    ctx.drawImage(checkinFotoTrasera, 0, 0);
+
+    const miniW = final.width * 0.32;
+    const miniH = miniW * (checkinFotoFrontal.height / checkinFotoFrontal.width);
+    const pad = final.width * 0.04;
+    const radio = miniW * 0.08;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pad + radio, pad);
+    ctx.arcTo(pad + miniW, pad, pad + miniW, pad + miniH, radio);
+    ctx.arcTo(pad + miniW, pad + miniH, pad, pad + miniH, radio);
+    ctx.arcTo(pad, pad + miniH, pad, pad, radio);
+    ctx.arcTo(pad, pad, pad + miniW, pad, radio);
+    ctx.closePath();
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.clip();
+    ctx.drawImage(checkinFotoFrontal, pad, pad, miniW, miniH);
+    ctx.restore();
+
+    const blob = await new Promise(res => final.toBlob(res, 'image/jpeg', 0.85));
+    const dateKey = todayKey();
+    const path = `checkins/${currentRole.parejaId}/${dateKey}/${currentRole.role}.jpg`;
+    const sref = storageRef(storage, path);
+    await uploadBytes(sref, blob);
+    const url = await getDownloadURL(sref);
+
+    const ahora = new Date();
+    const snap = await getDoc(checkinRef(dateKey));
+    const data = snap.data();
+    const tarde = !!(data && data.ventanaCierre && ahora > new Date(data.ventanaCierre));
+
+    await setDoc(checkinRef(dateKey), {
+      [currentRole.role]: { publicado: true, fotoUrl: url, subidoEn: ahora.toISOString(), tarde }
+    }, { merge: true });
+
+    checkinFotoFrontal = null;
+    checkinFotoTrasera = null;
+    await renderCheckinEstado();
+    loadCheckinBadge();
+  } catch (e) {
+    $('checkin-body').innerHTML = '<p class="hint-text">No se pudo subir la foto. Inténtalo de nuevo.</p>';
+  }
+}
+
+function setupCheckinModal() {
+  $('btn-checkin')?.addEventListener('click', abrirModalCheckin);
+  $('btn-close-checkin')?.addEventListener('click', cerrarModalCheckin);
 }
 
 // ─────────────────────────────────────────────

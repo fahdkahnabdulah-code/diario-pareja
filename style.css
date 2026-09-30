@@ -306,6 +306,13 @@ header { position: sticky; top: 0; z-index: 10; background: var(--surface); bord
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); }
 .modal-title { font-size: 15px; font-weight: 600; }
 .modal-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.checkin-camera-wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.checkin-camera-wrap video { width: 100%; border-radius: var(--radius-sm); background: #000; max-height: 60vh; object-fit: cover; }
+.checkin-photo-mine { width: 100%; border-radius: var(--radius-sm); }
+.checkin-reveal { display: flex; gap: 10px; }
+.checkin-reveal-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.checkin-reveal-item img { width: 100%; border-radius: var(--radius-sm); }
+.checkin-reveal-item span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 
 /* POKE TOAST */
 .poke-toast {

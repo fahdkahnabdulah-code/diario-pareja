@@ -1,8 +1,9 @@
 {
   "name": "diario-pareja",
   "private": true,
-  "description": "Funciones de servidor (notificaciones push) para +Dopamina",
+  "description": "Funciones de servidor (notificaciones push, check-in diario) para +Dopamina",
   "dependencies": {
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "firebase-admin": "^12.5.0"
   }
 }
