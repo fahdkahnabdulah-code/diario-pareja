@@ -146,7 +146,8 @@ async function initApp() {
   setupAutoGrowTextareas();
   pedirPermisoYSuscribirPush();
   if (currentRole.parejaId === 'demo') await seedDemoData();
-  loadRecommendation();
+  loadDeseoSemanal();
+  loadPartnerPendingCount();
   loadRacha();
   await enterComposeForDate(todayISO());
 }
@@ -683,6 +684,8 @@ async function loadRacha() {
 // ─────────────────────────────────────────────
 // BUZÓN DE DESEOS
 // ─────────────────────────────────────────────
+let wishesTabActiva = 'pendientes';
+
 function wishesRef() {
   return collection(db, 'parejas', currentRole.parejaId, 'deseos');
 }
@@ -694,10 +697,13 @@ async function addWish() {
     await addDoc(wishesRef(), {
       autor: currentRole.role,
       texto,
-      creado: new Date().toISOString()
+      creado: new Date().toISOString(),
+      cumplido: false,
+      cumplidoFecha: null
     });
     $('wish-input').value = '';
     loadMyWishes();
+    loadPartnerPendingCount();
   } catch (e) {
     // silencioso — se reintenta al recargar
   }
@@ -713,26 +719,59 @@ async function loadMyWishes() {
       const data = d.data();
       if (data.autor === currentRole.role) mine.push({ id: d.id, ...data });
     });
-    if (mine.length === 0) {
-      list.innerHTML = '<p class="empty-state">Aún no has añadido nada.</p>';
+    const pendientes = mine.filter(w => !w.cumplido);
+    const cumplidos = mine.filter(w => w.cumplido);
+    const activos = wishesTabActiva === 'cumplidos' ? cumplidos : pendientes;
+
+    if (activos.length === 0) {
+      list.innerHTML = wishesTabActiva === 'cumplidos'
+        ? '<p class="empty-state">Aún no has marcado ningún deseo como cumplido.</p>'
+        : '<p class="empty-state">Aún no has añadido nada.</p>';
       return;
     }
-    mine.sort((a, b) => (b.creado || '').localeCompare(a.creado || ''));
+    activos.sort((a, b) => {
+      const fa = wishesTabActiva === 'cumplidos' ? (a.cumplidoFecha || '') : (a.creado || '');
+      const fb = wishesTabActiva === 'cumplidos' ? (b.cumplidoFecha || '') : (b.creado || '');
+      return fb.localeCompare(fa);
+    });
     list.innerHTML = '';
-    mine.forEach(w => {
+    activos.forEach(w => {
       const card = document.createElement('div');
-      card.className = 'wish-card';
-      card.innerHTML = `<span class="wish-text">${escapeHtml(w.texto)}</span>
-        <button class="btn-delete" title="Eliminar">✕</button>`;
-      card.querySelector('.btn-delete').addEventListener('click', async () => {
-        await deleteDoc(doc(db, 'parejas', currentRole.parejaId, 'deseos', w.id));
-        loadMyWishes();
-      });
+      card.className = 'wish-card' + (w.cumplido ? ' done' : '');
+      if (w.cumplido) {
+        const fecha = w.cumplidoFecha ? new Date(w.cumplidoFecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '';
+        card.innerHTML = `<span class="wish-text">${escapeHtml(w.texto)}</span>
+          <span class="wish-done-date">${fecha}</span>`;
+      } else {
+        card.innerHTML = `<span class="wish-text">${escapeHtml(w.texto)}</span>
+          <div class="wish-card-actions">
+            <button class="btn-check" title="Marcar como cumplido">✓ Cumplido</button>
+            <button class="btn-delete" title="Eliminar">✕</button>
+          </div>`;
+        card.querySelector('.btn-check').addEventListener('click', async () => {
+          await setDoc(doc(db, 'parejas', currentRole.parejaId, 'deseos', w.id), {
+            cumplido: true,
+            cumplidoFecha: new Date().toISOString()
+          }, { merge: true });
+          loadMyWishes();
+        });
+        card.querySelector('.btn-delete').addEventListener('click', async () => {
+          await deleteDoc(doc(db, 'parejas', currentRole.parejaId, 'deseos', w.id));
+          loadMyWishes();
+        });
+      }
       list.appendChild(card);
     });
   } catch (e) {
     list.innerHTML = '<p class="empty-state">Error al cargar.</p>';
   }
+}
+
+function showWishesTab(nombre, btn) {
+  wishesTabActiva = nombre;
+  document.querySelectorAll('.deseos-tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadMyWishes();
 }
 
 function setupWishes() {
@@ -746,6 +785,9 @@ function setupWishesModal() {
   $('btn-wishes')?.addEventListener('click', () => {
     if (!modal) return;
     modal.hidden = false;
+    wishesTabActiva = 'pendientes';
+    document.querySelectorAll('.deseos-tabs button').forEach(b => b.classList.remove('active'));
+    $('btn-tab-pendientes')?.classList.add('active');
     loadMyWishes();
   });
   $('btn-close-deseos')?.addEventListener('click', () => {
@@ -754,6 +796,8 @@ function setupWishesModal() {
   modal?.addEventListener('click', (ev) => {
     if (ev.target === modal) modal.hidden = true;
   });
+  $('btn-tab-pendientes')?.addEventListener('click', (ev) => showWishesTab('pendientes', ev.currentTarget));
+  $('btn-tab-cumplidos')?.addEventListener('click', (ev) => showWishesTab('cumplidos', ev.currentTarget));
 }
 
 function escapeHtml(str) {
@@ -1181,30 +1225,109 @@ function setupEventos() {
 }
 
 // ─────────────────────────────────────────────
-// RECOMENDACIÓN CRUZADA
+// DESEO DE LA SEMANA — una revelación al azar por semana, del buzón de la pareja
 // ─────────────────────────────────────────────
-async function loadRecommendation() {
+function deseoSemanalRef() {
+  return doc(db, 'parejas', currentRole.parejaId, 'deseo_semanal', currentRole.role);
+}
+
+async function hayDeseosPendientesDePareja() {
   try {
     const snap = await getDocs(wishesRef());
-    const partnerWishes = [];
+    let hay = false;
     snap.forEach(d => {
       const data = d.data();
-      if (data.autor === currentRole.partner) partnerWishes.push(data.texto);
+      if (data.autor === currentRole.partner && !data.cumplido) hay = true;
     });
-    const card = $('recommendation-card');
-    if (partnerWishes.length === 0) {
-      card.style.display = 'none';
-      return;
-    }
-    const pick = partnerWishes[Math.floor(Math.random() * partnerWishes.length)];
-    $('rec-text').textContent = pick;
-    card.style.display = 'flex';
+    return hay;
   } catch (e) {
-    $('recommendation-card').style.display = 'none';
+    return false;
   }
 }
 
-$('btn-rec-refresh')?.addEventListener('click', loadRecommendation);
+async function loadDeseoSemanal() {
+  const card = $('recommendation-card');
+  const btn = $('btn-rec-refresh');
+  if (!card || !btn) return;
+  try {
+    const snap = await getDoc(deseoSemanalRef());
+    const semanaActual = isoWeekKey(new Date());
+    const data = snap.data();
+    if (data && data.semana === semanaActual) {
+      $('rec-text').textContent = data.texto;
+      $('rec-sub').textContent = 'Próxima tirada disponible el lunes.';
+      btn.textContent = 'Ya usada esta semana';
+      btn.disabled = true;
+      card.style.display = 'flex';
+    } else {
+      const hayDeseos = await hayDeseosPendientesDePareja();
+      if (!hayDeseos) {
+        card.style.display = 'none';
+        return;
+      }
+      $('rec-text').textContent = 'Tienes una tirada nueva disponible esta semana.';
+      $('rec-sub').textContent = `Descubre un deseo pendiente de ${nombrePorRol(currentRole.partner)}.`;
+      btn.textContent = 'Descubrir deseo';
+      btn.disabled = false;
+      card.style.display = 'flex';
+    }
+  } catch (e) {
+    card.style.display = 'none';
+  }
+}
+
+async function descubrirDeseoSemanal() {
+  const btn = $('btn-rec-refresh');
+  if (!btn || btn.disabled) return;
+  try {
+    const snap = await getDocs(wishesRef());
+    const pendientes = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.autor === currentRole.partner && !data.cumplido) pendientes.push({ id: d.id, texto: data.texto });
+    });
+    if (pendientes.length === 0) {
+      $('recommendation-card').style.display = 'none';
+      return;
+    }
+    const pick = pendientes[Math.floor(Math.random() * pendientes.length)];
+    await setDoc(deseoSemanalRef(), {
+      semana: isoWeekKey(new Date()),
+      wishId: pick.id,
+      texto: pick.texto
+    });
+    loadDeseoSemanal();
+  } catch (e) {
+    // silencioso
+  }
+}
+
+async function loadPartnerPendingCount() {
+  try {
+    const snap = await getDocs(wishesRef());
+    let count = 0;
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.autor === currentRole.partner && !data.cumplido) count++;
+    });
+    const badge = $('wishes-badge');
+    const pill = $('partner-pending-pill');
+    if (count > 0) {
+      if (badge) { badge.textContent = String(count); badge.style.display = 'flex'; }
+      if (pill) {
+        pill.textContent = `🎁 ${nombrePorRol(currentRole.partner)} tiene ${count} deseo${count === 1 ? '' : 's'} pendiente${count === 1 ? '' : 's'}`;
+        pill.style.display = 'inline-flex';
+      }
+    } else {
+      if (badge) badge.style.display = 'none';
+      if (pill) pill.style.display = 'none';
+    }
+  } catch (e) {
+    // silencioso
+  }
+}
+
+$('btn-rec-refresh')?.addEventListener('click', descubrirDeseoSemanal);
 
 // ─────────────────────────────────────────────
 // DATOS DE PRUEBA (solo cuenta demo)

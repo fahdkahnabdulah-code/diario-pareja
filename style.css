@@ -127,7 +127,7 @@ textarea { min-height: 72px; resize: vertical; line-height: 1.5; transition: hei
   cursor: pointer; transition: background .2s;
 }
 .btn-secondary:hover { background: var(--pink-light); }
-.btn-icon { background: none; border: none; font-size: 16px; color: var(--text-muted); cursor: pointer; padding: 4px 8px; }
+.btn-icon { background: none; border: none; font-size: 16px; color: var(--text-muted); cursor: pointer; padding: 4px 8px; position: relative; }
 .btn-icon:hover { color: var(--pink-dark); }
 .btn-text-small { background: none; border: none; font-size: 12px; color: var(--pink-dark); cursor: pointer; text-decoration: underline; padding: 2px 0; }
 .btn-delete { background: none; border: none; font-size: 13px; color: var(--text-muted); cursor: pointer; padding: 2px 6px; }
@@ -164,6 +164,18 @@ header { position: sticky; top: 0; z-index: 10; background: var(--surface); bord
 .recommendation-card { border-radius: var(--radius); padding: 16px; background: linear-gradient(135deg, var(--pink-light), var(--teal-light)); display: flex; flex-direction: column; gap: 6px; }
 .rec-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
 .rec-text { font-size: 15px; font-weight: 500; line-height: 1.4; }
+.rec-sub { font-size: 12px; color: var(--text-muted); }
+.btn-text-small:disabled { opacity: .55; cursor: default; text-decoration: none; }
+.icon-badge { position: absolute; top: -2px; right: -2px; background: var(--pink-dark); color: #fff; font-size: 9px; font-weight: 700; min-width: 15px; height: 15px; border-radius: 50%; align-items: center; justify-content: center; padding: 0 3px; }
+.partner-pill { align-self: flex-start; background: var(--gold-light); color: var(--gold-dark); font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; align-items: center; gap: 6px; }
+.deseos-tabs { display: flex; gap: 6px; background: var(--bg); padding: 4px; border-radius: 20px; margin-bottom: 4px; }
+.deseos-tabs button { flex: 1; border: none; background: transparent; padding: 7px 0; font-size: 12px; font-weight: 600; color: var(--text-muted); border-radius: 16px; cursor: pointer; }
+.deseos-tabs button.active { background: var(--surface); color: var(--pink-dark); box-shadow: var(--shadow-card); }
+.wish-card.done { background: var(--bg); opacity: .75; }
+.wish-card.done .wish-text { text-decoration: line-through; color: var(--text-muted); }
+.wish-done-date { font-size: 10px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.wish-card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.btn-check { border: 1px solid var(--pink-dark); background: transparent; color: var(--pink-dark); font-size: 11px; font-weight: 600; padding: 5px 9px; border-radius: 14px; cursor: pointer; white-space: nowrap; }
 
 /* DATE ROW */
 .date-row { display: flex; align-items: center; gap: 8px; }
