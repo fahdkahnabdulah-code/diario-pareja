@@ -1,0 +1,7 @@
+# Horarios de las funciones programadas del check-in diario.
+# (El cron declarado dentro del .js con exports.config no lo reconoce Netlify.)
+[functions."schedule-checkin"]
+  schedule = "5 0 * * *"
+
+[functions."checkin-notifier"]
+  schedule = "*/10 * * * *"
