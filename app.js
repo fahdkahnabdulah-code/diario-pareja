@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, setDoc, addDoc, deleteDoc,
-  getDocs, getDoc, query, orderBy, onSnapshot
+  getDocs, getDoc, query, orderBy, onSnapshot, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
@@ -1377,6 +1377,10 @@ let checkinStream = null;
 let checkinPaso = null; // 'frontal' | 'trasera'
 let checkinFotoFrontal = null;
 let checkinFotoTrasera = null;
+let checkinCanvasFinal = null; // foto compuesta lista para subir (se confirma tras el pie de foto)
+let checkinUnsub = null;       // listener en vivo mientras el modal está abierto
+let checkinModo = 'estado';    // 'estado' | 'captura' (en captura no se repinta por cambios remotos)
+const CHECKIN_EMOJIS = ['❤️', '😍', '😂', '🥺'];
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -1405,10 +1409,23 @@ async function loadCheckinBadge() {
 
 async function abrirModalCheckin() {
   $('modal-checkin').hidden = false;
+  checkinModo = 'estado';
   await renderCheckinEstado();
+  if (checkinUnsub) { checkinUnsub(); checkinUnsub = null; }
+  // En vivo: si tu pareja sube su foto, reacciona o comenta con el modal abierto, se actualiza solo.
+  checkinUnsub = onSnapshot(checkinRef(), snap => {
+    if (checkinModo !== 'estado') return;
+    const data = snap.data();
+    const ambos = data && data[currentRole.role]?.publicado && data[currentRole.partner]?.publicado;
+    if (ambos && $('checkin-hilo')) actualizarRevealCheckin(data);
+    else pintarCheckin(data);
+  }, () => {});
 }
 
 function cerrarModalCheckin() {
+  if (checkinUnsub) { checkinUnsub(); checkinUnsub = null; }
+  checkinModo = 'estado';
+  checkinCanvasFinal = null;
   pararStreamCamara();
   checkinFotoFrontal = null;
   checkinFotoTrasera = null;
@@ -1419,57 +1436,139 @@ function cerrarModalCheckin() {
 async function renderCheckinEstado() {
   const body = $('checkin-body');
   if (!body) return;
+  checkinModo = 'estado';
   body.innerHTML = '<p class="hint-text">Cargando...</p>';
   try {
     const snap = await getDoc(checkinRef());
-    const data = snap.data();
-    if (!data) {
-      body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check-in. Os avisaremos con una notificación 📸</p>';
-      return;
-    }
-    const ahora = new Date();
-    const momento = new Date(data.momento);
-    const yo = data[currentRole.role];
-    const suya = data[currentRole.partner];
-
-    if (ahora < momento) {
-      body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check-in. Os avisaremos con una notificación 📸</p>';
-      return;
-    }
-    if (!yo || !yo.publicado) {
-      body.innerHTML = `
-        <p class="hint-text">¡Es la hora! Haz tu foto del día antes de ver la de ${escapeHtml(nombrePorRol(currentRole.partner))}.</p>
-        <button id="btn-checkin-empezar" class="btn-primary">📸 Hacer mi foto</button>
-      `;
-      $('btn-checkin-empezar')?.addEventListener('click', iniciarCapturaCheckin);
-      return;
-    }
-    if (!suya || !suya.publicado) {
-      body.innerHTML = `
-        <img src="${yo.fotoUrl}" class="checkin-photo-mine" alt="Tu foto" />
-        <p class="hint-text">Ya subiste la tuya${yo.tarde ? ' (un poco tarde 🕐)' : ''}. Esperando a que ${escapeHtml(nombrePorRol(currentRole.partner))} suba la suya...</p>
-      `;
-      return;
-    }
-    body.innerHTML = `
-      <div class="checkin-reveal">
-        <div class="checkin-reveal-item">
-          <img src="${yo.fotoUrl}" alt="Tu foto" />
-          <span>Tú${yo.tarde ? ' 🕐' : ''}</span>
-        </div>
-        <div class="checkin-reveal-item">
-          <img src="${suya.fotoUrl}" alt="Foto de ${escapeHtml(nombrePorRol(currentRole.partner))}" />
-          <span>${escapeHtml(nombrePorRol(currentRole.partner))}${suya.tarde ? ' 🕐' : ''}</span>
-        </div>
-      </div>
-    `;
+    pintarCheckin(snap.data());
   } catch (e) {
     body.innerHTML = '<p class="hint-text">No se pudo cargar el check-in de hoy.</p>';
   }
 }
 
+function htmlReaccionesCheckin(data) {
+  const r = data.reacciones || {};
+  const mia = r[currentRole.role] || null;
+  const suya = r[currentRole.partner] || null;
+  const botones = CHECKIN_EMOJIS.map(em =>
+    `<button class="checkin-react-btn${mia === em ? ' on' : ''}" data-emoji="${em}">${em}</button>`
+  ).join('');
+  const aviso = suya ? `<span class="checkin-react-partner">${escapeHtml(nombrePorRol(currentRole.partner))}: ${escapeHtml(suya)}</span>` : '';
+  return botones + aviso;
+}
+
+function htmlHiloCheckin(data) {
+  const lista = Array.isArray(data.comentarios) ? [...data.comentarios] : [];
+  lista.sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
+  if (!lista.length) return '<p class="hint-text checkin-vacio">Aún no hay comentarios. ¡Escribe el primero!</p>';
+  return lista.map(c => {
+    const mio = c.autor === currentRole.role;
+    const quien = mio ? 'Tú' : nombrePorRol(c.autor);
+    return `<div class="checkin-bubble ${mio ? 'b-me' : 'b-her'}"><small>${escapeHtml(quien)}</small>${escapeHtml(c.texto)}</div>`;
+  }).join('');
+}
+
+function cablearReaccionesCheckin() {
+  document.querySelectorAll('#checkin-reacciones .checkin-react-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const emoji = btn.dataset.emoji;
+      try {
+        const snap = await getDoc(checkinRef());
+        const actual = snap.data()?.reacciones?.[currentRole.role] || null;
+        const nuevo = actual === emoji ? null : emoji; // tocar el mismo emoji lo quita
+        await setDoc(checkinRef(), { reacciones: { [currentRole.role]: nuevo } }, { merge: true });
+      } catch (e) { /* silencioso */ }
+    });
+  });
+}
+
+function actualizarRevealCheckin(data) {
+  const reac = $('checkin-reacciones');
+  const hilo = $('checkin-hilo');
+  if (reac) { reac.innerHTML = htmlReaccionesCheckin(data); cablearReaccionesCheckin(); }
+  if (hilo) { hilo.innerHTML = htmlHiloCheckin(data); hilo.scrollTop = hilo.scrollHeight; }
+}
+
+async function enviarComentarioCheckin() {
+  const input = $('checkin-comentario');
+  const texto = (input?.value || '').trim().slice(0, 300);
+  if (!texto) return;
+  input.value = '';
+  try {
+    await setDoc(checkinRef(), {
+      comentarios: arrayUnion({ autor: currentRole.role, texto, ts: new Date().toISOString() })
+    }, { merge: true });
+    // Aviso al otro (solo para comentarios; las reacciones no avisan). El texto no va en la notificación.
+    enviarPush(currentRole.partner, '+Dopamina', `💬 ${currentRole.displayName} ha comentado en vuestro check-in`, 'checkin-comentario');
+  } catch (e) {
+    input.value = texto; // si falla, no se pierde lo escrito
+  }
+}
+
+function pintarCheckin(data) {
+  const body = $('checkin-body');
+  if (!body) return;
+  if (!data) {
+    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check-in. Os avisaremos con una notificación 📸</p>';
+    return;
+  }
+  const ahora = new Date();
+  const momento = new Date(data.momento);
+  const yo = data[currentRole.role];
+  const suya = data[currentRole.partner];
+  const nombreOtro = nombrePorRol(currentRole.partner);
+
+  if (ahora < momento) {
+    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check-in. Os avisaremos con una notificación 📸</p>';
+    return;
+  }
+  if (!yo || !yo.publicado) {
+    body.innerHTML = `
+      <p class="hint-text">¡Es la hora! Haz tu foto del día antes de ver la de ${escapeHtml(nombreOtro)}.</p>
+      <button id="btn-checkin-empezar" class="btn-primary">📸 Hacer mi foto</button>
+    `;
+    $('btn-checkin-empezar')?.addEventListener('click', iniciarCapturaCheckin);
+    return;
+  }
+  if (!suya || !suya.publicado) {
+    body.innerHTML = `
+      <img src="${yo.fotoUrl}" class="checkin-photo-mine" alt="Tu foto" />
+      ${yo.pie ? `<div class="checkin-pie">“${escapeHtml(yo.pie)}”</div>` : ''}
+      <p class="hint-text">Ya subiste la tuya${yo.tarde ? ' (un poco tarde 🕐)' : ''}. Esperando a que ${escapeHtml(nombreOtro)} suba la suya...</p>
+    `;
+    return;
+  }
+  body.innerHTML = `
+    <div class="checkin-reveal">
+      <div class="checkin-reveal-item">
+        <img src="${yo.fotoUrl}" alt="Tu foto" />
+        <span>Tú${yo.tarde ? ' 🕐' : ''}</span>
+        ${yo.pie ? `<div class="checkin-pie">“${escapeHtml(yo.pie)}”</div>` : ''}
+      </div>
+      <div class="checkin-reveal-item">
+        <img src="${suya.fotoUrl}" alt="Foto de ${escapeHtml(nombreOtro)}" />
+        <span>${escapeHtml(nombreOtro)}${suya.tarde ? ' 🕐' : ''}</span>
+        ${suya.pie ? `<div class="checkin-pie">“${escapeHtml(suya.pie)}”</div>` : ''}
+      </div>
+    </div>
+    <div class="checkin-reacts" id="checkin-reacciones">${htmlReaccionesCheckin(data)}</div>
+    <div class="checkin-sep">Comentarios</div>
+    <div class="checkin-hilo" id="checkin-hilo">${htmlHiloCheckin(data)}</div>
+    <div class="checkin-composer">
+      <input id="checkin-comentario" type="text" maxlength="300" placeholder="Escribe un comentario…" autocomplete="off" />
+      <button id="btn-checkin-enviar">Enviar</button>
+    </div>
+  `;
+  cablearReaccionesCheckin();
+  $('btn-checkin-enviar')?.addEventListener('click', enviarComentarioCheckin);
+  $('checkin-comentario')?.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); enviarComentarioCheckin(); } });
+  const hilo = $('checkin-hilo');
+  if (hilo) hilo.scrollTop = hilo.scrollHeight;
+}
+
 async function iniciarCapturaCheckin() {
   const body = $('checkin-body');
+  checkinModo = 'captura';
   checkinPaso = 'frontal';
   body.innerHTML = `
     <div class="checkin-camera-wrap">
@@ -1516,38 +1615,61 @@ async function capturarFotoCheckin() {
     await iniciarStreamCamara('environment');
   } else {
     checkinFotoTrasera = canvas;
-    await componerYSubirCheckin();
+    await prepararPublicacionCheckin();
   }
 }
 
-async function componerYSubirCheckin() {
+function componerCanvasCheckin() {
+  const final = document.createElement('canvas');
+  final.width = checkinFotoTrasera.width;
+  final.height = checkinFotoTrasera.height;
+  const ctx = final.getContext('2d');
+  ctx.drawImage(checkinFotoTrasera, 0, 0);
+
+  const miniW = final.width * 0.32;
+  const miniH = miniW * (checkinFotoFrontal.height / checkinFotoFrontal.width);
+  const pad = final.width * 0.04;
+  const radio = miniW * 0.08;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pad + radio, pad);
+  ctx.arcTo(pad + miniW, pad, pad + miniW, pad + miniH, radio);
+  ctx.arcTo(pad + miniW, pad + miniH, pad, pad + miniH, radio);
+  ctx.arcTo(pad, pad + miniH, pad, pad, radio);
+  ctx.arcTo(pad, pad, pad + miniW, pad, radio);
+  ctx.closePath();
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.clip();
+  ctx.drawImage(checkinFotoFrontal, pad, pad, miniW, miniH);
+  ctx.restore();
+  return final;
+}
+
+// Paso 3: vista previa de la foto compuesta + pie de foto opcional, antes de subir.
+async function prepararPublicacionCheckin() {
+  $('checkin-body').innerHTML = '<p class="hint-text">Preparando tu foto...</p>';
+  try {
+    checkinCanvasFinal = componerCanvasCheckin();
+    const preview = checkinCanvasFinal.toDataURL('image/jpeg', 0.6);
+    $('checkin-body').innerHTML = `
+      <img src="${preview}" class="checkin-photo-mine" alt="Vista previa" />
+      <input id="checkin-pie" type="text" maxlength="80" placeholder="Añade un pie de foto (opcional)" autocomplete="off" />
+      <button id="btn-checkin-subir" class="btn-primary">Subir foto</button>
+      <button id="btn-checkin-repetir" class="btn-secondary">Repetir</button>
+    `;
+    $('btn-checkin-subir')?.addEventListener('click', subirCheckin);
+    $('btn-checkin-repetir')?.addEventListener('click', iniciarCapturaCheckin);
+  } catch (e) {
+    $('checkin-body').innerHTML = '<p class="hint-text">No se pudo preparar la foto. Inténtalo de nuevo.</p>';
+  }
+}
+
+async function subirCheckin() {
+  const pie = ($('checkin-pie')?.value || '').trim().slice(0, 80);
   $('checkin-body').innerHTML = '<p class="hint-text">Subiendo tu foto...</p>';
   try {
-    const final = document.createElement('canvas');
-    final.width = checkinFotoTrasera.width;
-    final.height = checkinFotoTrasera.height;
-    const ctx = final.getContext('2d');
-    ctx.drawImage(checkinFotoTrasera, 0, 0);
-
-    const miniW = final.width * 0.32;
-    const miniH = miniW * (checkinFotoFrontal.height / checkinFotoFrontal.width);
-    const pad = final.width * 0.04;
-    const radio = miniW * 0.08;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(pad + radio, pad);
-    ctx.arcTo(pad + miniW, pad, pad + miniW, pad + miniH, radio);
-    ctx.arcTo(pad + miniW, pad + miniH, pad, pad + miniH, radio);
-    ctx.arcTo(pad, pad + miniH, pad, pad, radio);
-    ctx.arcTo(pad, pad, pad + miniW, pad, radio);
-    ctx.closePath();
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    ctx.clip();
-    ctx.drawImage(checkinFotoFrontal, pad, pad, miniW, miniH);
-    ctx.restore();
-
-    const blob = await new Promise(res => final.toBlob(res, 'image/jpeg', 0.85));
+    const blob = await new Promise(res => checkinCanvasFinal.toBlob(res, 'image/jpeg', 0.85));
     const dateKey = todayKey();
     const path = `checkins/${currentRole.parejaId}/${dateKey}/${currentRole.role}.jpg`;
     const sref = storageRef(storage, path);
@@ -1560,11 +1682,11 @@ async function componerYSubirCheckin() {
     const tarde = !!(data && data.ventanaCierre && ahora > new Date(data.ventanaCierre));
 
     await setDoc(checkinRef(dateKey), {
-      [currentRole.role]: { publicado: true, fotoUrl: url, subidoEn: ahora.toISOString(), tarde }
+      [currentRole.role]: { publicado: true, fotoUrl: url, subidoEn: ahora.toISOString(), tarde, pie }
     }, { merge: true });
-
     checkinFotoFrontal = null;
     checkinFotoTrasera = null;
+    checkinCanvasFinal = null;
     await renderCheckinEstado();
     loadCheckinBadge();
   } catch (e) {

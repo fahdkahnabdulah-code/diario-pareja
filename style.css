@@ -313,6 +313,24 @@ header { position: sticky; top: 0; z-index: 10; background: var(--surface); bord
 .checkin-reveal-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .checkin-reveal-item img { width: 100%; border-radius: var(--radius-sm); }
 .checkin-reveal-item span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.checkin-pie { font-size: 13px; color: var(--text); text-align: center; font-style: italic; word-break: break-word; }
+.checkin-reacts { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.checkin-react-btn { background: var(--pink-light); border: 2px solid transparent; border-radius: 999px; padding: 3px 10px; font-size: 16px; cursor: pointer; }
+.checkin-react-btn.on { border-color: var(--pink-dark); }
+.checkin-react-partner { font-size: 12px; color: var(--text-muted); margin-left: 4px; }
+.checkin-sep { font-size: 11px; color: var(--text-muted); text-align: center; text-transform: uppercase; letter-spacing: .06em; }
+.checkin-hilo { display: flex; flex-direction: column; gap: 8px; max-height: 40vh; overflow-y: auto; }
+.checkin-vacio { text-align: center; padding: 6px 0; }
+.checkin-bubble { max-width: 82%; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.35; word-break: break-word; }
+.checkin-bubble small { display: block; font-size: 10px; font-weight: 600; opacity: .75; margin-bottom: 2px; }
+.checkin-bubble.b-me { align-self: flex-end; background: var(--pink-dark); color: #fff; border-bottom-right-radius: 4px; }
+.checkin-bubble.b-her { align-self: flex-start; background: var(--teal-light); color: var(--teal-dark); border-bottom-left-radius: 4px; }
+.checkin-composer { display: flex; gap: 8px; }
+.checkin-composer input { flex: 1; min-width: 0; }
+.checkin-composer button { padding: 0 16px; border: none; border-radius: var(--radius-sm); background: var(--pink-dark); color: #fff; font-size: 14px; cursor: pointer; }
+@media (prefers-color-scheme: dark) {
+  .checkin-bubble.b-me, .checkin-composer button { color: #3a1a26; }
+}
 
 /* POKE TOAST */
 .poke-toast {
