@@ -23,7 +23,7 @@
   var L = root.PetLogic, D = root.Dopi;
   var ctx = null, state = null, unsub = null, timer = null;
   var acting = false, busy = false, wired = false, svg = null;
-  var shopSlot = 'hat', shopSel = null, shopKey = '';
+  var shopSlot = 'food', shopSel = null, shopKey = '';
   var mode = null, scrub = 0, lastDirt = 0, drag = null, reactCls = '';
   var cleanStep = 0, stepProg = 0, foam = 0, wet = 0, washedUntil = 0;   // baño en 3 pasos
 
@@ -39,9 +39,18 @@
   };
   var ACT_ORDER = ['feed', 'play', 'pet', 'clean', 'sleep', 'surprise'];
   var SHORT = { feed: 'Comer', play: 'Jugar', pet: 'Caricia', clean: 'Bañar', sleep: 'Arropar', surprise: 'Sorpresa' };
-  var COLORS = { hunger: '#D99A2B', mood: '#E0508A', energy: '#17A493', love: '#B04E9A', clean: '#4C9FD6' };
+  var NEED_ICO = { hunger: '🍖', mood: '😊', energy: '⚡', love: '💗', clean: '🫧' };
+  // reacciones de Dopi a cada comida: al acercarla (hover) y al comerla (eat)
+  var FOOD_REACT = {
+    apple:      { hover: 'hungry', cls: 'pet-r-nod',    say: ['¡ñam!', '🍎 ¡crujiente!'],   eat: 'eat',   burst: ['😋', '✨', '💗'] },
+    strawberry: { hover: 'love',   cls: 'pet-r-sway',   say: ['mmm 🍓', '¡qué rica!'],       eat: 'love',  burst: ['💗', '🍓', '✨'] },
+    cookie:     { hover: 'hungry', cls: 'pet-r-wiggle', say: ['¡galleta!', '🍪 ¡dame!'],     eat: 'eat',   burst: ['🍪', '✨', '😋'] },
+    pizza:      { hover: 'party',  cls: 'pet-r-jump',   say: ['¡¡PIZZA!!', '🤤 ¡ay!'],       eat: 'party', burst: ['🍕', '🎉', '💗'] },
+    cake:       { hover: 'party',  cls: 'pet-r-jump',   say: ['¡¡TARTA!!', '🤩 ¡oh!'],       eat: 'love',  burst: ['🍰', '💗', '🎉'] }
+  };
+  var COLORS = { hunger: '#F5A524', mood: '#E0508A', energy: '#17A493', love: '#B04E9A', clean: '#4C9FD6' };
   var TITLES = { happy: 'Está contenta', hungry: 'Tiene hambre', sleepy: 'Durmiendo', sad: 'Os echa de menos', love: 'Está enamorada', sick: 'Está apagadita' };
-  var SLOTS = [['hat', 'Gorros'], ['face', 'Gafas'], ['neck', 'Cuello'], ['room', 'Cuarto']];
+  var SLOTS = [['food', 'Comida'], ['hat', 'Gorros'], ['face', 'Gafas'], ['neck', 'Cuello'], ['room', 'Cuarto']];
   var ROOM_SWATCH = { cozy: ['#F7E3DA', '#E7C3AE'], beach: ['#BFE7F1', '#F1DDB0'], garden: ['#CFE8C4', '#9DCB86'], attic: ['#E8CDB4', '#C99B76'] };
 
   var BLANKET = '<svg viewBox="0 0 48 36" width="52" height="40" aria-hidden="true"><rect x="2" y="4" width="44" height="28" rx="8" fill="#F6A9C6" stroke="#5A1E33" stroke-width="2.5"/><path d="M15 5v26M27 5v26M39 5v26" stroke="#17A493" stroke-width="3"/></svg>';
@@ -52,14 +61,14 @@
     { key: 'dry',   tool: TOWEL, label: 'Secar',     ms: 5000, mood: 'love',  hint: 'Sécala con la toalla ☁️' }
   ];
   var TOOLS = {
-    feed: ['🍎', '🍪', '🍓', '🍕'],
+    feed: null,   // dinámico: según la despensa
     play: ['⚽'],
     sleep: [BLANKET],
     surprise: ['🎁'],
     clean: []
   };
   var HINT = {
-    feed: 'Arrastra la comida hasta la boca de Dopi',
+    feed: 'Arrastra la comida hasta Dopi 🍽️',
     play: 'Lánzale la pelota a Dopi',
     sleep: 'Arrastra la manta sobre Dopi',
     surprise: 'Entrégale el regalo a Dopi',
@@ -127,8 +136,56 @@
       return '<div class="mess-spot" data-thr="' + x[3] + '" style="left:' + x[1] + '%;top:' + x[2] + '%;opacity:0">' + x[0] + '</div>';
     }).join('');
     room.insertBefore(m, $('pet-holder'));
+    var fb = document.createElement('div'); fb.className = 'pet-foodbar'; fb.id = 'pet-foodbar'; fb.hidden = true;
+    fb.innerHTML = '<span class="pfb-ico">🍖</span><div class="pfb-track"><i class="pfb-prev"></i><i class="pfb-fill"></i></div><b class="pfb-num">0</b>';
+    room.appendChild(fb);
     var pd = document.createElement('div'); pd.className = 'pet-puddle'; pd.setAttribute('aria-hidden', 'true');
     room.insertBefore(pd, $('pet-holder'));
+  }
+
+
+  /* ---------- barra de comida (estilo Pokémon GO) ---------- */
+  var barHunger = 0;
+  function hungerNow() { return L.decay(curState(), Date.now()).hunger; }
+  function updateFoodBar(hunger, gain) {
+    var fb = $('pet-foodbar'); if (!fb) return;
+    var show = mode === 'feed';
+    fb.hidden = !show;
+    if (hunger != null) barHunger = hunger;
+    if (!show) return;
+    var g = gain || 0;
+    fb.querySelector('.pfb-fill').style.width = barHunger + '%';
+    var pv = fb.querySelector('.pfb-prev');
+    pv.style.width = Math.min(100, barHunger + g) + '%'; pv.style.opacity = g ? '1' : '0';
+    fb.querySelector('.pfb-num').textContent = g ? barHunger + ' → ' + Math.min(100, barHunger + g) : String(barHunger);
+    fb.classList.toggle('is-full', barHunger >= L.FULL_AT);
+  }
+  function barPop(n) {
+    var fb = $('pet-foodbar'), room = $('pet-room'); if (!fb || !room || fb.hidden || !n) return;
+    var el = document.createElement('span'); el.className = 'pfb-pop'; el.textContent = '+' + n;
+    var rc = room.getBoundingClientRect(), bc = fb.getBoundingClientRect();
+    el.style.left = (bc.left - rc.left + bc.width * 0.55) + 'px'; el.style.top = (bc.top - rc.top + bc.height + 4) + 'px';
+    room.appendChild(el); setTimeout(function () { el.remove(); }, 1100);
+    fb.classList.remove('is-bump'); void fb.offsetWidth; fb.classList.add('is-bump');
+  }
+  var feedKey = '';
+  function renderFeedTray() {
+    var tray = $('pet-tray'); if (!tray) return;
+    var food = L.foodOf(curState());
+    var list = L.FOODS.filter(function (f) { return (food[f.id] || 0) > 0; });
+    var key = JSON.stringify(list.map(function (f) { return [f.id, food[f.id]]; }));
+    if (key === feedKey && !tray.hidden) return;
+    feedKey = key;
+    tray.className = 'pet-tray is-food';
+    if (!list.length) {
+      tray.innerHTML = '<div class="pet-empty">Sin comida en la despensa 😢<button type="button" data-go-shop="1">Ir a la tienda</button></div>';
+    } else {
+      tray.innerHTML = list.map(function (f) {
+        return '<div class="pet-tool-wrap"><button class="pet-tool" data-food="' + f.id + '" aria-label="' + esc(f.name) + ', quedan ' + food[f.id] + '"><span class="pet-emoji">' + f.emoji + '</span><b class="pet-count">×' + food[f.id] + '</b></button>' +
+          '<span class="pet-tool-lbl">' + esc(f.name) + '</span></div>';
+      }).join('');
+    }
+    tray.hidden = false;
   }
 
   function updateDirt(clean) {
@@ -178,6 +235,8 @@
     if (!acting) D.set(svg, { mood: r.mood });
     D.set(svg, { stage: s.stage, mix: s.harmony.mix, share: s.harmony.share, hat: s.equipped.hat, face: s.equipped.face, neck: s.equipped.neck });
     updateDirt(n.clean);
+    updateFoodBar(n.hunger);
+    if (mode === 'feed' && !drag) renderFeedTray();
 
     var room = $('pet-room');
     room.setAttribute('data-time', timeOfDay(t));
@@ -208,7 +267,7 @@
     $('pet-progress').innerHTML = prog;
 
     $('pet-needs').innerHTML = L.NEEDS.map(function (k) {
-      return '<div class="need' + (n[k] < 30 ? ' is-low' : '') + '"><div class="need-top"><span>' + L.NEED_LABEL[k] + '</span><b>' + n[k] + '</b></div>' +
+      return '<div class="need' + (n[k] < 30 ? ' is-low' : '') + '"><div class="need-top"><span class="need-ico" aria-hidden="true">' + NEED_ICO[k] + '</span><span>' + L.NEED_LABEL[k] + '</span><b>' + n[k] + '</b></div>' +
         '<div class="need-bar" role="meter" aria-label="' + L.NEED_LABEL[k] + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + n[k] + '"><i style="width:' + n[k] + '%;background:' + COLORS[k] + '"></i></div></div>';
     }).join('');
 
@@ -231,12 +290,31 @@
   }
 
   function renderShop(s) {
-    var key = JSON.stringify([s.points, s.owned, s.equipped, s.stage, shopSlot, shopSel]);
+    var key = JSON.stringify([s.points, s.owned, s.equipped, s.stage, shopSlot, shopSel, s.food]);
     if (key === shopKey) return;
     shopKey = key;
     var tabs = SLOTS.map(function (x) {
       return '<button class="pet-slot' + (x[0] === shopSlot ? ' is-on' : '') + '" data-slot="' + x[0] + '">' + x[1] + '</button>';
     }).join('');
+    if (shopSlot === 'food') {
+      var fd = L.foodOf(s);
+      var fitems = L.FOODS.map(function (f) {
+        return '<button class="pet-item pet-fooditem' + (shopSel === f.id ? ' is-sel' : '') + '" data-food-item="' + f.id + '">' +
+          '<span class="pet-item-prev pet-foodemoji">' + f.emoji + '</span><span class="pet-item-name">' + esc(f.name) + '</span>' +
+          '<span class="pet-item-tag">✦ ' + f.price + '</span><span class="pet-item-eff">+' + f.hunger + ' 🍖' + (f.mood >= 10 ? ' +' + f.mood + ' 😊' : '') + '</span><b class="pet-count">×' + (fd[f.id] || 0) + '</b></button>';
+      }).join('');
+      var sf = shopSel && L.foodById(shopSel), fbuy = '';
+      if (sf) {
+        var eff = '+' + sf.hunger + ' comida' + (sf.mood ? ' · +' + sf.mood + ' ánimo' : '') + (sf.love ? ' · +' + sf.love + ' cariño' : '');
+        fbuy = '<div class="pet-buy pet-buy-food"><span>«' + esc(sf.name) + '» · ' + eff + '</span><span class="pet-buy-btns">' +
+          [1, 5].map(function (q) {
+            var cost = sf.price * q, ok = s.points >= cost;
+            return '<button class="pet-buy-btn' + (ok ? '' : ' is-miss') + '" data-buy-food="' + sf.id + ':' + q + '"' + (ok ? '' : ' aria-disabled="true"') + '>×' + q + ' · ✦ ' + cost + '</button>';
+          }).join('') + '</span></div>';
+      }
+      $('pet-shop').innerHTML = '<div class="eyebrow">Armario y tienda</div><div class="pet-slots">' + tabs + '</div><div class="pet-items">' + fitems + '</div>' + fbuy;
+      return;
+    }
     var items = L.SHOP.filter(function (i) { return i.slot === shopSlot; }).map(function (i) {
       var owned = s.owned.indexOf(i.id) >= 0, eq = s.equipped[i.slot] === i.id;
       var locked = !owned && i.stage && s.stage < i.stage;
@@ -348,21 +426,31 @@
   }
 
   /* ---------- acciones (escritura en Firestore) ---------- */
-  function commit(type) {
+  function commit(type, opts) {
     if (busy) return;
     busy = true;
-    L.PetStore.act(ctx.fb, ctx.parejaId, ctx.people, ctx.role, type).then(function (r) {
+    var before = type === 'feed' ? hungerNow() : 0;
+    L.PetStore.act(ctx.fb, ctx.parejaId, ctx.people, ctx.role, type, opts).then(function (r) {
       busy = false;
       if (r.error === 'cooldown') return toast('Aún descansa de eso · vuelve en ' + fmt(r.left));
       if (r.error === 'no-tiene-sueño') return toast('No tiene sueño todavía');
+      if (r.error === 'sin-comida') { shopKey = ''; render(); return toast('Ya no te queda de eso · compra más en la tienda'); }
+      if (r.error === 'lleno') return toast('No tiene hambre ahora mismo 😊');
       if (r.error) return toast('No se pudo completar. Inténtalo de nuevo');
       state = r.state;
       var ev = r.events.filter(function (e) { return e.kind === 'action'; })[0];
       if (ev) floatPts(ev.pts);
-      if (r.ms && svg) { acting = true; D.flash(svg, r.mood, r.ms); setTimeout(function () { acting = false; render(); }, r.ms); }
+      var fr = type === 'feed' && opts && FOOD_REACT[opts.food];
+      var mood = fr ? fr.eat : r.mood;
+      if (type === 'feed') barPop(Math.round(r.state.needs.hunger - before));
+      if (r.ms && svg) { acting = true; D.flash(svg, mood, r.ms); setTimeout(function () { acting = false; render(); }, r.ms); }
       handleEvents(r.events);
       if (type === 'surprise' && ctx.push) ctx.push(ctx.partner, '+Dopamina', '🎁 ' + ctx.displayName + ' le ha dado un mimo sorpresa a Dopi', 'dopi-sorpresa');
       shopKey = ''; render();
+      if (type === 'feed' && mode === 'feed') {          // se puede seguir dando de comer
+        if (r.state.needs.hunger >= L.FULL_AT) { toast('Dopi está llena 😊'); setTimeout(function () { if (mode === 'feed') endMode(); }, 1800); }
+        else renderFeedTray();
+      }
     }).catch(function () { busy = false; toast('Sin conexión. Inténtalo de nuevo'); });
   }
 
@@ -379,9 +467,11 @@
   }
   function showHint(type) {
     var bar = $('pet-hintbar'), tray = $('pet-tray');
-    if (!type) { bar.hidden = true; tray.hidden = true; tray.innerHTML = ''; return; }
+    tray.className = 'pet-tray';
+    if (!type) { bar.hidden = true; tray.hidden = true; tray.innerHTML = ''; updateFoodBar(); return; }
     bar.hidden = false;
     if (type === 'clean') return renderCleanTray();
+    if (type === 'feed') { feedKey = ''; $('pet-hint-text').textContent = HINT.feed; return renderFeedTray(); }
     $('pet-hint-text').textContent = HINT[type];
     var tools = TOOLS[type];
     if (tools && tools.length) {
@@ -418,14 +508,15 @@
 
   /* arrastrar herramienta (comida, pelota, manta, regalo, esponja) */
   function startDrag(btn, ev) {
-    if (drag || busy || !mode || !TOOLS[mode]) return;
-    var type = mode, step = -1;
+    if (drag || busy || !mode || !(TOOLS[mode] || mode === 'feed')) return;
+    var type = mode, step = -1, food = null;
+    if (type === 'feed') { food = btn.getAttribute('data-food'); if (!food) return; }
     if (type === 'clean') { step = +btn.getAttribute('data-step'); if (step < cleanStep) return; if (step > cleanStep) { toast('Primero: ' + STEPS[cleanStep].label.toLowerCase()); return; } }
     var ghost = document.createElement('div');
-    ghost.className = 'pet-ghost'; ghost.innerHTML = btn.innerHTML;
+    ghost.className = 'pet-ghost'; ghost.innerHTML = (btn.querySelector('.pet-emoji') || btn).innerHTML;
     document.body.appendChild(ghost);
     btn.classList.add('is-dragging');
-    drag = { type: type, step: step, ghost: ghost, btn: btn, sx: ev.clientX, sy: ev.clientY, lx: ev.clientX, ly: ev.clientY, moved: false, over: false, dist: 0, tl: 0, bub: 0, id: ev.pointerId };
+    drag = { type: type, step: step, food: food, ghost: ghost, btn: btn, sx: ev.clientX, sy: ev.clientY, lx: ev.clientX, ly: ev.clientY, moved: false, over: false, dist: 0, tl: 0, bub: 0, id: ev.pointerId };
     place(ev.clientX, ev.clientY);
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragUp);
@@ -441,7 +532,7 @@
     var over = inBody(e.clientX, e.clientY - 34);
     if (over !== d.over) {
       d.over = over; setTarget(over);
-      if (d.type === 'feed') { acting = over; if (over) D.set(svg, { mood: 'hungry' }); else render(); }
+      if (d.type === 'feed') foodHover(over, d.food);
       if (d.type === 'clean') { acting = over; if (over) reactStart(d.step); else { clearReact(); render(); } }
     }
     if (d.type === 'clean' && over) {
@@ -453,6 +544,23 @@
       if (stepProg >= 1) { stepDone(); return; }
     }
     d.lx = e.clientX; d.ly = e.clientY;
+  }
+  function say(text) {
+    var h = $('pet-holder'); if (!h) return;
+    var r = h.getBoundingClientRect();
+    spawn(r.left + r.width * 0.2, r.top + r.height * 0.3, text, 'is-say');
+  }
+  function foodHover(over, id) {
+    var h = $('pet-holder'), R = FOOD_REACT[id], f = L.foodById(id);
+    clearReact(); acting = over;
+    if (!over || !h || !svg || !R) { updateFoodBar(hungerNow()); render(); return; }
+    if (hungerNow() >= L.FULL_AT) {                      // está llena: rechaza la comida
+      reactCls = 'pet-r-no'; h.classList.add(reactCls); D.set(svg, { mood: 'happy' });
+      say('no puedo más 🫢'); updateFoodBar(hungerNow()); return;
+    }
+    reactCls = R.cls; h.classList.add(reactCls); D.set(svg, { mood: R.hover });
+    say(R.say[Math.floor(Math.random() * R.say.length)]);
+    updateFoodBar(hungerNow(), f.hunger);
   }
   function washFx(step, x, y) {
     if (step === 0) spawn(x + (Math.random() * 40 - 20), y - 14, Math.random() < 0.5 ? '🫧' : '🫧', 'is-bubble');
@@ -467,7 +575,7 @@
     D.set(svg, { mood: STEPS[step].mood });
     var say = SAY[step][Math.floor(Math.random() * 2)];
     var r = h.getBoundingClientRect();
-    spawn(r.left + r.width * 0.72, r.top + r.height * 0.28, say, 'is-say');
+    spawn(r.left + r.width * 0.2, r.top + r.height * 0.3, say, 'is-say');
   }
   function clearReact() {
     var h = $('pet-holder'); if (h && reactCls) h.classList.remove(reactCls); reactCls = '';
@@ -505,12 +613,16 @@
     if (type === 'clean') {          // el progreso se conserva; sigue en modo limpiar
       finishDrag(); clearReact(); acting = false; render(); return;
     }
+    var opts = type === 'feed' ? { food: d.food } : undefined;
     if (d.over) {                    // soltado sobre Dopi
-      var g = d.ghost; finishDrag(); acting = false;
-      g.remove(); eatBurst(type, e.clientX, e.clientY - 34);
-      commit(type); endMode(true); return;
+      var g = d.ghost; finishDrag(); clearReact(); acting = false;
+      g.remove();
+      if (type === 'feed' && hungerNow() >= L.FULL_AT) { toast('No tiene hambre ahora mismo 😊'); render(); return; }
+      eatBurst(type, e.clientX, e.clientY - 34, opts);
+      commit(type, opts); if (type !== 'feed') endMode(true); return;
     }
     if (!d.moved) {                  // toque simple: el objeto vuela solo hasta Dopi
+      if (type === 'feed' && hungerNow() >= L.FULL_AT) { finishDrag(); toast('No tiene hambre ahora mismo 😊'); acting = false; render(); return; }
       var r = svg.getBoundingClientRect();
       var tx = r.left + r.width / 2, ty = r.top + r.height * 0.62;
       var ghost = d.ghost;
@@ -521,13 +633,15 @@
       var btn = d.btn;
       window.removeEventListener('pointermove', onDragMove); window.removeEventListener('pointerup', onDragUp); window.removeEventListener('pointercancel', onDragCancel);
       drag = null; btn.classList.remove('is-dragging'); setTarget(false);
-      setTimeout(function () { ghost.remove(); eatBurst(type, tx, ty); commit(type); endMode(true); }, 420);
+      if (type === 'feed') foodHover(true, opts.food);
+      setTimeout(function () { ghost.remove(); clearReact(); eatBurst(type, tx, ty, opts); commit(type, opts); if (type !== 'feed') endMode(true); }, 420);
       return;
     }
-    finishDrag(); acting = false; render();   // soltado fuera: vuelve a la bandeja
+    finishDrag(); clearReact(); acting = false; render();   // soltado fuera: vuelve a la bandeja
   }
-  function eatBurst(type, x, y) {
+  function eatBurst(type, x, y, opts) {
     var e = { feed: ['😋', '✨', '💗'], play: ['⭐', '✨', '💗'], sleep: ['💤', '🌙', '💗'], surprise: ['🎉', '💗', '✨'] }[type] || ['💗'];
+    if (type === 'feed' && opts && FOOD_REACT[opts.food]) e = FOOD_REACT[opts.food].burst;
     e.forEach(function (c, i) { setTimeout(function () { spawn(x + (i - 1) * 22, y, c, 'is-heart'); }, i * 90); });
   }
 
@@ -586,6 +700,23 @@
     var s = curState();
     var slotBtn = ev.target.closest('[data-slot]');
     if (slotBtn) { shopSlot = slotBtn.getAttribute('data-slot'); shopSel = null; return render(); }
+    var bf = ev.target.closest('[data-buy-food]');
+    if (bf) {
+      var pq = bf.getAttribute('data-buy-food').split(':'), fid = pq[0], q = +pq[1], fo = L.foodById(fid);
+      if (!fo || busy) return;
+      if (s.points < fo.price * q) return toast('Te faltan ' + (fo.price * q - s.points) + ' ✦');
+      busy = true;
+      L.PetStore.buyFood(ctx.fb, ctx.parejaId, fid, q).then(function (r) {
+        busy = false;
+        if (r.error === 'faltan-chispas') return toast('Te faltan ' + r.left + ' ✦');
+        if (r.error === 'despensa-llena') return toast('La despensa está llena (máx. 99)');
+        if (r.error) return toast('No se pudo comprar');
+        state = r.state; shopKey = ''; toast('+' + q + ' ' + fo.emoji + ' ' + fo.name.toLowerCase() + ' en la despensa'); render();
+      }).catch(function () { busy = false; toast('Sin conexión. Inténtalo de nuevo'); });
+      return;
+    }
+    var fi = ev.target.closest('[data-food-item]');
+    if (fi) { var fid2 = fi.getAttribute('data-food-item'); shopSel = shopSel === fid2 ? null : fid2; return render(); }
     var buyBtn = ev.target.closest('[data-buy]');
     if (buyBtn) {
       var item = L.SHOP.filter(function (i) { return i.id === buyBtn.getAttribute('data-buy'); })[0];
@@ -630,6 +761,11 @@
       ev.preventDefault(); startDrag(b, ev);
     });
     $('pet-hint-cancel').addEventListener('click', function () { endMode(); });
+    $('pet-tray').addEventListener('click', function (ev) {
+      if (!ev.target.closest('[data-go-shop]')) return;
+      endMode(); shopSlot = 'food'; shopSel = null; shopKey = ''; render();
+      var sh = $('pet-shop'); if (sh && sh.scrollIntoView) sh.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     $('pet-holder').addEventListener('pointerdown', onHolderDown);
     $('pet-shop').addEventListener('click', onShopClick);
     $('pet-reset-btn').addEventListener('click', onResetClick);
@@ -655,7 +791,7 @@
     if (busy) return;
     busy = true; endMode(true);
     L.PetStore.reset(ctx.fb, ctx.parejaId).then(function (r) {
-      busy = false; state = r.state; shopKey = ''; shopSel = null; shopSlot = 'hat'; acting = false;
+      busy = false; state = r.state; shopKey = ''; shopSel = null; shopSlot = 'food'; acting = false;
       toast('Dopi ha vuelto a ser un huevito 🥚');
       render();
     }).catch(function () { busy = false; toast('No se pudo reiniciar. Inténtalo de nuevo'); });

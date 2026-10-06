@@ -15,8 +15,21 @@
   var DECAY = { hunger: 4, mood: 3, energy: 2.5, love: 2, clean: 5 };   // puntos por hora (se ensucia rápido)
   var SLEEP_GAIN = 10;                 // energía por hora mientras duerme
 
+  // Alimentos: precio en ✦ y lo que suben a las barras (más caro = más sacia / anima)
+  var FOODS = [
+    { id: 'apple',      emoji: '🍎', name: 'Manzana', price: 4,  hunger: 12, mood: 2 },
+    { id: 'strawberry', emoji: '🍓', name: 'Fresa',   price: 7,  hunger: 15, mood: 6 },
+    { id: 'cookie',     emoji: '🍪', name: 'Galleta', price: 10, hunger: 9,  mood: 16 },
+    { id: 'pizza',      emoji: '🍕', name: 'Pizza',   price: 24, hunger: 38, mood: 8 },
+    { id: 'cake',       emoji: '🍰', name: 'Tarta',   price: 40, hunger: 28, mood: 28, love: 8 }
+  ];
+  var START_FOOD = { apple: 10 };
+  var FULL_AT = 96;                    // a partir de aquí no quiere más comida
+  function foodById(id) { return FOODS.filter(function (f) { return f.id === id; })[0]; }
+  function foodOf(state) { return (state && state.food) || Object.assign({}, START_FOOD); }
+
   var ACTIONS = {
-    feed:     { label: 'Dar de comer', mood: 'eat',   ms: 2400, cd: 3 * H,  delta: { hunger: 35, mood: 5 },              pts: 3, xp: 5 },
+    feed:     { label: 'Dar de comer', mood: 'eat',   ms: 2400, cd: 0,      delta: {},                                   pts: 2, xp: 4, dailyMax: 4 },
     play:     { label: 'Jugar',        mood: 'play',  ms: 3000, cd: 2 * H,  delta: { mood: 30, energy: -10, hunger: -5 }, pts: 3, xp: 5 },
     pet:      { label: 'Acariciar',    mood: 'pet',   ms: 2200, cd: 30 * MIN, delta: { love: 20, mood: 5 },              pts: 1, xp: 2, dailyMax: 6 },
     clean:    { label: 'Bañar',        mood: 'love',  ms: 2600, cd: 3 * H,  delta: { clean: 100, mood: 8 },              pts: 5, xp: 8 },
@@ -93,7 +106,7 @@
   }
 
   /* Aplica una acción de cuidado. Puro: devuelve { state, events } o { error } */
-  function applyAction(state, uid, type, now, people) {
+  function applyAction(state, uid, type, now, people, opts) {
     var A = ACTIONS[type];
     if (!A) return { error: 'acción desconocida' };
     var left = cooldownLeft(state, uid, type, now);
@@ -105,7 +118,17 @@
     var s = JSON.parse(JSON.stringify(state));
     var events = [];
     s.needs = decay(state, now);
-    Object.keys(A.delta).forEach(function (k) { s.needs[k] = clamp(s.needs[k] + A.delta[k]); });
+    var delta = A.delta, food = null;
+    if (type === 'feed') {
+      food = foodById(opts && opts.food);
+      if (!food) return { error: 'alimento-desconocido' };
+      s.food = s.food || Object.assign({}, START_FOOD);
+      if ((s.food[food.id] || 0) < 1) return { error: 'sin-comida' };
+      if (s.needs.hunger >= FULL_AT) return { error: 'lleno' };
+      s.food[food.id]--;
+      delta = { hunger: food.hunger, mood: food.mood || 0, love: food.love || 0 };
+    }
+    Object.keys(delta).forEach(function (k) { s.needs[k] = clamp(s.needs[k] + delta[k]); });
     s.lastTick = now;
     if (type === 'sleep') s.sleepingUntil = now + 6 * H;
     else if (s.sleepingUntil && s.sleepingUntil > now && type !== 'pet') s.sleepingUntil = now; // despertarla
@@ -122,9 +145,10 @@
     var d = dayFor(s, now);
     d[uid] = d[uid] || { actions: 0, pets: 0 };
     d[uid].actions++;
-    var counts = type !== 'pet' || ++d[uid].pets <= A.dailyMax;
+    var counter = type === 'pet' ? 'pets' : type === 'feed' ? 'feeds' : null;
+    var counts = !counter || (d[uid][counter] = (d[uid][counter] || 0) + 1) <= A.dailyMax;
     if (counts) { s.points += A.pts; events.push(addXp(s, d, A.xp, now)); }
-    events.push({ kind: 'action', type: type, uid: uid, pts: counts ? A.pts : 0 });
+    events.push({ kind: 'action', type: type, uid: uid, pts: counts ? A.pts : 0, food: food ? food.id : null });
 
     // ¿hoy ya habéis cuidado los dos? -> bonus visible una vez
     var both = (people || []).every(function (p) { return d[p.uid] && d[p.uid].actions > 0; });
@@ -214,7 +238,7 @@
       needs: { hunger: 80, mood: 80, energy: 80, love: 80, clean: 80 }, lastTick: now, sleepingUntil: 0,
       harmony: { mix: 0.5, share: 0.5, teamDays14: 0 }, teamDaysTotal: 0,
       equipped: { hat: 'none', face: 'none', neck: 'none', room: 'cozy' }, owned: ['cozy'],
-      cooldowns: {}, lastAction: {}, days: {}, streak: { weeks: 0, lastWeekId: null }
+      cooldowns: {}, lastAction: {}, days: {}, streak: { weeks: 0, lastWeekId: null }, food: Object.assign({}, START_FOOD)
     };
   }
 
@@ -235,13 +259,13 @@
      PetStore.act({ db, doc, runTransaction, collection }, coupleId, people, uid, 'feed')         */
   var PetStore = {
     ref: function (fb, coupleId) { return fb.doc(fb.db, 'parejas', coupleId, 'mascota', 'estado'); },
-    act: function (fb, coupleId, people, uid, type) {
+    act: function (fb, coupleId, people, uid, type, opts) {
       var ref = PetStore.ref(fb, coupleId);
       return fb.runTransaction(fb.db, function (tx) {
         return tx.get(ref).then(function (snap) {
           var now = Date.now();
           var s = snap.exists() ? snap.data() : newState(now);
-          var r = applyAction(s, uid, type, now, people);
+          var r = applyAction(s, uid, type, now, people, opts);
           if (r.error) return r;
           tx.set(ref, r.state);
           var logRef = fb.doc(fb.collection(fb.db, 'parejas', coupleId, 'mascotaLog'));
@@ -273,6 +297,22 @@
           if (item.stage && s.stage < item.stage) return { error: 'etapa', stage: item.stage };
           s.points -= item.price; s.owned.push(item.id);
           tx.update(ref, { points: s.points, owned: s.owned }); return { state: s };
+        });
+      });
+    },
+    buyFood: function (fb, coupleId, foodId, qty) {
+      var ref = PetStore.ref(fb, coupleId), f = foodById(foodId);
+      qty = Math.max(1, qty | 0);
+      return fb.runTransaction(fb.db, function (tx) {
+        return tx.get(ref).then(function (snap) {
+          var s = snap.exists() ? snap.data() : newState(Date.now());
+          if (!f) return { error: 'alimento-desconocido' };
+          var cost = f.price * qty;
+          if (s.points < cost) return { error: 'faltan-chispas', left: cost - s.points };
+          s.food = s.food || Object.assign({}, START_FOOD);
+          if ((s.food[f.id] || 0) + qty > 99) return { error: 'despensa-llena' };
+          s.points -= cost; s.food[f.id] = (s.food[f.id] || 0) + qty;
+          tx.set(ref, s); return { state: s };
         });
       });
     },
@@ -314,6 +354,7 @@
   ];
 
   root.PetLogic = {
+    FOODS: FOODS, FULL_AT: FULL_AT, foodById: foodById, foodOf: foodOf,
     NEEDS: NEEDS, NEED_LABEL: NEED_LABEL, ACTIONS: ACTIONS, REWARDS: REWARDS, SHOP: SHOP,
     STAGE_XP: STAGE_XP, STAGE_TEAMDAYS: STAGE_TEAMDAYS,
     newState: newState, decay: decay, resolveMood: resolveMood, applyAction: applyAction, award: award,

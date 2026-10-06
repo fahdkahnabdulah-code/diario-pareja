@@ -518,3 +518,50 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .pet-ui .pet-tool.is-locked{opacity:.32;filter:grayscale(.6);cursor:not-allowed}
 .pet-ui .pet-tool.is-done{opacity:.55;cursor:default}
 .pet-ui .pet-tick{position:absolute;right:-4px;top:-4px;width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;display:grid;place-items:center}
+
+/* ===== Comida: barra estilo Pokémon GO, despensa y reacciones ===== */
+.pet-foodbar{position:absolute;left:10px;top:10px;right:132px;height:36px;display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 3px 0 rgba(0,0,0,.14),0 6px 14px rgba(0,0,0,.12);z-index:8;color:#2A1520}
+.pet-foodbar[hidden]{display:none}
+.pet-foodbar .pfb-ico{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:radial-gradient(circle at 35% 30%,#FFE08A,#FF9A1F);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
+.pet-foodbar .pfb-track{position:relative;flex:1;height:16px;border-radius:9px;background:#E6DEDA;box-shadow:inset 0 2px 3px rgba(0,0,0,.22);overflow:hidden}
+.pet-foodbar .pfb-fill,.pet-foodbar .pfb-prev{position:absolute;left:0;top:0;bottom:0;display:block;border-radius:inherit;transition:width .7s cubic-bezier(.25,.8,.3,1)}
+.pet-foodbar .pfb-fill{background:linear-gradient(180deg,#FFD34D,#FF9A1F);box-shadow:inset 0 -3px 0 rgba(0,0,0,.14)}
+.pet-foodbar .pfb-fill::after{content:'';position:absolute;left:5px;right:5px;top:2px;height:4px;border-radius:4px;background:rgba(255,255,255,.6)}
+.pet-foodbar .pfb-prev{background:repeating-linear-gradient(135deg,#FFE9A8 0 6px,#FFD070 6px 12px);opacity:0;animation:pfb-stripes 1s linear infinite}
+@keyframes pfb-stripes{from{background-position:0 0}to{background-position:17px 0}}
+.pet-foodbar .pfb-num{flex:none;min-width:34px;text-align:right;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pet-foodbar.is-full .pfb-fill{background:linear-gradient(180deg,#8EE6A6,#2BB673)}
+.pet-foodbar.is-bump{animation:pfb-bump .5s ease}
+@keyframes pfb-bump{0%,100%{transform:scale(1)}35%{transform:scale(1.06)}}
+.pfb-pop{position:absolute;z-index:9;pointer-events:none;font-size:20px;font-weight:900;color:#FF8A00;text-shadow:0 2px 0 #fff,0 0 8px rgba(255,255,255,.9);transform:translateX(-50%);animation:pfb-pop 1.1s ease-out forwards}
+@keyframes pfb-pop{0%{opacity:0;transform:translate(-50%,0) scale(.5)}20%{opacity:1;transform:translate(-50%,0) scale(1.25)}100%{opacity:0;transform:translate(-50%,28px) scale(1)}}
+.pet-ui .pet-tray.is-food{flex-wrap:wrap;gap:10px}
+.pet-ui .pet-tray.is-food .pet-tool{width:54px;height:54px;font-size:30px}
+.pet-ui .pet-emoji{line-height:1}
+.pet-ui .pet-count{position:absolute;right:-6px;bottom:-6px;min-width:22px;height:20px;padding:0 5px;border-radius:10px;background:var(--rose);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;border:2px solid var(--surface)}
+.pet-ui .pet-empty{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:14px;color:var(--ink-2);font-weight:600;padding:4px 0}
+.pet-ui .pet-empty button{appearance:none;border:0;background:var(--rose);color:#fff;font:inherit;font-size:13px;font-weight:700;padding:8px 16px;border-radius:999px;cursor:pointer}
+/* reacciones a cada comida */
+.pet-ui .room-pet.pet-r-nod{animation:pet-r-nod .5s ease-in-out infinite}
+.pet-ui .room-pet.pet-r-sway{animation:pet-r-soap .9s ease-in-out infinite}
+.pet-ui .room-pet.pet-r-wiggle{animation:pet-r-wiggle .26s ease-in-out infinite}
+.pet-ui .room-pet.pet-r-jump{animation:pet-r-jump .55s ease-in-out infinite}
+.pet-ui .room-pet.pet-r-no{animation:pet-r-no .5s ease-in-out infinite}
+@keyframes pet-r-nod{0%,100%{transform:translateY(0)}50%{transform:translateY(5px) scale(1.02,.97)}}
+@keyframes pet-r-wiggle{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@keyframes pet-r-jump{0%,100%{transform:translateY(0) scale(1.05,.93)}50%{transform:translateY(-16px) scale(.97,1.04)}}
+@keyframes pet-r-no{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+/* barras de necesidades estilo Pokémon GO */
+.pet-ui .need-top{gap:7px}
+.pet-ui .need-ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;line-height:1;background:var(--surface-2);box-shadow:inset 0 -2px 0 rgba(0,0,0,.1);flex:none}
+.pet-ui .need-bar{height:14px;border-radius:8px;background:rgba(120,90,100,.18);box-shadow:inset 0 2px 3px rgba(0,0,0,.2);overflow:hidden}
+.pet-ui .need-bar i{position:relative;border-radius:8px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.16)}
+.pet-ui .need-bar i::after{content:'';position:absolute;left:5px;right:5px;top:2px;height:4px;border-radius:4px;background:rgba(255,255,255,.55)}
+/* tienda de comida */
+.pet-ui .pet-fooditem{position:relative}
+.pet-ui .pet-foodemoji{font-size:34px;line-height:1;display:grid;place-items:center}
+.pet-ui .pet-fooditem .pet-count{right:8px;top:8px;bottom:auto}
+.pet-ui .pet-buy-food{flex-direction:column;align-items:stretch;gap:8px;text-align:center}
+.pet-ui .pet-buy-btns{display:flex;gap:8px;justify-content:center}
+.pet-ui .pet-buy-btn.is-miss{opacity:.45}
+.pet-ui .pet-item-eff{font-size:11px;color:var(--ink-3);font-weight:600}
