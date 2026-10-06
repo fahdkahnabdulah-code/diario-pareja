@@ -485,3 +485,36 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .pet-ui .pet-reset button.is-armed{background:var(--rose-soft);color:var(--rose);border-color:var(--rose)}
 .pet-ui .pet-reset p{margin:8px 12px 0;font-size:12px;color:var(--ink-3)}
 .pet-ui .pet-reset p[hidden]{display:none}
+
+/* ===== Baño en 3 pasos + cuarto que se ensucia ===== */
+.pet-ui .room{position:relative;overflow:hidden}
+.pet-mess{position:absolute;inset:0;pointer-events:none;z-index:1}
+.pet-mess .mess-haze{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 70%,rgba(120,90,40,.0) 0%,rgba(110,80,35,.34) 100%);opacity:0;mix-blend-mode:multiply;transition:opacity .4s}
+.pet-mess .mess-spot{position:absolute;transform:translate(-50%,-50%);transition:opacity .35s}
+.pet-mess .mess-stain{display:block;border-radius:48% 52% 45% 55%/55% 45% 55% 45%;background:radial-gradient(ellipse at 40% 40%,rgba(112,78,40,.55),rgba(112,78,40,.28) 60%,transparent 72%)}
+.pet-mess .mess-mud{display:block;border-radius:50%;background:radial-gradient(ellipse,rgba(94,64,34,.62),rgba(94,64,34,.3) 62%,transparent 74%)}
+.pet-mess .mess-it{display:block;font-size:17px;line-height:1;filter:sepia(.35) saturate(.85)}
+.pet-mess .mess-it.big{font-size:24px}
+.pet-mess .mess-fly{display:block;font-size:16px;line-height:1;animation:pet-fly 2.4s ease-in-out infinite}
+.pet-mess .mess-fly.f2{animation-duration:3.1s;animation-direction:reverse}
+.pet-mess .mess-fly.f3{animation-duration:2.8s;animation-delay:-1s}
+@keyframes pet-fly{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(26px,-14px) rotate(20deg)}50%{transform:translate(8px,18px) rotate(-10deg)}75%{transform:translate(-24px,6px) rotate(14deg)}100%{transform:translate(0,0) rotate(0)}}
+.pet-puddle{position:absolute;left:50%;bottom:4px;width:200px;height:26px;border-radius:50%;background:radial-gradient(ellipse,rgba(110,190,230,.65),rgba(110,190,230,.3) 65%,transparent 72%);opacity:0;transform:translateX(-50%);pointer-events:none;z-index:1;transition:opacity .3s,transform .3s}
+.pet-ui .room-pet{z-index:2}
+.pet-ui .room-pet.is-wet svg.dopi{filter:brightness(.97) saturate(1.12) drop-shadow(0 3px 2px rgba(80,160,210,.45))}
+.pet-ui .room-pet.pet-r-soap{animation:pet-r-soap .42s ease-in-out infinite}
+.pet-ui .room-pet.pet-r-rinse{animation:pet-r-rinse .13s linear infinite}
+.pet-ui .room-pet.pet-r-dry{animation:pet-r-dry .55s ease-in-out infinite}
+@keyframes pet-r-soap{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg) translateY(-2px)}}
+@keyframes pet-r-rinse{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
+@keyframes pet-r-dry{0%,100%{transform:scale(1.02,.96)}50%{transform:scale(.97,1.04) translateY(-3px)}}
+.pet-fx.is-drop{animation:pet-drop .7s ease-in forwards;font-size:16px}
+@keyframes pet-drop{0%{opacity:0;transform:translateY(-14px)}20%{opacity:1}100%{opacity:0;transform:translateY(40px)}}
+.pet-fx.is-say{font-size:13px;font-weight:800;background:#fff;color:#2A1520;padding:3px 9px;border-radius:12px;border:2px solid #2A1520;white-space:nowrap;animation-duration:1.4s}
+.pet-ui .pet-tray{gap:16px}
+.pet-ui .pet-tool-wrap{display:flex;flex-direction:column;align-items:center;gap:5px}
+.pet-ui .pet-tool-lbl{font-size:11px;font-weight:700;color:var(--ink-2)}
+.pet-ui .pet-tool{position:relative}
+.pet-ui .pet-tool.is-locked{opacity:.32;filter:grayscale(.6);cursor:not-allowed}
+.pet-ui .pet-tool.is-done{opacity:.55;cursor:default}
+.pet-ui .pet-tick{position:absolute;right:-4px;top:-4px;width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;display:grid;place-items:center}

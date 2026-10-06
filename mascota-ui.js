@@ -24,9 +24,9 @@
   var ctx = null, state = null, unsub = null, timer = null;
   var acting = false, busy = false, wired = false, svg = null;
   var shopSlot = 'hat', shopSel = null, shopKey = '';
-  var mode = null, scrub = 0, lastDirt = 0, drag = null;
+  var mode = null, scrub = 0, lastDirt = 0, drag = null, reactCls = '';
+  var cleanStep = 0, stepProg = 0, foam = 0, wet = 0, washedUntil = 0;   // baño en 3 pasos
 
-  var CLEAN_DIST = 520;   // píxeles de frotado para dejarla limpia
   var RUB_DIST = 240;     // píxeles de caricia para que cuente
 
   var ICON = {
@@ -38,30 +38,59 @@
     surprise: 'M4 10h16v10H4ZM3 7h18v3H3ZM12 7v13M12 7C10.5 3.5 6.5 4 7.5 6.5M12 7c1.5-3.5 5.5-3 4.5-.5'
   };
   var ACT_ORDER = ['feed', 'play', 'pet', 'clean', 'sleep', 'surprise'];
-  var SHORT = { feed: 'Comer', play: 'Jugar', pet: 'Caricia', clean: 'Limpiar', sleep: 'Arropar', surprise: 'Sorpresa' };
+  var SHORT = { feed: 'Comer', play: 'Jugar', pet: 'Caricia', clean: 'Bañar', sleep: 'Arropar', surprise: 'Sorpresa' };
   var COLORS = { hunger: '#D99A2B', mood: '#E0508A', energy: '#17A493', love: '#B04E9A', clean: '#4C9FD6' };
   var TITLES = { happy: 'Está contenta', hungry: 'Tiene hambre', sleepy: 'Durmiendo', sad: 'Os echa de menos', love: 'Está enamorada', sick: 'Está apagadita' };
   var SLOTS = [['hat', 'Gorros'], ['face', 'Gafas'], ['neck', 'Cuello'], ['room', 'Cuarto']];
   var ROOM_SWATCH = { cozy: ['#F7E3DA', '#E7C3AE'], beach: ['#BFE7F1', '#F1DDB0'], garden: ['#CFE8C4', '#9DCB86'], attic: ['#E8CDB4', '#C99B76'] };
 
   var BLANKET = '<svg viewBox="0 0 48 36" width="52" height="40" aria-hidden="true"><rect x="2" y="4" width="44" height="28" rx="8" fill="#F6A9C6" stroke="#5A1E33" stroke-width="2.5"/><path d="M15 5v26M27 5v26M39 5v26" stroke="#17A493" stroke-width="3"/></svg>';
+  var TOWEL = '<svg viewBox="0 0 48 36" width="52" height="40" aria-hidden="true"><rect x="3" y="5" width="42" height="26" rx="5" fill="#9ADBEF" stroke="#1F4E63" stroke-width="2.5"/><path d="M13 5v26M35 5v26" stroke="#fff" stroke-width="3.5"/><path d="M3 31c4 3 8 3 12 0s8-3 12 0 8 3 12 0" stroke="#1F4E63" stroke-width="2" fill="none"/></svg>';
+  var STEPS = [
+    { key: 'soap',  tool: '🧽',  label: 'Enjabonar', dist: 380, mood: 'pet',   hint: 'Paso 1 de 3 · Enjabona a Dopi con la esponja 🫧' },
+    { key: 'rinse', tool: '🚿',  label: 'Aclarar',   dist: 300, mood: 'party', hint: 'Paso 2 de 3 · Aclara el jabón con la ducha 🚿' },
+    { key: 'dry',   tool: TOWEL, label: 'Secar',     dist: 320, mood: 'love',  hint: 'Paso 3 de 3 · Sécala con la toalla ☁️' }
+  ];
   var TOOLS = {
     feed: ['🍎', '🍪', '🍓', '🍕'],
     play: ['⚽'],
     sleep: [BLANKET],
     surprise: ['🎁'],
-    clean: ['🧽']
+    clean: []
   };
   var HINT = {
     feed: 'Arrastra la comida hasta la boca de Dopi',
     play: 'Lánzale la pelota a Dopi',
     sleep: 'Arrastra la manta sobre Dopi',
     surprise: 'Entrégale el regalo a Dopi',
-    clean: 'Frota a Dopi con la esponja 🫧',
+    clean: '',
     pet: 'Acaricia a Dopi frotando de lado a lado ✨ hasta que salga un corazón'
   };
   // manchas: x, y, radio, umbral de suciedad (0-100) a partir del cual aparecen
-  var DIRT = [[78, 100, 9, 8], [124, 132, 7, 18], [62, 140, 8, 28], [112, 82, 6, 38], [142, 112, 8, 48], [92, 152, 7, 58], [100, 120, 10, 68]];
+  var DIRT = [[78, 100, 9, 4], [124, 132, 7, 10], [62, 140, 8, 16], [112, 82, 6, 22], [142, 112, 8, 28], [92, 152, 7, 34], [100, 120, 10, 40],
+    [70, 120, 7, 46], [130, 98, 7, 52], [88, 78, 6, 58], [118, 150, 8, 64], [74, 156, 7, 70], [104, 100, 9, 76], [136, 142, 7, 82], [96, 138, 11, 88]];
+  // espuma: círculos repartidos por el cuerpo (umbral 0-1 según cuánta espuma hay)
+  var FOAM = (function () {
+    var out = [], seed = 7;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    for (var i = 0; i < 26; i++) {
+      var a = rnd() * Math.PI * 2, rr = Math.sqrt(rnd());
+      out.push([Math.round(100 + Math.cos(a) * 44 * rr), Math.round(122 + Math.sin(a) * 52 * rr), 8 + Math.round(rnd() * 8), +(i / 26 * 0.92).toFixed(2)]);
+    }
+    return out;
+  })();
+  // desorden del cuarto: [html, left%, top%, umbral de suciedad]
+  var MESS = [
+    ['<i class="mess-stain" style="width:64px;height:48px"></i>', 47, 20, 34], ['<i class="mess-stain" style="width:46px;height:36px"></i>', 73, 52, 46],
+    ['<i class="mess-stain" style="width:80px;height:56px"></i>', 56, 40, 60], ['<i class="mess-stain" style="width:38px;height:30px"></i>', 84, 18, 72],
+    ['<i class="mess-mud" style="width:70px;height:20px"></i>', 16, 84, 14], ['<i class="mess-mud" style="width:56px;height:16px"></i>', 78, 76, 28],
+    ['<i class="mess-mud" style="width:90px;height:24px"></i>', 40, 90, 42], ['<i class="mess-mud" style="width:50px;height:15px"></i>', 66, 88, 54],
+    ['<span class="mess-it" style="transform:rotate(-14deg)">🐾</span>', 22, 74, 12], ['<span class="mess-it" style="transform:rotate(12deg)">🐾</span>', 30, 82, 20],
+    ['<span class="mess-it" style="transform:rotate(-8deg)">🐾</span>', 72, 82, 32],
+    ['<span class="mess-it big">🧦</span>', 14, 70, 38], ['<span class="mess-it big">🍌</span>', 84, 86, 50], ['<span class="mess-it big">🥫</span>', 28, 90, 58],
+    ['<span class="mess-it big">🍕</span>', 62, 94, 66], ['<span class="mess-it big">🗑️</span>', 90, 66, 76],
+    ['<span class="mess-fly f1">🪰</span>', 38, 44, 62], ['<span class="mess-fly f2">🪰</span>', 62, 48, 74], ['<span class="mess-fly f3">🪰</span>', 50, 36, 86]
+  ];
 
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -82,20 +111,57 @@
         '<svg class="pet-dirt" viewBox="0 0 200 200" aria-hidden="true">' + DIRT.map(function (d) {
           return '<g class="pet-spot" data-thr="' + d[3] + '" opacity="0"><ellipse cx="' + d[0] + '" cy="' + d[1] + '" rx="' + d[2] + '" ry="' + (d[2] * 0.75) + '" fill="#8A6A3F" opacity=".55"/>' +
             '<circle cx="' + (d[0] + d[2] * 0.6) + '" cy="' + (d[1] - d[2] * 0.5) + '" r="' + (d[2] * 0.35) + '" fill="#6E8A4A" opacity=".6"/></g>';
+        }).join('') + FOAM.map(function (f) {
+          return '<g class="pet-foamb" data-thr="' + f[3] + '" opacity="0"><circle cx="' + f[0] + '" cy="' + f[1] + '" r="' + f[2] + '" fill="#fff" stroke="#BFE6F5" stroke-width="1.6"/>' +
+            '<circle cx="' + (f[0] - f[2] * 0.3) + '" cy="' + (f[1] - f[2] * 0.32) + '" r="' + (f[2] * 0.22) + '" fill="#DFF4FC"/></g>';
         }).join('') + '</svg>';
       svg = holder.querySelector('.dopi');
     }
+    ensureMess();
     return svg;
+  }
+  function ensureMess() {
+    var room = $('pet-room'); if (!room || room.querySelector('.pet-mess')) return;
+    var m = document.createElement('div'); m.className = 'pet-mess'; m.setAttribute('aria-hidden', 'true');
+    m.innerHTML = '<div class="mess-haze"></div>' + MESS.map(function (x) {
+      return '<div class="mess-spot" data-thr="' + x[3] + '" style="left:' + x[1] + '%;top:' + x[2] + '%;opacity:0">' + x[0] + '</div>';
+    }).join('');
+    room.insertBefore(m, $('pet-holder'));
+    var pd = document.createElement('div'); pd.className = 'pet-puddle'; pd.setAttribute('aria-hidden', 'true');
+    room.insertBefore(pd, $('pet-holder'));
   }
 
   function updateDirt(clean) {
-    if (clean != null) lastDirt = 100 - clean;
+    if (clean != null) lastDirt = 100 - (washedUntil > Date.now() ? 100 : clean);
+    washVisuals();
+    var k = 1 - scrub, i, thr;
     var spots = document.querySelectorAll('#pet-holder .pet-spot');
-    for (var i = 0; i < spots.length; i++) {
-      var thr = +spots[i].getAttribute('data-thr');
-      var op = Math.max(0, Math.min(1, (lastDirt - thr) / 14)) * (1 - scrub);
-      spots[i].setAttribute('opacity', op.toFixed(2));
+    for (i = 0; i < spots.length; i++) {
+      thr = +spots[i].getAttribute('data-thr');
+      spots[i].setAttribute('opacity', (Math.max(0, Math.min(1, (lastDirt - thr) / 10)) * k).toFixed(2));
     }
+    var fb = document.querySelectorAll('#pet-holder .pet-foamb');
+    for (i = 0; i < fb.length; i++) {
+      thr = +fb[i].getAttribute('data-thr');
+      fb[i].setAttribute('opacity', Math.max(0, Math.min(1, (foam - thr) / 0.08)).toFixed(2));
+    }
+    var ms = document.querySelectorAll('#pet-room .mess-spot');
+    for (i = 0; i < ms.length; i++) {
+      thr = +ms[i].getAttribute('data-thr');
+      ms[i].style.opacity = (Math.max(0, Math.min(1, (lastDirt - thr) / 12)) * k).toFixed(2);
+    }
+    var haze = document.querySelector('#pet-room .mess-haze');
+    if (haze) haze.style.opacity = (Math.max(0, Math.min(1, (lastDirt - 15) / 70)) * k).toFixed(2);
+    var h = $('pet-holder'), pd = document.querySelector('#pet-room .pet-puddle');
+    if (h) h.classList.toggle('is-wet', wet > 0.15);
+    if (pd) pd.style.opacity = Math.min(1, wet * 1.2).toFixed(2), pd.style.transform = 'translateX(-50%) scaleX(' + (0.5 + wet * 0.5).toFixed(2) + ')';
+  }
+  // reparte el progreso del baño en suciedad / espuma / mojado
+  function washVisuals() {
+    if (mode !== 'clean') { scrub = 0; foam = 0; wet = 0; return; }
+    scrub = (cleanStep + stepProg) / 3;
+    foam = cleanStep === 0 ? stepProg : cleanStep === 1 ? 1 - stepProg : 0;
+    wet = cleanStep === 0 ? 0 : cleanStep === 1 ? stepProg : 1 - stepProg;
   }
 
   /* ---------- pintado ---------- */
@@ -301,21 +367,32 @@
   }
 
   /* ---------- modos de interacción ---------- */
+  function renderCleanTray() {
+    var tray = $('pet-tray');
+    tray.innerHTML = STEPS.map(function (st, i) {
+      var cls = 'pet-tool' + (i < cleanStep ? ' is-done' : i > cleanStep ? ' is-locked' : '');
+      return '<div class="pet-tool-wrap"><button class="' + cls + '" data-step="' + i + '" aria-label="' + esc(st.label) + '"' + (i !== cleanStep ? ' aria-disabled="true"' : '') + '>' + st.tool + (i < cleanStep ? '<b class="pet-tick">✓</b>' : '') + '</button>' +
+        '<span class="pet-tool-lbl">' + (i + 1) + ' · ' + st.label + '</span></div>';
+    }).join('');
+    tray.hidden = false;
+    $('pet-hint-text').textContent = STEPS[cleanStep].hint;
+  }
   function showHint(type) {
     var bar = $('pet-hintbar'), tray = $('pet-tray');
     if (!type) { bar.hidden = true; tray.hidden = true; tray.innerHTML = ''; return; }
-    $('pet-hint-text').textContent = HINT[type];
     bar.hidden = false;
+    if (type === 'clean') return renderCleanTray();
+    $('pet-hint-text').textContent = HINT[type];
     var tools = TOOLS[type];
-    if (tools) {
+    if (tools && tools.length) {
       tray.innerHTML = tools.map(function (t, i) { return '<button class="pet-tool" data-tool="' + i + '" aria-label="' + esc(SHORT[type]) + '">' + t + '</button>'; }).join('');
       tray.hidden = false;
     } else { tray.hidden = true; tray.innerHTML = ''; }
   }
 
   function endMode(silent) {
-    mode = null; scrub = 0;
-    setTarget(false);
+    mode = null; scrub = 0; cleanStep = 0; stepProg = 0;
+    clearReact(); setTarget(false);
     showHint(null);
     if (!silent) { acting = false; render(); }
   }
@@ -335,19 +412,20 @@
       if (!(h >= 21 || h < 10) && n.energy >= 70) return toast('No tiene sueño todavía');
     }
     if (type === 'clean' && n.clean >= 90) return toast('Está reluciente ✨');
-    endMode(true); mode = type; scrub = 0; showHint(type);
+    endMode(true); mode = type; scrub = 0; cleanStep = 0; stepProg = 0; showHint(type);
     render();
   }
 
   /* arrastrar herramienta (comida, pelota, manta, regalo, esponja) */
   function startDrag(btn, ev) {
     if (drag || busy || !mode || !TOOLS[mode]) return;
-    var type = mode;
+    var type = mode, step = -1;
+    if (type === 'clean') { step = +btn.getAttribute('data-step'); if (step < cleanStep) return; if (step > cleanStep) { toast('Primero: ' + STEPS[cleanStep].label.toLowerCase()); return; } }
     var ghost = document.createElement('div');
     ghost.className = 'pet-ghost'; ghost.innerHTML = btn.innerHTML;
     document.body.appendChild(ghost);
     btn.classList.add('is-dragging');
-    drag = { type: type, ghost: ghost, btn: btn, sx: ev.clientX, sy: ev.clientY, lx: ev.clientX, ly: ev.clientY, moved: false, over: false, dist: 0, bub: 0, id: ev.pointerId };
+    drag = { type: type, step: step, ghost: ghost, btn: btn, sx: ev.clientX, sy: ev.clientY, lx: ev.clientX, ly: ev.clientY, moved: false, over: false, dist: (step >= 0 ? stepProg * STEPS[step].dist : 0), bub: 0, id: ev.pointerId };
     place(ev.clientX, ev.clientY);
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragUp);
@@ -364,16 +442,50 @@
     if (over !== d.over) {
       d.over = over; setTarget(over);
       if (d.type === 'feed') { acting = over; if (over) D.set(svg, { mood: 'hungry' }); else render(); }
-      if (d.type === 'clean') { acting = over; if (over) D.set(svg, { mood: 'pet' }); else render(); }
+      if (d.type === 'clean') { acting = over; if (over) reactStart(d.step); else { clearReact(); render(); } }
     }
     if (d.type === 'clean' && over) {
-      var step = Math.hypot(dx, dy);
+      var st = STEPS[d.step], step = Math.hypot(dx, dy);
       d.dist += step; d.bub += step;
-      scrub = Math.min(1, d.dist / CLEAN_DIST); updateDirt();
-      if (d.bub > 26) { d.bub = 0; spawn(e.clientX + (Math.random() * 30 - 15), e.clientY - 20, '🫧', 'is-bubble'); }
-      if (scrub >= 1) { finishDrag(); commit('clean'); endMode(true); return; }
+      stepProg = Math.min(1, d.dist / st.dist); updateDirt();
+      if (d.bub > (d.step === 1 ? 14 : 24)) { d.bub = 0; washFx(d.step, e.clientX, e.clientY); }
+      if (stepProg >= 1) { stepDone(); return; }
     }
     d.lx = e.clientX; d.ly = e.clientY;
+  }
+  function washFx(step, x, y) {
+    if (step === 0) spawn(x + (Math.random() * 40 - 20), y - 14, Math.random() < 0.5 ? '🫧' : '🫧', 'is-bubble');
+    else if (step === 1) { spawn(x + (Math.random() * 44 - 22), y - 6, '💧', 'is-drop'); if (Math.random() < 0.3) spawn(x + (Math.random() * 60 - 30), y + 20, '💦', 'is-drop'); }
+    else spawn(x + (Math.random() * 40 - 20), y - 14, Math.random() < 0.5 ? '☁️' : '💗', 'is-heart');
+  }
+  var SAY = [['jiji 🫧', 'cosquillas'], ['¡Brrr!', '💦 ¡fría!'], ['mmm 😌', 'qué suave']];
+  function reactStart(step) {
+    var h = $('pet-holder'); if (!h || !svg) return;
+    clearReact();
+    reactCls = 'pet-r-' + STEPS[step].key; h.classList.add(reactCls);
+    D.set(svg, { mood: STEPS[step].mood });
+    var say = SAY[step][Math.floor(Math.random() * 2)];
+    var r = h.getBoundingClientRect();
+    spawn(r.left + r.width * 0.72, r.top + r.height * 0.28, say, 'is-say');
+  }
+  function clearReact() {
+    var h = $('pet-holder'); if (h && reactCls) h.classList.remove(reactCls); reactCls = '';
+  }
+  function stepDone() {
+    var d = drag, st = STEPS[cleanStep];
+    finishDrag(); clearReact();
+    var r = svg.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height * 0.5;
+    if (cleanStep >= STEPS.length - 1) {          // baño completo
+      washedUntil = Date.now() + 5000; lastDirt = 0;
+      bigHeart(); bounce(); sparks(cx, cy, 16);
+      acting = false; stepProg = 1; updateDirt();
+      commit('clean'); endMode(true);
+      return;
+    }
+    sparks(cx, cy - 20, 8);
+    toast(['¡Bien enjabonada! Ahora, la ducha 🚿', 'Aclarada. Ahora, a secarla con la toalla'][cleanStep]);
+    cleanStep++; stepProg = 0; acting = false;
+    renderCleanTray(); updateDirt(); render();
   }
   function finishDrag() {
     if (!drag) return;
@@ -385,12 +497,12 @@
     setTarget(false);
     drag = null;
   }
-  function onDragCancel() { finishDrag(); acting = false; render(); }
+  function onDragCancel() { finishDrag(); clearReact(); acting = false; render(); }
   function onDragUp(e) {
     if (!drag || e.pointerId !== drag.id) return;
     var d = drag, type = d.type;
     if (type === 'clean') {          // el progreso se conserva; sigue en modo limpiar
-      finishDrag(); acting = false; render(); return;
+      finishDrag(); clearReact(); acting = false; render(); return;
     }
     if (d.over) {                    // soltado sobre Dopi
       var g = d.ghost; finishDrag(); acting = false;

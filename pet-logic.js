@@ -12,14 +12,14 @@
   var NEEDS = ['hunger', 'mood', 'energy', 'love', 'clean'];
   var NEED_LABEL = { hunger: 'Comida', mood: 'Ánimo', energy: 'Energía', love: 'Cariño', clean: 'Limpieza' };
   var FLOOR = 5;                       // nunca llega a 0
-  var DECAY = { hunger: 4, mood: 3, energy: 2.5, love: 2, clean: 2 };   // puntos por hora
+  var DECAY = { hunger: 4, mood: 3, energy: 2.5, love: 2, clean: 5 };   // puntos por hora (se ensucia rápido)
   var SLEEP_GAIN = 10;                 // energía por hora mientras duerme
 
   var ACTIONS = {
     feed:     { label: 'Dar de comer', mood: 'eat',   ms: 2400, cd: 3 * H,  delta: { hunger: 35, mood: 5 },              pts: 3, xp: 5 },
     play:     { label: 'Jugar',        mood: 'play',  ms: 3000, cd: 2 * H,  delta: { mood: 30, energy: -10, hunger: -5 }, pts: 3, xp: 5 },
     pet:      { label: 'Acariciar',    mood: 'pet',   ms: 2200, cd: 30 * MIN, delta: { love: 20, mood: 5 },              pts: 1, xp: 2, dailyMax: 6 },
-    clean:    { label: 'Limpiar',      mood: 'pet',   ms: 2200, cd: 4 * H,  delta: { clean: 50, mood: 5 },               pts: 3, xp: 5 },
+    clean:    { label: 'Bañar',        mood: 'love',  ms: 2600, cd: 3 * H,  delta: { clean: 100, mood: 8 },              pts: 5, xp: 8 },
     sleep:    { label: 'Arropar',      mood: 'sleepy',ms: 0,    cd: 8 * H,  delta: { energy: 10 },                       pts: 3, xp: 5 },
     surprise: { label: 'Mimo sorpresa',mood: 'party', ms: 3200, cd: 24 * H, delta: { hunger: 15, mood: 15, energy: 15, love: 15 }, pts: 5, xp: 10, notify: true }
   };
@@ -219,7 +219,7 @@
   }
 
   /* "Abdu la alimentó hace 2 h" */
-  var VERB = { feed: 'le dio de comer', play: 'jugó con ella', pet: 'la acarició', sleep: 'la arropó', surprise: 'le dio un mimo sorpresa' };
+  var VERB = { feed: 'le dio de comer', play: 'jugó con ella', pet: 'la acarició', clean: 'la bañó', sleep: 'la arropó', surprise: 'le dio un mimo sorpresa' };
   function ago(ms) {
     var m = Math.round(ms / MIN);
     if (m < 1) return 'ahora mismo';
