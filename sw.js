@@ -1,5 +1,5 @@
-const CACHE = 'diario-pareja-v4';
-const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json'];
+const CACHE = 'diario-pareja-v5';
+const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json', '/dopi.css', '/dopi.js', '/pet-ui.css', '/pet-logic.js', '/mascota-ui.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

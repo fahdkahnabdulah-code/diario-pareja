@@ -13,6 +13,8 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
   <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="dopi.css" />
+  <link rel="stylesheet" href="pet-ui.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -65,6 +67,7 @@
       <button class="tab active" data-tab="nueva"><span class="tab-icon">📝</span>Entrada</button>
       <button class="tab" data-tab="historial"><span class="tab-icon">🕰️</span>Historial</button>
       <button class="tab" data-tab="fechas"><span class="tab-icon">📅</span>Fechas</button>
+      <button class="tab" data-tab="mascota"><span class="tab-icon">🐣</span>Dopi<span class="tab-dot" id="pet-tab-dot" hidden></span></button>
     </nav>
 
     <!-- TAB: NUEVA ENTRADA -->
@@ -168,6 +171,30 @@
         <div id="history-list">
           <p class="empty-state">Aún no hay entradas guardadas.</p>
         </div>
+      </div>
+    </div>
+
+    <!-- TAB: DOPI (mascota compartida) -->
+    <div id="tab-mascota" class="tab-content">
+      <div class="container pet-ui">
+        <div class="pet-head">
+          <h2 class="pet-title">Dopi <span class="chip chip-rose" id="pet-stage"></span></h2>
+          <span class="chip chip-gold" id="pet-points">✦ 0</span>
+        </div>
+        <div class="room" id="pet-room" data-time="day" data-room="cozy">
+          <div class="room-wall"></div>
+          <div class="room-window"><div class="room-sun"></div><div class="room-stars"></div><div class="room-cross"></div></div>
+          <div class="room-shelf"></div><div class="room-glow"></div><div class="room-lamp"></div>
+          <div class="room-floor"></div><div class="room-rug"></div><div class="room-dim"></div>
+          <div class="room-pet" id="pet-holder" style="width:210px;margin-left:-105px;bottom:6px"></div>
+          <span class="chip chip-plain" id="pet-team" style="position:absolute;right:12px;top:12px;height:26px;font-size:12px"></span>
+        </div>
+        <div class="pet-moodrow"><strong id="pet-mood-title"></strong><span id="pet-mood-reason"></span></div>
+        <div class="card pet-progress" id="pet-progress"></div>
+        <div class="card needs" id="pet-needs"></div>
+        <div class="acts" id="pet-acts"></div>
+        <div class="card log" id="pet-log"></div>
+        <div class="card pet-shop" id="pet-shop"></div>
       </div>
     </div>
 
@@ -286,6 +313,9 @@
   </div><!-- /screen-app -->
 
   <!-- Firebase SDKs -->
+  <script src="dopi.js"></script>
+  <script src="pet-logic.js"></script>
+  <script src="mascota-ui.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

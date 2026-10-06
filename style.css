@@ -391,3 +391,44 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 @keyframes cargando-latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
 @keyframes cargando-giro { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .cargando-icon, .cargando-spinner { animation-duration: 3s; } }
+
+/* ── Pestaña Dopi (mascota) ─────────────────────────────── */
+.tab { position: relative; }
+.tab-dot { position: absolute; top: 8px; left: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%; background: #E0508A; border: 2px solid var(--surface); }
+#tab-mascota .pet-ui { background: transparent; }
+.pet-ui.container { gap: 18px; }
+.pet-ui .pet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pet-ui .pet-title { font-size: 26px; margin: 0; display: flex; align-items: center; gap: 10px; }
+.pet-ui .pet-title .chip { height: 24px; font-size: 12px; }
+.pet-ui #pet-points { height: 36px; font-size: 15px; }
+.pet-ui .room { height: 290px; }
+.pet-ui .pet-moodrow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 0 4px; }
+.pet-ui .pet-moodrow span { font-size: 13px; color: var(--ink-3); text-align: right; }
+.pet-ui .needs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; padding: 16px 18px; }
+.pet-ui .acts { display: flex; justify-content: space-between; padding: 2px 4px; }
+.pet-ui .log { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.pet-ui .log > div { display: flex; gap: 10px; align-items: center; }
+.pet-ui .log time { margin-left: auto; font-size: 12px; color: var(--ink-3); }
+.pet-ui .pet-progress { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+.pet-ui .pet-prog-text { font-size: 13px; color: var(--ink-2); }
+.pet-ui .pet-shop { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.pet-ui .pet-slots { display: flex; gap: 6px; background: var(--surface-2); padding: 4px; border-radius: 14px; }
+.pet-ui .pet-slot { flex: 1; border: 0; background: none; padding: 8px 4px; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.pet-ui .pet-slot.is-on { background: var(--surface); color: var(--rose); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.pet-ui .pet-items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pet-ui .pet-item { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 8px 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; font: inherit; color: var(--ink); cursor: pointer; }
+.pet-ui .pet-item-prev { width: 64px; height: 64px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; overflow: hidden; }
+.pet-ui .pet-item-prev .dopi { width: 78px; margin-top: 8px; }
+.pet-ui .pet-swatch { width: 100%; height: 100%; display: block; }
+.pet-ui .pet-item-name { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.15; }
+.pet-ui .pet-item-tag { font-size: 11px; color: var(--ink-3); }
+.pet-ui .pet-item.is-owned .pet-item-tag { color: var(--teal); font-weight: 600; }
+.pet-ui .pet-item.is-eq { border-color: var(--teal); box-shadow: 0 0 0 2px var(--teal-soft); }
+.pet-ui .pet-item.is-sel { border-color: var(--rose); box-shadow: 0 0 0 2px var(--rose-soft); }
+.pet-ui .pet-item.is-locked { opacity: .55; }
+.pet-ui .pet-buy { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--gold-soft); color: var(--gold-ink); font-size: 14px; font-weight: 600; }
+.pet-ui .pet-buy-btn { border: 0; background: var(--rose); color: #fff; font: inherit; font-size: 14px; font-weight: 700; padding: 9px 14px; border-radius: 12px; cursor: pointer; }
+.pet-ui .pet-buy-miss { font-size: 13px; }
+@media (prefers-color-scheme: dark) { .pet-ui .pet-buy-btn { color: #3a1a26; } }
+.pet-ui .log time { white-space: nowrap; }
+.pet-ui .log > div > span:nth-child(2) { min-width: 0; }

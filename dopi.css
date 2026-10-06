@@ -1,0 +1,259 @@
+/* =========================================================
+   DOPI — mascota compartida de +Dopamina
+   Un solo SVG (ver dopi.js) controlado por data-attributes:
+     data-stage  1..5            (huevo, cría, joven, adulto, alma gemela)
+     data-mood   happy | hungry | sleepy | sad | love | sick |
+                 eat | play | pet | party
+     data-hat    none | beanie | beret | cap | crown | flowers | horns | party
+     data-face   none | round | hearts | stache
+     data-neck   none | scarf | bowtie | collar | bandana
+     data-react  none | poke | photo   (reacciones de 1-2 s)
+   Variables CSS en style="":
+     --mix   0..1  armonía (cuánto cuidan JUNTOS) -> el corazón se une
+     --share 0..1  parte de Abdu en los cuidados (0 = todo Alba)
+   ========================================================= */
+
+.dopi{
+  --dopi-body:#F9D6E2; --dopi-shade:#F0B4C8; --dopi-line:#5A1E33; --dopi-eye:#2B0E1A;
+  --dopi-a:#E0508A; --dopi-a-soft:#F6A9C6;       /* Abdu: rosa  */
+  --dopi-b:#17A493; --dopi-b-soft:#93DED4;       /* Alba: teal  */
+  --dopi-gold:#E2A72E; --dopi-glint:#FFFFFF;
+  --dopi-shadow:rgba(90,30,51,.16); --dopi-aura:rgba(226,167,46,.20);
+  --mix:.5; --share:.5;
+  display:block; overflow:visible; width:100%; height:auto;
+}
+.dopi *{transform-box:view-box}
+
+/* ---------- trazo y relleno base ---------- */
+.dopi .ln{stroke:var(--dopi-line);stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}
+.dopi .ln-thin{stroke:var(--dopi-line);stroke-width:2.5;stroke-linejoin:round}
+.dopi .d-body,.dopi .d-egg,.dopi .d-limb{fill:var(--dopi-body)}
+.dopi .d-shade{fill:var(--dopi-shade);opacity:.85}
+.dopi .d-shine{fill:#fff;opacity:.6}
+.dopi .d-shadow{fill:var(--dopi-shadow)}
+.dopi .d-crack{fill:none;stroke:var(--dopi-line);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.dopi .c-a{fill:var(--dopi-a)}
+.dopi .c-b{fill:var(--dopi-b)}
+.dopi .d-cheek{opacity:.5;transform-box:fill-box;transform-origin:center}
+.dopi .d-stem{fill:none;stroke:var(--dopi-line);stroke-width:3;stroke-linecap:round}
+.dopi .d-leaf{fill:var(--dopi-a-soft)}
+.dopi[data-stage="3"] .d-leaf-l{fill:var(--dopi-a)}
+.dopi .d-leaf-r{fill:var(--dopi-b)}
+.dopi .d-heart-l{fill:var(--dopi-a)}
+.dopi .d-heart-r{fill:var(--dopi-b)}
+.dopi[data-stage="5"] .d-heart path{stroke:var(--dopi-gold);stroke-width:3}
+.dopi .d-aura{fill:var(--dopi-aura)}
+.dopi .d-freckle{fill:var(--dopi-gold)}
+.dopi .d-orb-a{fill:var(--dopi-a);stroke:#fff;stroke-width:2}
+.dopi .d-orb-b{fill:var(--dopi-b);stroke:#fff;stroke-width:2}
+
+/* ---------- "de los dos": armonía y reparto ---------- */
+/* Hojas (etapa 2-3): se inclinan una hacia la otra con la armonía */
+.dopi .d-leaf-l{transform-origin:100px 42px;transform:rotate(calc((1 - var(--mix)) * -22deg))}
+.dopi .d-leaf-r{transform-origin:101px 42px;transform:rotate(calc((1 - var(--mix)) * 22deg))}
+/* Corazón (etapa 4-5): dos mitades que se juntan */
+.dopi .d-heart-l{transform:translateX(calc((1 - var(--mix)) * -7px)) rotate(calc((1 - var(--mix)) * -10deg));transform-origin:100px 50px}
+.dopi .d-heart-r{transform:translateX(calc((1 - var(--mix)) * 7px)) rotate(calc((1 - var(--mix)) * 10deg));transform-origin:100px 50px}
+/* Barriga: dos lunares que se solapan; su tamaño = quién cuida más */
+.dopi .d-belly-a{fill:var(--dopi-a);transform-box:fill-box;transform-origin:center;
+  transform:translateX(calc(-3px - 9px * (1 - var(--mix)))) scale(calc(.7 + .6 * var(--share)))}
+.dopi .d-belly-b{fill:var(--dopi-b);mix-blend-mode:multiply;transform-box:fill-box;transform-origin:center;
+  transform:translateX(calc(3px + 9px * (1 - var(--mix)))) scale(calc(1.3 - .6 * var(--share)))}
+
+/* ---------- etapas ---------- */
+.dopi .only-1,.dopi .from-2,.dopi .from-3,.dopi .from-4,.dopi .only-5,.dopi .s23,.dopi .only-3{display:none}
+.dopi[data-stage="1"] .only-1,
+.dopi[data-stage="2"] .from-2,.dopi[data-stage="3"] .from-2,.dopi[data-stage="4"] .from-2,.dopi[data-stage="5"] .from-2,
+.dopi[data-stage="3"] .from-3,.dopi[data-stage="4"] .from-3,.dopi[data-stage="5"] .from-3,
+.dopi[data-stage="4"] .from-4,.dopi[data-stage="5"] .from-4,
+.dopi[data-stage="5"] .only-5,
+.dopi[data-stage="2"] .s23,.dopi[data-stage="3"] .s23,
+.dopi[data-stage="3"] .only-3{display:inline}
+
+.dopi .d-scale{transform-origin:100px 182px}
+.dopi[data-stage="1"] .d-scale{transform:scale(.8)}
+.dopi[data-stage="2"] .d-scale{transform:scale(.7)}
+.dopi[data-stage="3"] .d-scale{transform:scale(.84)}
+.dopi[data-stage="4"] .d-scale{transform:scale(.95)}
+.dopi[data-stage="5"] .d-scale{transform:scale(1)}
+/* el huevo no tiene mejillas ni boca visible en "dormido" */
+.dopi[data-stage="1"] .d-cheeks{display:none}
+
+/* ---------- caras (estados) ---------- */
+.dopi .m-happy,.dopi .m-hungry,.dopi .m-sleepy,.dopi .m-sad,.dopi .m-love,
+.dopi .m-sick,.dopi .m-eat,.dopi .m-play,.dopi .m-pet,.dopi .m-party{display:none}
+.dopi[data-mood="happy"] .m-happy,.dopi[data-mood="hungry"] .m-hungry,
+.dopi[data-mood="sleepy"] .m-sleepy,.dopi[data-mood="sad"] .m-sad,
+.dopi[data-mood="love"] .m-love,.dopi[data-mood="sick"] .m-sick,
+.dopi[data-mood="eat"] .m-eat,.dopi[data-mood="play"] .m-play,
+.dopi[data-mood="pet"] .m-pet,.dopi[data-mood="party"] .m-party{display:inline}
+
+.dopi .d-eye{fill:var(--dopi-eye)}
+.dopi .d-glint{fill:var(--dopi-glint)}
+.dopi .d-mouth{fill:none;stroke:var(--dopi-eye);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.dopi .d-mouth-in{fill:#7A1F3D;stroke:var(--dopi-eye);stroke-width:2.5;stroke-linejoin:round}
+.dopi .d-tongue{fill:#F27BA0}
+.dopi .d-drool,.dopi .d-tear{fill:#9AD8F2;stroke:#4A9CC0;stroke-width:1.2}
+.dopi .d-eyeheart-a{fill:var(--dopi-a);stroke:var(--dopi-line);stroke-width:2;stroke-linejoin:round}
+.dopi .d-eyeheart-b{fill:var(--dopi-b);stroke:var(--dopi-line);stroke-width:2;stroke-linejoin:round}
+.dopi .d-star{fill:var(--dopi-gold);stroke:#9A6A10;stroke-width:1.5;stroke-linejoin:round}
+.dopi .d-blush{fill:none;stroke:var(--dopi-a);stroke-width:2;stroke-linecap:round;opacity:.75}
+.dopi .d-bandage rect{fill:#F4E3C8;stroke:#B9986A;stroke-width:1.5}
+.dopi .d-bandage .d-bandage-pad{fill:#E8CFA8}
+
+/* colores por estado */
+.dopi[data-mood="sick"]{--dopi-body:#E8DCE1;--dopi-shade:#D6C5CC;--dopi-a:#C98AA4;--dopi-b:#82B5AE;--dopi-a-soft:#DDB9C7}
+.dopi[data-mood="sad"]{--dopi-body:#F3D7E0;--dopi-shade:#E3B9C7}
+.dopi[data-mood="love"] .d-cheek,.dopi[data-mood="pet"] .d-cheek{opacity:.85;transform:scale(1.15)}
+.dopi[data-mood="eat"] .d-cheek{opacity:.7;transform:scale(1.35)}
+.dopi[data-mood="sick"] .d-cheek{opacity:.25}
+
+/* ---------- accesorios ---------- */
+.dopi .acc{display:none}
+.dopi[data-hat="beanie"] .a-hat-beanie,.dopi[data-hat="beret"] .a-hat-beret,
+.dopi[data-hat="cap"] .a-hat-cap,.dopi[data-hat="crown"] .a-hat-crown,
+.dopi[data-hat="flowers"] .a-hat-flowers,.dopi[data-hat="horns"] .a-hat-horns,
+.dopi[data-hat="party"] .a-hat-party,
+.dopi[data-face="round"] .a-face-round,.dopi[data-face="hearts"] .a-face-hearts,
+.dopi[data-face="stache"] .a-face-stache,
+.dopi[data-neck="scarf"] .a-neck-scarf,.dopi[data-neck="bowtie"] .a-neck-bowtie,
+.dopi[data-neck="collar"] .a-neck-collar,.dopi[data-neck="bandana"] .a-neck-bandana{display:inline}
+/* los gorros tapan el brote; diadema y cuernitos lo dejan ver */
+.dopi[data-hat="beanie"] .d-tuft,.dopi[data-hat="beret"] .d-tuft,.dopi[data-hat="cap"] .d-tuft,
+.dopi[data-hat="crown"] .d-tuft,.dopi[data-hat="party"] .d-tuft{display:none}
+/* con gafas de sol la cara se ve igual pero los ojos quedan detrás */
+.dopi[data-face="hearts"] .d-eye,.dopi[data-face="hearts"] .d-glint{opacity:.0}
+
+.dopi .a-pink{fill:var(--dopi-a)}
+.dopi .a-teal{fill:var(--dopi-b)}
+.dopi .a-wine{fill:#7A2442}
+.dopi .a-gold{fill:var(--dopi-gold)}
+.dopi .a-cream{fill:#FFF6EC}
+.dopi .a-dark{fill:#2B0E1A}
+.dopi .a-lens{fill:rgba(255,255,255,.28)}
+.dopi .a-sun{fill:#2B0E1A;opacity:.92}
+.dopi .a-wire{fill:none;stroke:var(--dopi-line);stroke-width:2.5;stroke-linecap:round}
+.dopi .a-stripe-b{fill:none;stroke:var(--dopi-b);stroke-width:4;stroke-linecap:round}
+.dopi .a-stripe-w{fill:none;stroke:#FFF6EC;stroke-width:3.5;stroke-linecap:round}
+.dopi .a-band{fill:none;stroke:var(--dopi-b);stroke-width:5;stroke-linecap:round}
+.dopi .a-collar{fill:none;stroke:#7A2442;stroke-width:7;stroke-linecap:round}
+.dopi .a-horn{fill:#C2365F}
+
+/* ---------- partículas ---------- */
+.dopi .fx{pointer-events:none}
+.dopi .fx-heart-a{fill:var(--dopi-a)}
+.dopi .fx-heart-b{fill:var(--dopi-b)}
+.dopi .fx-z{fill:none;stroke:var(--dopi-line);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+.dopi .fx-bub{fill:#fff;stroke:var(--dopi-line);stroke-width:2}
+.dopi .fx-cookie{fill:#E4B072;stroke:#8A5A22;stroke-width:2}
+.dopi .fx-chip{fill:#6B3B12}
+.dopi .fx-crumb{fill:#C98E4A}
+.dopi .fx-rumble{fill:none;stroke:var(--dopi-line);stroke-width:2.5;stroke-linecap:round;opacity:.55}
+.dopi .fx-cloud{fill:#C3C6CF}
+.dopi .fx-drop{fill:#9AD8F2}
+.dopi .fx-sick{fill:#CBDABD;stroke:#7E9A6C;stroke-width:1.5}
+.dopi .fx-swirl{fill:none;stroke:#7E9A6C;stroke-width:2;stroke-linecap:round}
+.dopi .fx-spark{fill:var(--dopi-gold)}
+.dopi .fx-ball-line{fill:none;stroke:var(--dopi-line);stroke-width:2.5}
+.dopi .fx-conf-a{fill:var(--dopi-a)}
+.dopi .fx-conf-b{fill:var(--dopi-b)}
+.dopi .fx-conf-g{fill:var(--dopi-gold)}
+.dopi .fx-poke{fill:var(--dopi-gold);stroke:var(--dopi-line);stroke-width:2}
+.dopi .fx-poke-mark{fill:var(--dopi-line)}
+.dopi .fx-photo-card{fill:#fff;stroke:var(--dopi-line);stroke-width:2}
+.dopi .fx-photo-img{fill:var(--dopi-b-soft)}
+.dopi .fx-photo-sun{fill:var(--dopi-gold)}
+.dopi .fx-photo-hill{fill:var(--dopi-b)}
+.dopi .r-poke,.dopi .r-photo{display:none}
+.dopi[data-react="poke"] .r-poke,.dopi[data-react="photo"] .r-photo{display:inline}
+
+/* =========================================================
+   ANIMACIÓN
+   ========================================================= */
+.dopi .d-rig{transform-origin:100px 182px;animation:dopi-breathe 3.2s ease-in-out infinite}
+.dopi .d-blink{transform-origin:100px 98px;animation:dopi-blink 5s infinite}
+.dopi .d-arm-l{transform-origin:46px 124px;animation:dopi-arm-l 3.2s ease-in-out infinite}
+.dopi .d-arm-r{transform-origin:154px 124px;animation:dopi-arm-r 3.2s ease-in-out infinite}
+
+.dopi[data-mood="hungry"] .d-rig{animation:dopi-wobble 1.6s ease-in-out infinite}
+.dopi[data-mood="sleepy"] .d-rig{animation:dopi-breathe 4.6s ease-in-out infinite}
+.dopi[data-mood="sad"] .d-rig{animation:dopi-sag 4s ease-in-out infinite}
+.dopi[data-mood="love"] .d-rig{animation:dopi-pulse 1.1s ease-in-out infinite}
+.dopi[data-mood="sick"] .d-rig{animation:dopi-shiver .45s linear infinite}
+.dopi[data-mood="eat"] .d-rig{animation:dopi-nom .5s ease-in-out infinite}
+.dopi[data-mood="play"] .d-rig{animation:dopi-hop .8s cubic-bezier(.3,.7,.4,1) infinite}
+.dopi[data-mood="pet"] .d-rig{animation:dopi-squish 1s ease-in-out infinite}
+.dopi[data-mood="party"] .d-rig{animation:dopi-jump .9s cubic-bezier(.3,.7,.4,1) infinite}
+.dopi[data-react="poke"] .d-rig{animation:dopi-startle .7s ease-out 1}
+
+.dopi[data-mood="party"] .d-arm-l{transform:translate(-8px,-4px) rotate(130deg);animation:dopi-wave-l .45s ease-in-out infinite alternate}
+.dopi[data-mood="party"] .d-arm-r{transform:translate(8px,-4px) rotate(-130deg);animation:dopi-wave-r .45s ease-in-out infinite alternate}
+.dopi[data-mood="play"] .d-arm-r{animation:dopi-wave-r .4s ease-in-out infinite alternate}
+.dopi[data-mood="sad"] .d-arm-l,.dopi[data-mood="sad"] .d-arm-r,
+.dopi[data-mood="sick"] .d-arm-l,.dopi[data-mood="sick"] .d-arm-r{animation:none}
+
+.dopi .d-chomp,.dopi .d-snore,.dopi .d-drool,.dopi .d-tear{transform-box:fill-box}
+.dopi .d-chomp{transform-origin:center top;animation:dopi-chomp .5s ease-in-out infinite}
+.dopi .d-snore{transform-origin:center;animation:dopi-snore 4.6s ease-in-out infinite}
+.dopi .d-drool{transform-origin:center top;animation:dopi-drool 2s ease-in-out infinite}
+.dopi .d-tear{transform-origin:center top;animation:dopi-tear 2.6s ease-in infinite}
+.dopi .d-orbit-x{animation:dopi-orb-x 3.4s ease-in-out infinite alternate}
+.dopi .d-orbit-y{animation:dopi-orb-y 3.4s ease-in-out infinite alternate;animation-delay:-1.7s}
+.dopi .d-orbit-b .d-orbit-x{animation-delay:-3.4s}
+.dopi .d-orbit-b .d-orbit-y{animation-delay:-5.1s}
+.dopi .d-aura{transform-origin:100px 112px;animation:dopi-aura 3s ease-in-out infinite}
+
+.dopi .fx-rise,.dopi .fx-fall,.dopi .fx-float,.dopi .fx-twinkle,.dopi .fx-bounce,.dopi .fx-drop-in{transform-box:fill-box;transform-origin:center}
+.dopi .fx-rise{animation:fx-rise 2.6s ease-out infinite}
+.dopi .fx-float{animation:fx-float 3.6s ease-out infinite}
+.dopi .fx-fall{animation:fx-fall 1.6s ease-in infinite}
+.dopi .fx-twinkle{animation:fx-twinkle 1.8s ease-in-out infinite}
+.dopi .fx-bounce{animation:fx-bounce .8s cubic-bezier(.3,.7,.4,1) infinite}
+.dopi .fx-drop-in{animation:fx-drop-in 1.4s cubic-bezier(.2,.9,.3,1.2) 1 both}
+.dopi .dl1{animation-delay:-.6s}
+.dopi .dl2{animation-delay:-1.3s}
+.dopi .dl3{animation-delay:-2s}
+
+@keyframes dopi-breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.02,.97)}}
+@keyframes dopi-blink{0%,93%,100%{transform:scaleY(1)}95.5%{transform:scaleY(.08)}}
+@keyframes dopi-arm-l{0%,100%{transform:rotate(0)}50%{transform:rotate(8deg)}}
+@keyframes dopi-arm-r{0%,100%{transform:rotate(0)}50%{transform:rotate(-8deg)}}
+@keyframes dopi-wobble{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes dopi-sag{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(2px) scale(1.03,.95)}}
+@keyframes dopi-pulse{0%,100%{transform:scale(1)}30%{transform:scale(1.05)}50%{transform:scale(.99)}}
+@keyframes dopi-shiver{0%,100%{transform:translateX(0)}25%{transform:translateX(-1.2px)}75%{transform:translateX(1.2px)}}
+@keyframes dopi-nom{0%,100%{transform:scale(1,1)}50%{transform:scale(1.03,.96)}}
+@keyframes dopi-hop{0%,100%{transform:translateY(0) scale(1.06,.92)}15%{transform:translateY(0) scale(.96,1.05)}50%{transform:translateY(-18px) scale(.98,1.02)}}
+@keyframes dopi-squish{0%,100%{transform:scale(1,1)}50%{transform:scale(1.09,.9)}}
+@keyframes dopi-jump{0%,100%{transform:translateY(0) scale(1.08,.9)}20%{transform:translateY(0) scale(.95,1.06)}50%{transform:translateY(-24px) rotate(-4deg)}70%{transform:translateY(-10px) rotate(3deg)}}
+@keyframes dopi-startle{0%{transform:translateY(0)}25%{transform:translateY(-12px) scale(.96,1.06)}55%{transform:translateY(0) scale(1.06,.94)}100%{transform:none}}
+@keyframes dopi-wave-l{from{transform:translate(-8px,-4px) rotate(115deg)}to{transform:translate(-8px,-4px) rotate(145deg)}}
+@keyframes dopi-wave-r{from{transform:translate(8px,-4px) rotate(-115deg)}to{transform:translate(8px,-4px) rotate(-145deg)}}
+@keyframes dopi-chomp{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.25)}}
+@keyframes dopi-snore{0%,100%{transform:scale(1)}50%{transform:scale(1.45)}}
+@keyframes dopi-drool{0%,100%{transform:scaleY(.6)}50%{transform:scaleY(1.25)}}
+@keyframes dopi-tear{0%{transform:translateY(-4px);opacity:0}15%{opacity:1}100%{transform:translateY(16px);opacity:0}}
+@keyframes dopi-orb-x{from{transform:translateX(-82px)}to{transform:translateX(82px)}}
+@keyframes dopi-orb-y{from{transform:translateY(-14px)}to{transform:translateY(14px)}}
+@keyframes dopi-aura{0%,100%{transform:scale(.96);opacity:.8}50%{transform:scale(1.04);opacity:1}}
+@keyframes fx-rise{0%{transform:translateY(0) scale(.5);opacity:0}15%{opacity:1}100%{transform:translateY(-48px) scale(1.05);opacity:0}}
+@keyframes fx-float{0%{transform:translate(0,0) scale(.6);opacity:0}20%{opacity:.9}100%{transform:translate(14px,-40px) scale(1.1);opacity:0}}
+@keyframes fx-fall{0%{transform:translateY(-6px) rotate(0);opacity:0}15%{opacity:1}100%{transform:translateY(34px) rotate(160deg);opacity:0}}
+@keyframes fx-twinkle{0%,100%{transform:scale(.4);opacity:.3}50%{transform:scale(1);opacity:1}}
+@keyframes fx-bounce{0%,100%{transform:translateY(0) scale(1.1,.88)}15%{transform:translateY(0) scale(1)}50%{transform:translateY(-34px)}}
+@keyframes fx-drop-in{0%{transform:translateY(-60px) rotate(-14deg);opacity:0}60%{opacity:1}100%{transform:translateY(0) rotate(-6deg);opacity:1}}
+
+/* ---------- modo oscuro ---------- */
+@media (prefers-color-scheme: dark){
+  .dopi{--dopi-shadow:rgba(0,0,0,.42);--dopi-aura:rgba(242,190,80,.26)}
+}
+.theme-dark .dopi,.dopi.is-dark{--dopi-shadow:rgba(0,0,0,.42);--dopi-aura:rgba(242,190,80,.26)}
+
+/* ---------- movimiento reducido ---------- */
+@media (prefers-reduced-motion: reduce){
+  .dopi,.dopi *{animation:none !important}
+  .dopi .fx-rise,.dopi .fx-float,.dopi .fx-fall,.dopi .fx-twinkle,.dopi .fx-drop-in{opacity:1}
+  .dopi .d-tear{opacity:1}
+}
+.dopi.is-still,.dopi.is-still *{animation:none !important}
+.dopi.is-still .fx-rise,.dopi.is-still .fx-float,.dopi.is-still .fx-fall,.dopi.is-still .fx-twinkle,.dopi.is-still .fx-drop-in,.dopi.is-still .d-tear{opacity:1}

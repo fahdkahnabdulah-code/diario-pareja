@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, setDoc, addDoc, deleteDoc,
-  getDocs, getDoc, query, orderBy, onSnapshot, arrayUnion
+  getDocs, getDoc, query, orderBy, onSnapshot, arrayUnion, runTransaction, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
@@ -61,6 +61,7 @@ function showTab(name) {
   document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
   $(`tab-${name}`).classList.add('active');
   if (name === 'historial') loadHistory();
+  if (name === 'mascota' && window.MascotaUI) MascotaUI.show();
   if (name === 'fechas') {
     calMonthOffset = 0;
     renderDiasJuntos();
@@ -137,6 +138,7 @@ onAuthStateChanged(auth, user => {
   } else {
     currentRole = null;
     if (pokeUnsub) { pokeUnsub(); pokeUnsub = null; }
+    if (window.MascotaUI) MascotaUI.stop();
     showScreen('login');
   }
 });
@@ -176,6 +178,7 @@ async function initApp() {
   setupWishes();
   setupWishesModal();
   setupCheckinModal();
+  iniciarMascota();
   setupBloqueadaModal();
   setupPoke();
   setupCalendar();
@@ -372,6 +375,7 @@ async function saveEntry() {
     if (!yaCompletadaAntes) {
       enviarPush(currentRole.partner, '+Dopamina', `✓ ${currentRole.displayName} ya escribió su parte de hoy`, 'entrada-completada');
     }
+    if (data.date === todayISO()) mascotaPremio('diary');
     loadRacha();
     enterComposeForDate(data.date); // refresca el banner de estado con los datos ya guardados
   } catch (e) {
@@ -707,6 +711,7 @@ async function loadRacha() {
     }
     if (racha > 0) {
       const etapa = mascotaRacha(racha);
+      if (semanas.has(isoWeekKey(new Date())) && window.MascotaUI) MascotaUI.weekly(isoWeekKey(new Date()), racha);
       el.innerHTML = `<span class="mascota-icon">${mascotaSVG(etapa.idx)}</span><span class="mascota-texto">${racha} semana${racha === 1 ? '' : 's'} seguida${racha === 1 ? '' : 's'}</span>`;
       el.title = `${etapa.nombre} — vuestra mascota crece con cada semana seguida`;
     } else {
@@ -874,6 +879,7 @@ function setupPoke() {
         await setDoc(pokeDocRef(), { de: currentRole.role, ts: Date.now() });
         showPokeToast('💌 Le has dicho que piensas en ella/él');
         enviarPush(currentRole.partner, '+Dopamina', `💕 ${currentRole.displayName} está pensando en ti`, 'poke');
+        mascotaPremio('poke');
       } catch (e) {
         // silencioso
       }
@@ -888,10 +894,37 @@ function setupPoke() {
     if (Date.now() - data.ts > 15000) return; // ignora pokes viejos al cargar la app
     const nombre = EMAIL_ROLES[Object.keys(EMAIL_ROLES).find(k => EMAIL_ROLES[k].role === data.de)]?.displayName || 'Tu pareja';
     showPokeToast(`💕 ${nombre} está pensando en ti`);
+    if (window.MascotaUI) MascotaUI.react('poke');
     // La notificación del sistema mientras la pestaña está en segundo plano ya
     // llega por el push real (ver más abajo) — aquí solo queda el toast en
     // pantalla para cuando la app está en primer plano.
   });
+}
+
+// ─────────────────────────────────────────────
+// MASCOTA (Dopi) — la UI vive en mascota-ui.js; aquí solo el pegamento
+// ─────────────────────────────────────────────
+const MASCOTA_PERSONAS = [
+  { uid: 'fahd', name: 'Abdu' },   // rosa
+  { uid: 'cilia', name: 'Alba' }   // verde azulado
+];
+
+function iniciarMascota() {
+  if (!window.MascotaUI || !currentRole) return;
+  MascotaUI.init({
+    role: currentRole.role,
+    partner: currentRole.partner,
+    displayName: currentRole.displayName,
+    parejaId: currentRole.parejaId,
+    people: MASCOTA_PERSONAS,
+    fb: { db, doc, collection, runTransaction, updateDoc, onSnapshot },
+    push: enviarPush,
+    toast: showPokeToast
+  });
+}
+
+function mascotaPremio(tipo) {
+  if (window.MascotaUI) MascotaUI.reward(tipo);
 }
 
 // ─────────────────────────────────────────────
@@ -1719,6 +1752,7 @@ async function subirCheckin() {
     checkinFotoFrontal = null;
     checkinFotoTrasera = null;
     checkinCanvasFinal = null;
+    mascotaPremio('photoCheck');
     await renderCheckinEstado();
     loadCheckinBadge();
   } catch (e) {
