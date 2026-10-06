@@ -17,8 +17,18 @@
 </head>
 <body>
 
+  <!-- CARGANDO (mientras Firebase comprueba la sesión guardada) -->
+  <div id="screen-cargando" class="screen active" role="status" aria-live="polite">
+    <div class="cargando-card">
+      <div class="cargando-icon">♡</div>
+      <h1>+Dopamina</h1>
+      <div class="cargando-spinner" aria-hidden="true"></div>
+      <p class="cargando-texto" id="cargando-texto">Iniciando sesión…</p>
+    </div>
+  </div>
+
   <!-- LOGIN -->
-  <div id="screen-login" class="screen active">
+  <div id="screen-login" class="screen">
     <div class="login-card">
       <div class="login-icon">♡</div>
       <h1>+Dopamina</h1>

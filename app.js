@@ -111,7 +111,17 @@ $('btn-register').addEventListener('click', async () => {
 
 $('btn-logout').addEventListener('click', () => signOut(auth));
 
+// Si Firebase tarda demasiado (sin conexión, red lenta), no dejar la pantalla de carga para siempre
+const cargaTimeout = setTimeout(() => {
+  const el = $('screen-cargando');
+  if (el && el.classList.contains('active')) {
+    const t = $('cargando-texto');
+    if (t) t.textContent = 'Tarda más de lo normal… comprueba tu conexión';
+  }
+}, 8000);
+
 onAuthStateChanged(auth, user => {
+  clearTimeout(cargaTimeout);
   if (user) {
     const email = (user.email || '').toLowerCase();
     const roleInfo = EMAIL_ROLES[email];

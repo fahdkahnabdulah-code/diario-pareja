@@ -379,3 +379,15 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .racha-badge { padding: 4px 8px; flex-shrink: 1; min-width: 0; }
 .tab { padding: 12px 4px 11px; gap: 5px; }
 .tab-icon { font-size: 19px; }
+
+
+/* ── Pantalla "Iniciando sesión…" ───────────────────────── */
+#screen-cargando.active { display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--pink-light); }
+.cargando-card { background: var(--surface); border-radius: var(--radius); padding: 36px 40px 30px; width: 100%; max-width: 300px; display: flex; flex-direction: column; align-items: center; gap: 12px; box-shadow: 0 2px 24px rgba(0,0,0,0.08); text-align: center; }
+.cargando-icon { font-size: 40px; line-height: 1; color: var(--pink-dark); animation: cargando-latido 1.4s ease-in-out infinite; }
+.cargando-card h1 { font-size: 22px; font-weight: 700; }
+.cargando-spinner { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--pink-light); border-top-color: var(--pink-dark); animation: cargando-giro .8s linear infinite; margin-top: 6px; }
+.cargando-texto { font-size: 13px; color: var(--text-muted); }
+@keyframes cargando-latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+@keyframes cargando-giro { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cargando-icon, .cargando-spinner { animation-duration: 3s; } }
