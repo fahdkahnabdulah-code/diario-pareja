@@ -58,7 +58,7 @@
     sleep: 'Arrastra la manta sobre Dopi',
     surprise: 'Entrégale el regalo a Dopi',
     clean: 'Frota a Dopi con la esponja 🫧',
-    pet: 'Desliza el dedo sobre Dopi para acariciarla'
+    pet: 'Acaricia a Dopi frotando de lado a lado ✨ hasta que salga un corazón'
   };
   // manchas: x, y, radio, umbral de suciedad (0-100) a partir del cual aparecen
   var DIRT = [[78, 100, 9, 8], [124, 132, 7, 18], [62, 140, 8, 28], [112, 82, 6, 38], [142, 112, 8, 48], [92, 152, 7, 58], [100, 120, 10, 68]];
@@ -221,6 +221,49 @@
     if (!svg) return false;
     var r = svg.getBoundingClientRect();
     return x > r.left + r.width * 0.15 && x < r.right - r.width * 0.15 && y > r.top + r.height * 0.18 && y < r.bottom;
+  }
+
+  /* chispas estilo Pokémon GO + anillo de progreso de la caricia */
+  var SPARK_COLORS = ['#FFD54A', '#FF8FB8', '#7FE3D3', '#FFFFFF', '#FFB347'];
+  function sparks(x, y, n) {
+    var room = $('pet-room'); if (!room) return;
+    var rc = room.getBoundingClientRect();
+    for (var i = 0; i < n; i++) {
+      var el = document.createElement('span');
+      var a = Math.random() * Math.PI * 2, d = 26 + Math.random() * 34;
+      el.className = 'pet-spark' + (Math.random() < 0.35 ? ' is-dot' : '');
+      el.textContent = el.className.indexOf('is-dot') > -1 ? '' : '✦';
+      el.style.left = (x - rc.left) + 'px'; el.style.top = (y - rc.top) + 'px';
+      el.style.setProperty('--dx', Math.round(Math.cos(a) * d) + 'px');
+      el.style.setProperty('--dy', Math.round(Math.sin(a) * d - 8) + 'px');
+      el.style.color = SPARK_COLORS[Math.floor(Math.random() * SPARK_COLORS.length)];
+      el.style.fontSize = (10 + Math.floor(Math.random() * 10)) + 'px';
+      room.appendChild(el);
+      (function (e) { setTimeout(function () { e.remove(); }, 750); })(el);
+    }
+  }
+  function ringShow(on) {
+    var room = $('pet-room'); if (!room) return null;
+    var r = room.querySelector('.pet-ring');
+    if (!on) { if (r) r.remove(); return null; }
+    if (r) return r;
+    var h = $('pet-holder'), rc = room.getBoundingClientRect(), hc = h.getBoundingClientRect();
+    r = document.createElement('div'); r.className = 'pet-ring';
+    r.innerHTML = '<svg viewBox="0 0 100 100"><circle class="pr-bg" cx="50" cy="50" r="44"/><circle class="pr-fg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg>';
+    r.style.left = (hc.left - rc.left + hc.width / 2) + 'px'; r.style.top = (hc.top - rc.top + hc.height * 0.5) + 'px';
+    room.appendChild(r); return r;
+  }
+  function ringSet(p) {
+    var r = ringShow(true); if (!r) return;
+    r.querySelector('.pr-fg').style.strokeDashoffset = String(100 - Math.round(p * 100));
+  }
+  function bigHeart() {
+    var room = $('pet-room'), h = $('pet-holder'); if (!room || !h) return;
+    var rc = room.getBoundingClientRect(), hc = h.getBoundingClientRect();
+    var el = document.createElement('div'); el.className = 'pet-bigheart'; el.textContent = '💗';
+    el.style.left = (hc.left - rc.left + hc.width / 2) + 'px'; el.style.top = (hc.top - rc.top + hc.height * 0.12) + 'px';
+    room.appendChild(el); setTimeout(function () { el.remove(); }, 1500);
+    sparks(hc.left + hc.width / 2, hc.top + hc.height * 0.4, 14);
   }
   function setTarget(on) { var room = $('pet-room'); if (room) room.classList.toggle('is-target', !!on); }
 
@@ -392,12 +435,22 @@
     if (Math.hypot(e.clientX - rub.sx, e.clientY - rub.sy) > 8) rub.moved = true;
     if (Math.abs(dx) > 4) { var dir = dx > 0 ? 1 : -1; if (rub.dir && dir !== rub.dir) rub.rev++; rub.dir = dir; }
     rub.dist += step; rub.fx += step; rub.lx = e.clientX; rub.ly = e.clientY;
-    if (rub.fx > 48) { rub.fx = 0; spawn(e.clientX, e.clientY - 10, '💗', 'is-heart'); }
+    if (rub.fx > 22) { rub.fx = 0; sparks(e.clientX, e.clientY, 3); }
+    if (!rub.done) {
+      var prog = Math.min(1, rub.dist / RUB_DIST);
+      ringSet(rub.rev >= 2 ? prog : Math.min(prog, 0.92));
+    }
     if (!rub.done && rub.dist >= RUB_DIST && rub.rev >= 2) {
       rub.done = true;
       var left = L.cooldownLeft(curState(), ctx.role, 'pet', Date.now());
-      if (left > 0) { if (!rub.warned) { rub.warned = true; toast('Ya está mimadita ahora mismo · otra caricia con premio en ' + fmt(left)); } }
-      else { commit('pet'); if (mode === 'pet') endMode(true); }
+      if (left > 0) {
+        var rg = ringShow(true); if (rg) rg.classList.add('is-full');
+        sparks(e.clientX, e.clientY, 8);
+        if (!rub.warned) { rub.warned = true; toast('Ya está mimadita ahora mismo · otra caricia con premio en ' + fmt(left)); }
+      } else {
+        var rg2 = ringShow(true); if (rg2) rg2.classList.add('is-done');
+        bigHeart(); bounce(); commit('pet'); if (mode === 'pet') endMode(true);
+      }
     }
   }
   function onRubUp(e) {
@@ -406,6 +459,8 @@
     window.removeEventListener('pointermove', onRubMove);
     window.removeEventListener('pointerup', onRubUp);
     window.removeEventListener('pointercancel', onRubUp);
+    var rg3 = document.querySelector('#pet-room .pet-ring');
+    if (rg3) { rg3.classList.add('is-out'); setTimeout(function () { ringShow(false); }, r.done ? 900 : 250); }
     if (!r.moved && Date.now() - r.t0 < 400) {      // toque: cosquillas
       bounce(); spawn(r.sx, r.sy - 20, ['💗', '✨', '😄'][Math.floor(Math.random() * 3)], 'is-heart');
     }
