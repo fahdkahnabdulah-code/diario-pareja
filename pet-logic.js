@@ -9,16 +9,17 @@
   'use strict';
 
   var H = 3600 * 1000, MIN = 60 * 1000;
-  var NEEDS = ['hunger', 'mood', 'energy', 'love'];
-  var NEED_LABEL = { hunger: 'Comida', mood: 'Ánimo', energy: 'Energía', love: 'Cariño' };
+  var NEEDS = ['hunger', 'mood', 'energy', 'love', 'clean'];
+  var NEED_LABEL = { hunger: 'Comida', mood: 'Ánimo', energy: 'Energía', love: 'Cariño', clean: 'Limpieza' };
   var FLOOR = 5;                       // nunca llega a 0
-  var DECAY = { hunger: 4, mood: 3, energy: 2.5, love: 2 };   // puntos por hora
+  var DECAY = { hunger: 4, mood: 3, energy: 2.5, love: 2, clean: 2 };   // puntos por hora
   var SLEEP_GAIN = 10;                 // energía por hora mientras duerme
 
   var ACTIONS = {
     feed:     { label: 'Dar de comer', mood: 'eat',   ms: 2400, cd: 3 * H,  delta: { hunger: 35, mood: 5 },              pts: 3, xp: 5 },
     play:     { label: 'Jugar',        mood: 'play',  ms: 3000, cd: 2 * H,  delta: { mood: 30, energy: -10, hunger: -5 }, pts: 3, xp: 5 },
     pet:      { label: 'Acariciar',    mood: 'pet',   ms: 2200, cd: 30 * MIN, delta: { love: 20, mood: 5 },              pts: 1, xp: 2, dailyMax: 6 },
+    clean:    { label: 'Limpiar',      mood: 'pet',   ms: 2200, cd: 4 * H,  delta: { clean: 50, mood: 5 },               pts: 3, xp: 5 },
     sleep:    { label: 'Arropar',      mood: 'sleepy',ms: 0,    cd: 8 * H,  delta: { energy: 10 },                       pts: 3, xp: 5 },
     surprise: { label: 'Mimo sorpresa',mood: 'party', ms: 3200, cd: 24 * H, delta: { hunger: 15, mood: 15, energy: 15, love: 15 }, pts: 5, xp: 10, notify: true }
   };
@@ -49,7 +50,7 @@
 
   /* Aplica el desgaste desde lastTick hasta now. Devuelve necesidades nuevas. */
   function decay(state, now) {
-    var n = Object.assign({}, state.needs);
+    var n = Object.assign({ clean: 80 }, state.needs);   // clean: docs antiguos sin limpieza
     var from = state.lastTick, to = now;
     if (to <= from) return n;
     var sleepEnd = state.sleepingUntil || 0;
@@ -65,7 +66,7 @@
 
   function isSick(n) {
     var avg = (n.hunger + n.mood + n.energy + n.love) / 4;
-    var low = NEEDS.filter(function (k) { return n[k] < 12; }).length;
+    var low = ['hunger', 'mood', 'energy', 'love'].filter(function (k) { return n[k] < 12; }).length;
     return avg < 20 || low >= 3;
   }
 
@@ -210,7 +211,7 @@
   function newState(now) {
     return {
       name: 'Dopi', stage: 1, xp: 0, points: 0,
-      needs: { hunger: 80, mood: 80, energy: 80, love: 80 }, lastTick: now, sleepingUntil: 0,
+      needs: { hunger: 80, mood: 80, energy: 80, love: 80, clean: 80 }, lastTick: now, sleepingUntil: 0,
       harmony: { mix: 0.5, share: 0.5, teamDays14: 0 }, teamDaysTotal: 0,
       equipped: { hat: 'none', face: 'none', neck: 'none', room: 'cozy' }, owned: ['cozy'],
       cooldowns: {}, lastAction: {}, days: {}, streak: { weeks: 0, lastWeekId: null }

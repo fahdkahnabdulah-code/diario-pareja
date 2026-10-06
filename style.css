@@ -432,3 +432,32 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 @media (prefers-color-scheme: dark) { .pet-ui .pet-buy-btn { color: #3a1a26; } }
 .pet-ui .log time { white-space: nowrap; }
 .pet-ui .log > div > span:nth-child(2) { min-width: 0; }
+
+/* ===== Dopi interactiva (v6) ===== */
+.pet-ui .pet-hintbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:8px 8px 8px 14px;border-radius:14px;background:var(--rose-soft);color:var(--rose);font-size:14px;font-weight:700}
+.pet-ui .pet-hintbar[hidden]{display:none}
+.pet-ui .pet-hintbar button{appearance:none;border:0;background:rgba(255,255,255,.55);color:inherit;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;flex:none}
+.pet-ui .pet-tray{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px;padding:10px;border:2px dashed var(--line);border-radius:16px;background:var(--surface)}
+.pet-ui .pet-tray[hidden]{display:none}
+.pet-ui .pet-tool{appearance:none;border:0;background:var(--surface-2);width:60px;height:60px;border-radius:18px;font-size:34px;line-height:1;display:grid;place-items:center;touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;padding:0}
+.pet-ui .pet-tool.is-dragging{opacity:.35}
+.pet-ui .pet-tool svg{width:44px;height:34px}
+.pet-ghost{position:fixed;z-index:9999;font-size:46px;line-height:1;pointer-events:none;transform:translate(-50%,-50%);filter:drop-shadow(0 6px 6px rgba(0,0,0,.25))}
+.pet-ghost svg{width:56px;height:44px}
+.pet-ui .room{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pet-ui .room.is-target{box-shadow:inset 0 0 0 3px var(--teal)}
+.pet-ui .room-pet{touch-action:none;cursor:pointer}
+.room-pet svg.pet-dirt{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.pet-fx{position:absolute;pointer-events:none;font-size:20px;line-height:1;z-index:5;animation:pet-fx 1s ease-out forwards}
+.pet-fx.is-bubble{animation-duration:1.3s}
+@keyframes pet-fx{0%{opacity:0;transform:translateY(0) scale(.6)}15%{opacity:1}100%{opacity:0;transform:translateY(-46px) scale(1.15)}}
+.room-pet.pet-bounce{animation:pet-bounce .6s ease}
+@keyframes pet-bounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-16px)}60%{transform:translateY(0)}80%{transform:translateY(-5px)}}
+.pet-ui .acts{gap:2px}
+.pet-ui .act{width:54px}
+.pet-ui .act-btn{width:48px;height:48px}
+.pet-ui .act-btn svg{width:23px;height:23px}
+.pet-ui .act-label{font-size:11px}
+.pet-ui .act-time{font-size:10px}
+.pet-ui .act.is-active .act-btn{background:var(--rose-soft);border-color:var(--rose);box-shadow:0 0 0 2px var(--rose)}
+.pet-ui .need:last-child:nth-child(odd){grid-column:1/-1}
