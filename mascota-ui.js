@@ -460,7 +460,7 @@
     tray.innerHTML = STEPS.map(function (st, i) {
       var cls = 'pet-tool' + (i < cleanStep ? ' is-done' : i > cleanStep ? ' is-locked' : '');
       return '<div class="pet-tool-wrap"><button class="' + cls + '" data-step="' + i + '" aria-label="' + esc(st.label) + '"' + (i !== cleanStep ? ' aria-disabled="true"' : '') + '>' + st.tool + (i < cleanStep ? '<b class="pet-tick">✓</b>' : '') + '</button>' +
-        '<span class="pet-tool-lbl">' + (i + 1) + ' · ' + st.label + '</span></div>';
+        '<span class="pet-tool-lbl">' + st.label + '</span></div>';
     }).join('');
     tray.hidden = false;
     $('pet-hint-text').textContent = STEPS[cleanStep].hint;
