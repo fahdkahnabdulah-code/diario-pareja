@@ -23,6 +23,18 @@
     { id: 'pizza',      emoji: '🍕', name: 'Pizza',   price: 24, hunger: 38, mood: 8 },
     { id: 'cake',       emoji: '🍰', name: 'Tarta',   price: 40, hunger: 28, mood: 28, love: 8 }
   ];
+  // Juguetes: cada uno lanza un minijuego distinto. 'ball' viene de serie.
+  var TOYS = [
+    { id: 'ball',    emoji: '⚽', name: 'Pelota',   price: 0,  mood: 14, energy: 6,  game: { kind: 'catch', ms: 15000, rate: 800, speed: 150 }, stars: [5, 9, 13],  hint: 'Mueve a Dopi con el dedo y atrapa las pelotas ⚽', label: 'Atrapa' },
+    { id: 'balloon', emoji: '🎈', name: 'Globos',   price: 8,  mood: 16, energy: 4,  game: { kind: 'pop', mode: 'float', ms: 15000, rate: 650 },             stars: [6, 10, 14], hint: 'Toca los globos antes de que se escapen 🎈', label: 'Explota' },
+    { id: 'yarn',    emoji: '🧶', name: 'Ovillo',   price: 14, mood: 20, energy: 6,  game: { kind: 'pop', mode: 'roll', ms: 15000, rate: 800 },              stars: [6, 10, 14], hint: 'Toca los ovillos antes de que rueden fuera 🧶', label: 'Persigue' },
+    { id: 'frisbee', emoji: '🥏', name: 'Frisbi',   price: 20, mood: 24, energy: 8,  game: { kind: 'catch', ms: 15000, rate: 600, speed: 215 },             stars: [7, 11, 16], hint: 'Mueve a Dopi y atrapa los frisbis 🥏', label: 'Atrapa' },
+    { id: 'teddy',   emoji: '🧸', name: 'Peluche',  price: 30, mood: 28, energy: 3,  love: 4, game: { kind: 'catch', ms: 15000, rate: 900, speed: 120 },   stars: [6, 10, 14], hint: 'Atrapa los peluches 🧸 y esquiva las arañas', label: 'Atrapa' },
+    { id: 'console', emoji: '🎮', name: 'Consola',  price: 50, mood: 38, energy: 10, game: { kind: 'pop', mode: 'flash', ms: 15000, rate: 560 },             stars: [8, 13, 18], hint: 'Toca las estrellas ⭐ ¡rápido!', label: 'Reflejos' }
+  ];
+  var MIN_PLAY_ENERGY = 15;
+  function toyById(id) { return TOYS.filter(function (t) { return t.id === id; })[0]; }
+  function toyOwned(state, id) { return id === 'ball' || !!(state && state.owned && state.owned.indexOf('toy-' + id) >= 0); }
   var START_FOOD = { apple: 10 };
   var FULL_AT = 96;                    // a partir de aquí no quiere más comida
   function foodById(id) { return FOODS.filter(function (f) { return f.id === id; })[0]; }
@@ -30,7 +42,7 @@
 
   var ACTIONS = {
     feed:     { label: 'Dar de comer', mood: 'eat',   ms: 2400, cd: 0,      delta: {},                                   pts: 2, xp: 4, dailyMax: 4 },
-    play:     { label: 'Jugar',        mood: 'play',  ms: 3000, cd: 2 * H,  delta: { mood: 30, energy: -10, hunger: -5 }, pts: 3, xp: 5 },
+    play:     { label: 'Jugar',        mood: 'play',  ms: 3000, cd: 10 * MIN, delta: {},                                pts: 2, xp: 4, dailyMax: 6 },
     pet:      { label: 'Acariciar',    mood: 'pet',   ms: 2200, cd: 30 * MIN, delta: { love: 20, mood: 5 },              pts: 1, xp: 2, dailyMax: 6 },
     clean:    { label: 'Bañar',        mood: 'love',  ms: 2600, cd: 3 * H,  delta: { clean: 100, mood: 8 },              pts: 5, xp: 8 },
     sleep:    { label: 'Arropar',      mood: 'sleepy',ms: 0,    cd: 8 * H,  delta: { energy: 10 },                       pts: 3, xp: 5 },
@@ -118,7 +130,7 @@
     var s = JSON.parse(JSON.stringify(state));
     var events = [];
     s.needs = decay(state, now);
-    var delta = A.delta, food = null;
+    var delta = A.delta, food = null, bonus = 0, toy = null, stars = 0;
     if (type === 'feed') {
       food = foodById(opts && opts.food);
       if (!food) return { error: 'alimento-desconocido' };
@@ -127,6 +139,15 @@
       if (s.needs.hunger >= FULL_AT) return { error: 'lleno' };
       s.food[food.id]--;
       delta = { hunger: food.hunger, mood: food.mood || 0, love: food.love || 0 };
+    }
+    if (type === 'play') {
+      toy = toyById(opts && opts.toy);
+      if (!toy) return { error: 'juguete-desconocido' };
+      if (!toyOwned(state, toy.id)) return { error: 'sin-juguete' };
+      if (s.needs.energy < MIN_PLAY_ENERGY) return { error: 'cansada' };
+      stars = Math.max(0, Math.min(3, (opts.stars | 0)));
+      bonus = stars;
+      delta = { mood: Math.round(toy.mood * (0.55 + 0.15 * stars)), energy: -toy.energy, hunger: -3, love: Math.round((toy.love || 0) * stars / 3) };
     }
     Object.keys(delta).forEach(function (k) { s.needs[k] = clamp(s.needs[k] + delta[k]); });
     s.lastTick = now;
@@ -145,10 +166,10 @@
     var d = dayFor(s, now);
     d[uid] = d[uid] || { actions: 0, pets: 0 };
     d[uid].actions++;
-    var counter = type === 'pet' ? 'pets' : type === 'feed' ? 'feeds' : null;
+    var counter = type === 'pet' ? 'pets' : type === 'feed' ? 'feeds' : type === 'play' ? 'plays' : null;
     var counts = !counter || (d[uid][counter] = (d[uid][counter] || 0) + 1) <= A.dailyMax;
-    if (counts) { s.points += A.pts; events.push(addXp(s, d, A.xp, now)); }
-    events.push({ kind: 'action', type: type, uid: uid, pts: counts ? A.pts : 0, food: food ? food.id : null });
+    if (counts) { s.points += A.pts + bonus; events.push(addXp(s, d, A.xp + bonus, now)); }
+    events.push({ kind: 'action', type: type, uid: uid, pts: counts ? A.pts + bonus : 0, food: food ? food.id : null, toy: toy ? toy.id : null, stars: stars });
 
     // ¿hoy ya habéis cuidado los dos? -> bonus visible una vez
     var both = (people || []).every(function (p) { return d[p.uid] && d[p.uid].actions > 0; });
@@ -300,6 +321,19 @@
         });
       });
     },
+    buyToy: function (fb, coupleId, toyId) {
+      var ref = PetStore.ref(fb, coupleId), t = toyById(toyId);
+      return fb.runTransaction(fb.db, function (tx) {
+        return tx.get(ref).then(function (snap) {
+          var s = snap.exists() ? snap.data() : newState(Date.now());
+          if (!t) return { error: 'juguete-desconocido' };
+          if (toyOwned(s, t.id)) return { error: 'ya-lo-tenéis' };
+          if (s.points < t.price) return { error: 'faltan-chispas', left: t.price - s.points };
+          s.points -= t.price; s.owned = (s.owned || []).concat('toy-' + t.id);
+          tx.set(ref, s); return { state: s };
+        });
+      });
+    },
     buyFood: function (fb, coupleId, foodId, qty) {
       var ref = PetStore.ref(fb, coupleId), f = foodById(foodId);
       qty = Math.max(1, qty | 0);
@@ -354,6 +388,7 @@
   ];
 
   root.PetLogic = {
+    TOYS: TOYS, MIN_PLAY_ENERGY: MIN_PLAY_ENERGY, toyById: toyById, toyOwned: toyOwned,
     FOODS: FOODS, FULL_AT: FULL_AT, foodById: foodById, foodOf: foodOf,
     NEEDS: NEEDS, NEED_LABEL: NEED_LABEL, ACTIONS: ACTIONS, REWARDS: REWARDS, SHOP: SHOP,
     STAGE_XP: STAGE_XP, STAGE_TEAMDAYS: STAGE_TEAMDAYS,

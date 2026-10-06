@@ -565,3 +565,25 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .pet-ui .pet-buy-btns{display:flex;gap:8px;justify-content:center}
 .pet-ui .pet-buy-btn.is-miss{opacity:.45}
 .pet-ui .pet-item-eff{font-size:11px;color:var(--ink-3);font-weight:600}
+
+/* ===== Jugar: minijuegos y barra de ánimo ===== */
+.pet-foodbar.is-mood .pfb-ico{background:radial-gradient(circle at 35% 30%,#FFC2DA,#E0508A)}
+.pet-foodbar.is-mood .pfb-fill{background:linear-gradient(180deg,#FF8FBE,#E0508A)}
+.pet-foodbar.is-mood .pfb-prev{background:repeating-linear-gradient(135deg,#FFD3E5 0 6px,#FFA9CB 6px 12px)}
+.pet-game{position:absolute;inset:0;z-index:7;touch-action:none;-webkit-user-select:none;user-select:none;cursor:pointer;overflow:hidden}
+.pet-game .pg-hud{position:absolute;left:10px;top:54px;display:flex;gap:8px;pointer-events:none}
+.pet-game .pg-hud span{padding:4px 11px;border-radius:14px;background:rgba(255,255,255,.92);color:#2A1520;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.pet-game .pg-score.is-bump{animation:pfb-bump .35s ease}
+.pet-game .pg-x{position:absolute;right:12px;top:48px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#2A1520;font-size:15px;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.pet-game .pg-count{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-size:64px;font-weight:900;color:#fff;text-shadow:0 4px 0 #E0508A,0 0 18px rgba(0,0,0,.25);pointer-events:none}
+.pet-game .pg-count.is-pop{animation:pg-pop .6s ease-out}
+@keyframes pg-pop{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}30%{transform:translate(-50%,-50%) scale(1.2);opacity:1}100%{transform:translate(-50%,-50%) scale(1)}}
+.pet-game .pg-item{position:absolute;left:0;top:0;font-size:36px;line-height:1;padding:6px;will-change:transform;filter:drop-shadow(0 3px 3px rgba(0,0,0,.25))}
+.pet-game .pg-result{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 26px;border-radius:22px;background:rgba(255,255,255,.95);color:#2A1520;box-shadow:0 6px 0 rgba(0,0,0,.14),0 10px 24px rgba(0,0,0,.18);animation:pg-pop .5s ease-out}
+.pet-game .pg-result b{font-size:20px}
+.pet-game .pg-result small{font-size:12px;color:#6B4A57;font-weight:700}
+.pet-game .pg-stars{display:flex;gap:4px;font-size:30px;line-height:1}
+.pet-game .pg-stars i{font-style:normal;color:#D9CBD0}
+.pet-game .pg-stars i.on{color:#FFC21A;text-shadow:0 2px 0 #E08A00;animation:pg-pop .5s ease-out}
+.pet-ui .pet-tool.pet-more{font-size:26px;color:var(--rose);background:var(--rose-soft)}
+.pet-ui .pet-fooditem.is-owned .pet-item-tag{color:var(--teal)}

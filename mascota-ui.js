@@ -50,7 +50,7 @@
   };
   var COLORS = { hunger: '#F5A524', mood: '#E0508A', energy: '#17A493', love: '#B04E9A', clean: '#4C9FD6' };
   var TITLES = { happy: 'Está contenta', hungry: 'Tiene hambre', sleepy: 'Durmiendo', sad: 'Os echa de menos', love: 'Está enamorada', sick: 'Está apagadita' };
-  var SLOTS = [['food', 'Comida'], ['hat', 'Gorros'], ['face', 'Gafas'], ['neck', 'Cuello'], ['room', 'Cuarto']];
+  var SLOTS = [['food', 'Comida'], ['toy', 'Juguetes'], ['hat', 'Gorros'], ['face', 'Gafas'], ['neck', 'Cuello'], ['room', 'Cuarto']];
   var ROOM_SWATCH = { cozy: ['#F7E3DA', '#E7C3AE'], beach: ['#BFE7F1', '#F1DDB0'], garden: ['#CFE8C4', '#9DCB86'], attic: ['#E8CDB4', '#C99B76'] };
 
   var BLANKET = '<svg viewBox="0 0 48 36" width="52" height="40" aria-hidden="true"><rect x="2" y="4" width="44" height="28" rx="8" fill="#F6A9C6" stroke="#5A1E33" stroke-width="2.5"/><path d="M15 5v26M27 5v26M39 5v26" stroke="#17A493" stroke-width="3"/></svg>';
@@ -62,14 +62,14 @@
   ];
   var TOOLS = {
     feed: null,   // dinámico: según la despensa
-    play: ['⚽'],
+    play: null,   // dinámico: juguetes que tenéis
     sleep: [BLANKET],
     surprise: ['🎁'],
     clean: []
   };
   var HINT = {
     feed: 'Arrastra la comida hasta Dopi 🍽️',
-    play: 'Lánzale la pelota a Dopi',
+    play: 'Elige un juguete para jugar 🎲',
     sleep: 'Arrastra la manta sobre Dopi',
     surprise: 'Entrégale el regalo a Dopi',
     clean: '',
@@ -147,18 +147,23 @@
   /* ---------- barra de comida (estilo Pokémon GO) ---------- */
   var barHunger = 0;
   function hungerNow() { return L.decay(curState(), Date.now()).hunger; }
-  function updateFoodBar(hunger, gain) {
+  function moodNow() { return L.decay(curState(), Date.now()).mood; }
+  function barKey() { return mode === 'play' ? 'mood' : 'hunger'; }
+  function updateFoodBar(val, gain) {
     var fb = $('pet-foodbar'); if (!fb) return;
-    var show = mode === 'feed';
+    var show = mode === 'feed' || mode === 'play';
     fb.hidden = !show;
-    if (hunger != null) barHunger = hunger;
     if (!show) return;
+    var kind = barKey();
+    fb.classList.toggle('is-mood', kind === 'mood');
+    fb.querySelector('.pfb-ico').textContent = kind === 'mood' ? '😊' : '🍖';
+    if (val != null) barHunger = val; else barHunger = L.decay(curState(), Date.now())[kind];
     var g = gain || 0;
     fb.querySelector('.pfb-fill').style.width = barHunger + '%';
     var pv = fb.querySelector('.pfb-prev');
     pv.style.width = Math.min(100, barHunger + g) + '%'; pv.style.opacity = g ? '1' : '0';
     fb.querySelector('.pfb-num').textContent = g ? barHunger + ' → ' + Math.min(100, barHunger + g) : String(barHunger);
-    fb.classList.toggle('is-full', barHunger >= L.FULL_AT);
+    fb.classList.toggle('is-full', kind === 'hunger' && barHunger >= L.FULL_AT);
   }
   function barPop(n) {
     var fb = $('pet-foodbar'), room = $('pet-room'); if (!fb || !room || fb.hidden || !n) return;
@@ -235,8 +240,9 @@
     if (!acting) D.set(svg, { mood: r.mood });
     D.set(svg, { stage: s.stage, mix: s.harmony.mix, share: s.harmony.share, hat: s.equipped.hat, face: s.equipped.face, neck: s.equipped.neck });
     updateDirt(n.clean);
-    updateFoodBar(n.hunger);
+    if (!game) updateFoodBar(mode === 'play' ? n.mood : n.hunger);
     if (mode === 'feed' && !drag) renderFeedTray();
+    if (mode === 'play' && !game) renderPlayTray();
 
     var room = $('pet-room');
     room.setAttribute('data-time', timeOfDay(t));
@@ -290,7 +296,7 @@
   }
 
   function renderShop(s) {
-    var key = JSON.stringify([s.points, s.owned, s.equipped, s.stage, shopSlot, shopSel, s.food]);
+    var key = JSON.stringify([s.points, s.owned, s.equipped, s.stage, shopSlot, shopSel, s.food, s.energy]);
     if (key === shopKey) return;
     shopKey = key;
     var tabs = SLOTS.map(function (x) {
@@ -313,6 +319,23 @@
           }).join('') + '</span></div>';
       }
       $('pet-shop').innerHTML = '<div class="eyebrow">Armario y tienda</div><div class="pet-slots">' + tabs + '</div><div class="pet-items">' + fitems + '</div>' + fbuy;
+      return;
+    }
+    if (shopSlot === 'toy') {
+      var titems = L.TOYS.map(function (t) {
+        var own = L.toyOwned(s, t.id);
+        return '<button class="pet-item pet-fooditem' + (own ? ' is-owned' : '') + (shopSel === t.id ? ' is-sel' : '') + '" data-toy-item="' + t.id + '">' +
+          '<span class="pet-item-prev pet-foodemoji">' + t.emoji + '</span><span class="pet-item-name">' + esc(t.name) + '</span>' +
+          '<span class="pet-item-tag">' + (own ? 'Tuyo' : '✦ ' + t.price) + '</span><span class="pet-item-eff">' + esc(t.label) + ' · +' + t.mood + ' 😊</span></button>';
+      }).join('');
+      var st2 = shopSel && L.toyById(shopSel), tbuy = '';
+      if (st2) {
+        var own2 = L.toyOwned(s, st2.id);
+        var miss = st2.price - s.points;
+        tbuy = '<div class="pet-buy pet-buy-food"><span>«' + esc(st2.name) + '» · ' + esc(st2.label) + ' · +' + st2.mood + ' ánimo · −' + st2.energy + ' energía</span>' +
+          (own2 ? '<span class="pet-buy-miss">Ya lo tenéis · ¡a jugar!</span>' : miss > 0 ? '<span class="pet-buy-miss">Te faltan ' + miss + ' ✦</span>' : '<span class="pet-buy-btns"><button class="pet-buy-btn" data-buy-toy="' + st2.id + '">Comprar por ✦ ' + st2.price + '</button></span>') + '</div>';
+      }
+      $('pet-shop').innerHTML = '<div class="eyebrow">Armario y tienda</div><div class="pet-slots">' + tabs + '</div><div class="pet-items">' + titems + '</div>' + tbuy;
       return;
     }
     var items = L.SHOP.filter(function (i) { return i.slot === shopSlot; }).map(function (i) {
@@ -429,10 +452,12 @@
   function commit(type, opts) {
     if (busy) return;
     busy = true;
-    var before = type === 'feed' ? hungerNow() : 0;
+    var before = type === 'feed' ? hungerNow() : type === 'play' ? moodNow() : 0;
     L.PetStore.act(ctx.fb, ctx.parejaId, ctx.people, ctx.role, type, opts).then(function (r) {
       busy = false;
       if (r.error === 'cooldown') return toast('Aún descansa de eso · vuelve en ' + fmt(r.left));
+      if (r.error === 'cansada') return toast('Está muy cansada para jugar 😴 Déjala dormir un poco');
+      if (r.error === 'sin-juguete') return toast('Ese juguete no lo tenéis aún');
       if (r.error === 'no-tiene-sueño') return toast('No tiene sueño todavía');
       if (r.error === 'sin-comida') { shopKey = ''; render(); return toast('Ya no te queda de eso · compra más en la tienda'); }
       if (r.error === 'lleno') return toast('No tiene hambre ahora mismo 😊');
@@ -442,7 +467,9 @@
       if (ev) floatPts(ev.pts);
       var fr = type === 'feed' && opts && FOOD_REACT[opts.food];
       var mood = fr ? fr.eat : r.mood;
+      if (type === 'play') mood = ['happy', 'play', 'love', 'party'][(ev && ev.stars) || 0];
       if (type === 'feed') barPop(Math.round(r.state.needs.hunger - before));
+      if (type === 'play') { updateFoodBar(r.state.needs.mood); barPop(Math.round(r.state.needs.mood - before)); }
       if (r.ms && svg) { acting = true; D.flash(svg, mood, r.ms); setTimeout(function () { acting = false; render(); }, r.ms); }
       handleEvents(r.events);
       if (type === 'surprise' && ctx.push) ctx.push(ctx.partner, '+Dopamina', '🎁 ' + ctx.displayName + ' le ha dado un mimo sorpresa a Dopi', 'dopi-sorpresa');
@@ -472,6 +499,7 @@
     bar.hidden = false;
     if (type === 'clean') return renderCleanTray();
     if (type === 'feed') { feedKey = ''; $('pet-hint-text').textContent = HINT.feed; return renderFeedTray(); }
+    if (type === 'play') { playKey = ''; $('pet-hint-text').textContent = HINT.play; return renderPlayTray(); }
     $('pet-hint-text').textContent = HINT[type];
     var tools = TOOLS[type];
     if (tools && tools.length) {
@@ -481,6 +509,7 @@
   }
 
   function endMode(silent) {
+    if (game) endGame(true);
     mode = null; scrub = 0; cleanStep = 0; stepProg = 0;
     clearReact(); setTarget(false);
     showHint(null);
@@ -506,8 +535,164 @@
     render();
   }
 
+
+  /* ---------- Jugar: bandeja de juguetes + minijuegos ---------- */
+  var game = null, playKey = '';
+  function renderPlayTray() {
+    var tray = $('pet-tray'); if (!tray) return;
+    var s = curState();
+    var list = L.TOYS.filter(function (t) { return L.toyOwned(s, t.id); });
+    var key = JSON.stringify(list.map(function (t) { return t.id; }));
+    if (key === playKey && !tray.hidden && tray.classList.contains('is-toys')) return;
+    playKey = key;
+    tray.className = 'pet-tray is-food is-toys';
+    tray.innerHTML = list.map(function (t) {
+      return '<div class="pet-tool-wrap"><button class="pet-tool" data-toy="' + t.id + '" aria-label="' + esc(t.name) + ': ' + esc(t.label) + '"><span class="pet-emoji">' + t.emoji + '</span></button>' +
+        '<span class="pet-tool-lbl">' + esc(t.name) + '</span></div>';
+    }).join('') + '<div class="pet-tool-wrap"><button type="button" class="pet-tool pet-more" data-go-toys="1" aria-label="Más juguetes">＋</button><span class="pet-tool-lbl">Tienda</span></div>';
+    tray.hidden = false;
+  }
+  function starsFor(T, score) { return score >= T.stars[2] ? 3 : score >= T.stars[1] ? 2 : score >= T.stars[0] ? 1 : 0; }
+  function estGain(T, score) { return Math.round(T.mood * (0.55 + 0.15 * starsFor(T, score))); }
+
+  function startGame(toyId) {
+    if (game || busy || !ctx) return;
+    var T = L.toyById(toyId); if (!T) return;
+    var left = L.cooldownLeft(curState(), ctx.role, 'play', Date.now());
+    if (left > 0) return toast('Dopi descansa un poco · volved a jugar en ' + fmt(left));
+    if (L.decay(curState(), Date.now()).energy < L.MIN_PLAY_ENERGY) return toast('Está muy cansada para jugar 😴 Déjala dormir un poco');
+    var room = $('pet-room'), h = $('pet-holder'); if (!room || !h || !svg) return;
+    var rc = room.getBoundingClientRect();
+    var layer = document.createElement('div'); layer.className = 'pet-game';
+    layer.innerHTML = '<div class="pg-hud"><span class="pg-time">⏱ ' + Math.round(T.game.ms / 1000) + '</span><span class="pg-score">⭐ 0</span></div><button class="pg-x" aria-label="Salir del juego">✕</button><div class="pg-count"></div>';
+    room.appendChild(layer);
+    game = { T: T, layer: layer, W: rc.width, H: rc.height, rc: rc, score: 0, items: [], started: false, done: false, t0: 0, last: 0, nextSpawn: 0, spawned: 0, off: 0, target: 0, raf: 0, timers: [] };
+    acting = true; D.set(svg, { mood: 'play' });
+    $('pet-tray').hidden = true; $('pet-hint-text').textContent = T.hint;
+    updateFoodBar(moodNow(), 0);
+    layer.addEventListener('pointerdown', onGameDown);
+    layer.addEventListener('pointermove', onGameMove);
+    layer.querySelector('.pg-x').addEventListener('pointerdown', function (ev) { ev.stopPropagation(); ev.preventDefault(); endGame(true); });
+    var cnt = layer.querySelector('.pg-count'), seq = ['3', '2', '1', '¡Ya!'];
+    seq.forEach(function (t, i) {
+      game.timers.push(setTimeout(function () {
+        if (!game) return;
+        cnt.textContent = t; cnt.classList.remove('is-pop'); void cnt.offsetWidth; cnt.classList.add('is-pop');
+        if (i === seq.length - 1) {
+          game.timers.push(setTimeout(function () { if (!game) return; cnt.remove(); game.started = true; game.t0 = performance.now(); game.last = game.t0; game.nextSpawn = game.t0; game.raf = requestAnimationFrame(gameLoop); }, 500));
+        }
+      }, i * 650));
+    });
+  }
+  function gameX(e) { return e.clientX - game.rc.left; }
+  function onGameMove(e) {
+    if (!game || game.T.game.kind !== 'catch') return;
+    game.target = Math.max(-(game.W / 2 - 62), Math.min(game.W / 2 - 62, gameX(e) - game.W / 2));
+  }
+  function onGameDown(e) {
+    if (!game) return;
+    if (game.T.game.kind === 'catch') { onGameMove(e); return; }
+    var it = e.target.closest && e.target.closest('.pg-item');
+    if (!it || !game.started) return;
+    e.preventDefault();
+    for (var i = 0; i < game.items.length; i++) {
+      if (game.items[i].el === it) { popItem(game.items[i], e.clientX, e.clientY); game.items.splice(i, 1); break; }
+    }
+  }
+  function gameScore(n) {
+    game.score = Math.max(0, game.score + n);
+    var sc = game.layer.querySelector('.pg-score');
+    if (sc) { sc.textContent = '⭐ ' + game.score; sc.classList.remove('is-bump'); void sc.offsetWidth; sc.classList.add('is-bump'); }
+    updateFoodBar(moodNow(), estGain(game.T, game.score));
+  }
+  var CHEERS = ['¡yupi!', '¡otro!', '¡sí!', '¡toma!'];
+  function popItem(it, x, y) {
+    it.el.remove(); gameScore(1);
+    sparks(x, y, 6); spawn(x, y - 8, game.T.game.mode === 'flash' ? '⭐' : '✨', 'is-heart');
+    bounce(); if (Math.random() < 0.22) say(CHEERS[Math.floor(Math.random() * CHEERS.length)]);
+  }
+  function holderCatchRect() {
+    var r = svg.getBoundingClientRect(), rc = game.rc;
+    return { cx: r.left - rc.left + r.width / 2, top: r.top - rc.top + r.height * 0.28, bottom: r.top - rc.top + r.height * 0.7 };
+  }
+  function spawnItem(now) {
+    var T = game.T, g = T.game, L2 = game.layer, W = game.W, H = game.H, el = document.createElement('span');
+    el.className = 'pg-item'; var it = { el: el, t: now };
+    if (g.kind === 'catch') {
+      var bad = game.spawned > 0 && game.spawned % 6 === 5;
+      it.bad = bad; el.textContent = bad ? '🕷️' : T.emoji;
+      it.x = 30 + Math.random() * (W - 60); it.y = -24; it.vy = g.speed * (0.9 + Math.random() * 0.3);
+    } else if (g.mode === 'float') {
+      el.textContent = '🎈'; el.style.filter = 'hue-rotate(' + Math.floor(Math.random() * 360) + 'deg)';
+      it.x = 28 + Math.random() * (W - 56); it.y = H + 24; it.vy = -(75 + Math.random() * 45); it.sw = Math.random() * 6; it.sx = it.x;
+    } else if (g.mode === 'roll') {
+      el.textContent = '🧶'; var dir = Math.random() < 0.5 ? 1 : -1;
+      it.x = dir > 0 ? -24 : W + 24; it.y = H * (0.66 + Math.random() * 0.2); it.vx = dir * (95 + Math.random() * 60); it.rot = 0;
+    } else {
+      el.textContent = '⭐'; it.x = 34 + Math.random() * (W - 68); it.y = 70 + Math.random() * (H - 150); it.life = 950; it.born = now;
+    }
+    el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px) translate(-50%,-50%)';
+    L2.appendChild(el); game.items.push(it); game.spawned++;
+  }
+  function gameLoop(now) {
+    if (!game || game.done) return;
+    var g = game, T = g.T, dt = Math.min(0.05, (now - g.last) / 1000); g.last = now;
+    var remain = T.game.ms - (now - g.t0);
+    var tm = g.layer.querySelector('.pg-time'); if (tm) tm.textContent = '⏱ ' + Math.max(0, Math.ceil(remain / 1000));
+    if (remain <= 0) return endGame(false);
+    if (now >= g.nextSpawn) { spawnItem(now); g.nextSpawn = now + T.game.rate * (0.8 + Math.random() * 0.4); }
+    var hr = null;
+    if (T.game.kind === 'catch') {                           // Dopi persigue el dedo
+      g.off += (g.target - g.off) * Math.min(1, dt * 9);
+      $('pet-holder').style.marginLeft = (-105 + g.off) + 'px';
+      hr = holderCatchRect();
+    }
+    for (var i = g.items.length - 1; i >= 0; i--) {
+      var it = g.items[i], gone = false;
+      if (T.game.kind === 'catch') {
+        it.y += it.vy * dt; it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px) translate(-50%,-50%) rotate(' + (it.y * 1.6) + 'deg)';
+        if (it.y > hr.top && it.y < hr.bottom && Math.abs(it.x - hr.cx) < 52) {
+          gone = true; var rcx = g.rc.left + it.x, rcy = g.rc.top + it.y;
+          if (it.bad) { gameScore(-1); D.set(svg, { mood: 'sad' }); say('¡agh! 🕷️'); sparkBad(rcx, rcy); setTimeout(function () { if (game && !game.done) D.set(svg, { mood: 'play' }); }, 500); }
+          else { gameScore(1); sparks(rcx, rcy, 6); D.set(svg, { mood: 'party' }); setTimeout(function () { if (game && !game.done) D.set(svg, { mood: 'play' }); }, 350); if (Math.random() < 0.2) say(CHEERS[Math.floor(Math.random() * CHEERS.length)]); }
+        } else if (it.y > g.H + 30) gone = true;
+      } else if (T.game.mode === 'float') {
+        it.y += it.vy * dt; it.x = it.sx + Math.sin(now / 420 + it.sw) * 14;
+        it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px) translate(-50%,-50%)';
+        if (it.y < -30) gone = true;
+      } else if (T.game.mode === 'roll') {
+        it.x += it.vx * dt; it.rot += it.vx * dt * 2.2;
+        it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px) translate(-50%,-50%) rotate(' + it.rot + 'deg)';
+        if (it.x < -40 || it.x > g.W + 40) gone = true;
+      } else {
+        var age = now - it.born, k = 1 - age / it.life;
+        it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px) translate(-50%,-50%) scale(' + (0.5 + 0.6 * Math.min(1, age / 120) * Math.max(0.35, k)).toFixed(2) + ')';
+        if (age > it.life) gone = true;
+      }
+      if (gone) { it.el.remove(); g.items.splice(i, 1); }
+    }
+    g.raf = requestAnimationFrame(gameLoop);
+  }
+  function sparkBad(x, y) { spawn(x, y - 6, '💢', 'is-heart'); }
+  function endGame(cancel) {
+    if (!game || game.done) return;
+    var g = game; g.done = true; cancelAnimationFrame(g.raf); g.timers.forEach(clearTimeout);
+    var h = $('pet-holder');
+    if (h) { h.style.transition = 'margin-left .35s ease'; h.style.marginLeft = '-105px'; setTimeout(function () { h.style.transition = ''; }, 400); }
+    game = null;
+    if (cancel) { g.layer.remove(); acting = false; showHint('play'); render(); return; }
+    var stars = starsFor(g.T, g.score);
+    g.layer.innerHTML = '<div class="pg-result"><b>' + ['¡Buen intento!', '¡Bien jugado!', '¡Genial!', '¡Increíble!'][stars] + '</b><span class="pg-stars">' +
+      [0, 1, 2].map(function (i) { return '<i class="' + (i < stars ? 'on' : '') + '">★</i>'; }).join('') + '</span><small>' + g.score + ' aciertos</small></div>';
+    g.layer.style.pointerEvents = 'none';
+    setTimeout(function () { g.layer.remove(); }, 2300);
+    acting = false; commit('play', { toy: g.T.id, stars: stars });
+    setTimeout(function () { if (mode === 'play' && !game) endMode(); }, 2400);
+  }
+
   /* arrastrar herramienta (comida, pelota, manta, regalo, esponja) */
   function startDrag(btn, ev) {
+    if (mode === 'play') { var tid = btn.getAttribute('data-toy'); if (tid) startGame(tid); return; }
     if (drag || busy || !mode || !(TOOLS[mode] || mode === 'feed')) return;
     var type = mode, step = -1, food = null;
     if (type === 'feed') { food = btn.getAttribute('data-food'); if (!food) return; }
@@ -715,6 +900,21 @@
       }).catch(function () { busy = false; toast('Sin conexión. Inténtalo de nuevo'); });
       return;
     }
+    var bt = ev.target.closest('[data-buy-toy]');
+    if (bt) {
+      var tid = bt.getAttribute('data-buy-toy'), to = L.toyById(tid);
+      if (!to || busy) return;
+      busy = true;
+      L.PetStore.buyToy(ctx.fb, ctx.parejaId, tid).then(function (r) {
+        busy = false;
+        if (r.error === 'faltan-chispas') return toast('Te faltan ' + r.left + ' ✦');
+        if (r.error) return toast('No se pudo comprar');
+        state = r.state; shopKey = ''; playKey = ''; toast('¡Nuevo juguete: ' + to.emoji + ' ' + to.name + '!'); render();
+      }).catch(function () { busy = false; toast('Sin conexión. Inténtalo de nuevo'); });
+      return;
+    }
+    var ti = ev.target.closest('[data-toy-item]');
+    if (ti) { var tid2 = ti.getAttribute('data-toy-item'); shopSel = shopSel === tid2 ? null : tid2; return render(); }
     var fi = ev.target.closest('[data-food-item]');
     if (fi) { var fid2 = fi.getAttribute('data-food-item'); shopSel = shopSel === fid2 ? null : fid2; return render(); }
     var buyBtn = ev.target.closest('[data-buy]');
@@ -762,8 +962,9 @@
     });
     $('pet-hint-cancel').addEventListener('click', function () { endMode(); });
     $('pet-tray').addEventListener('click', function (ev) {
-      if (!ev.target.closest('[data-go-shop]')) return;
-      endMode(); shopSlot = 'food'; shopSel = null; shopKey = ''; render();
+      var gt = ev.target.closest('[data-go-toys]');
+      if (!ev.target.closest('[data-go-shop]') && !gt) return;
+      endMode(); shopSlot = gt ? 'toy' : 'food'; shopSel = null; shopKey = ''; render();
       var sh = $('pet-shop'); if (sh && sh.scrollIntoView) sh.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     $('pet-holder').addEventListener('pointerdown', onHolderDown);
@@ -812,6 +1013,7 @@
     if (unsub) { unsub(); unsub = null; }
     if (timer) { clearInterval(timer); timer = null; }
     if (drag) finishDrag();
+    if (game) endGame(true);
     ctx = null; state = null; svg = null; mode = null;
     var dot = $('pet-tab-dot'); if (dot) dot.hidden = true;
   }
