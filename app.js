@@ -132,6 +132,28 @@ onAuthStateChanged(auth, user => {
 });
 
 // ─────────────────────────────────────────────
+// Teclado: tocar en cualquier parte fuera de un campo lo oculta
+// (pointerdown para zonas no interactivas — iOS no dispara click ahí —
+//  y click para botones, así no se desplaza el botón antes de pulsarlo)
+// ─────────────────────────────────────────────
+(function setupOcultarTeclado() {
+  const esCampo = el => el && el.closest && el.closest('input, textarea, select, [contenteditable="true"]');
+  const cerrar = () => {
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) ae.blur();
+  };
+  document.addEventListener('pointerdown', ev => {
+    if (esCampo(ev.target)) return;
+    if (ev.target.closest && ev.target.closest('button, a, label, [role="button"]')) return;
+    cerrar();
+  }, true);
+  document.addEventListener('click', ev => {
+    if (esCampo(ev.target)) return;
+    cerrar();
+  });
+})();
+
+// ─────────────────────────────────────────────
 // Inicialización de la app tras login
 // ─────────────────────────────────────────────
 async function initApp() {
@@ -1368,7 +1390,7 @@ async function seedDemoData() {
 
 
 // ─────────────────────────────────────────────
-// CHECK-IN DIARIO CON FOTO (estilo BeReal)
+// CHECK DIARIO CON FOTO (estilo BeReal)
 // Una vez al día, a una hora aleatoria (la decide schedule-checkin.js en el
 // servidor), cada uno tiene una ventana de 2h para subir una foto (frontal +
 // trasera combinadas). No ves la foto de tu pareja hasta subir la tuya.
@@ -1442,7 +1464,7 @@ async function renderCheckinEstado() {
     const snap = await getDoc(checkinRef());
     pintarCheckin(snap.data());
   } catch (e) {
-    body.innerHTML = '<p class="hint-text">No se pudo cargar el check-in de hoy.</p>';
+    body.innerHTML = '<p class="hint-text">No se pudo cargar el check de hoy.</p>';
   }
 }
 
@@ -1499,7 +1521,7 @@ async function enviarComentarioCheckin() {
       comentarios: arrayUnion({ autor: currentRole.role, texto, ts: new Date().toISOString() })
     }, { merge: true });
     // Aviso al otro (solo para comentarios; las reacciones no avisan). El texto no va en la notificación.
-    enviarPush(currentRole.partner, '+Dopamina', `💬 ${currentRole.displayName} ha comentado en vuestro check-in`, 'checkin-comentario');
+    enviarPush(currentRole.partner, '+Dopamina', `💬 ${currentRole.displayName} ha comentado en vuestro check`, 'checkin-comentario');
   } catch (e) {
     input.value = texto; // si falla, no se pierde lo escrito
   }
@@ -1509,7 +1531,7 @@ function pintarCheckin(data) {
   const body = $('checkin-body');
   if (!body) return;
   if (!data) {
-    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check-in. Os avisaremos con una notificación 📸</p>';
+    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check. Os avisaremos con una notificación 📸</p>';
     return;
   }
   const ahora = new Date();
@@ -1519,7 +1541,7 @@ function pintarCheckin(data) {
   const nombreOtro = nombrePorRol(currentRole.partner);
 
   if (ahora < momento) {
-    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check-in. Os avisaremos con una notificación 📸</p>';
+    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check. Os avisaremos con una notificación 📸</p>';
     return;
   }
   if (!yo || !yo.publicado) {

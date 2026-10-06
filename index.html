@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>+Dopamina</title>
   <meta name="theme-color" content="#fbeaf0" />
+  <meta name="application-name" content="+Dopamina" />
+  <meta name="apple-mobile-web-app-title" content="+Dopamina" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
@@ -40,7 +44,7 @@
         <span id="racha-indicador" class="racha-badge" style="display:none"></span>
         <div class="header-actions">
           <button id="btn-wishes" class="btn-icon" title="Buzón de deseos">💭<span id="wishes-badge" class="icon-badge" style="display:none">0</span></button>
-          <button id="btn-checkin" class="btn-icon" title="Check-in del día">📸<span id="checkin-badge" class="icon-badge" style="display:none">!</span></button>
+          <button id="btn-checkin" class="btn-icon" title="Check del día">📸<span id="checkin-badge" class="icon-badge" style="display:none">!</span></button>
           <button id="btn-poke" class="btn-icon" title="Pensando en ti">💌</button>
           <button id="btn-logout" class="btn-icon" title="Cerrar sesión">✕</button>
         </div>
@@ -243,11 +247,11 @@
       </div>
     </div>
 
-    <!-- MODAL: CHECK-IN DEL DÍA -->
+    <!-- MODAL: CHECK DEL DÍA -->
     <div id="modal-checkin" class="modal-overlay" hidden>
       <div class="modal-card">
         <div class="modal-header">
-          <span class="modal-title">📸 Check-in del día</span>
+          <span class="modal-title">📸 Check del día</span>
           <button id="btn-close-checkin" class="btn-icon" aria-label="Cerrar">✕</button>
         </div>
         <div class="modal-body" id="checkin-body">
