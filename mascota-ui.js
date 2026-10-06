@@ -249,19 +249,20 @@
     if (r) return r;
     var h = $('pet-holder'), rc = room.getBoundingClientRect(), hc = h.getBoundingClientRect();
     r = document.createElement('div'); r.className = 'pet-ring';
-    r.innerHTML = '<svg viewBox="0 0 100 100"><circle class="pr-bg" cx="50" cy="50" r="44"/><circle class="pr-fg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg>';
-    r.style.left = (hc.left - rc.left + hc.width / 2) + 'px'; r.style.top = (hc.top - rc.top + hc.height * 0.5) + 'px';
+    r.innerHTML = '<svg viewBox="0 0 100 100"><circle class="pr-bg" cx="50" cy="50" r="44"/><circle class="pr-fg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg><span class="pr-ico">💗</span>';
+    r.style.left = (hc.left - rc.left + hc.width / 2) + 'px'; r.style.top = (hc.top - rc.top + hc.height * 0.17) + 'px';
     room.appendChild(r); return r;
   }
   function ringSet(p) {
     var r = ringShow(true); if (!r) return;
     r.querySelector('.pr-fg').style.strokeDashoffset = String(100 - Math.round(p * 100));
+    r.querySelector('.pr-ico').style.transform = 'translate(-50%,-50%) scale(' + (0.55 + p * 0.45).toFixed(2) + ')';
   }
   function bigHeart() {
     var room = $('pet-room'), h = $('pet-holder'); if (!room || !h) return;
     var rc = room.getBoundingClientRect(), hc = h.getBoundingClientRect();
     var el = document.createElement('div'); el.className = 'pet-bigheart'; el.textContent = '💗';
-    el.style.left = (hc.left - rc.left + hc.width / 2) + 'px'; el.style.top = (hc.top - rc.top + hc.height * 0.12) + 'px';
+    el.style.left = (hc.left - rc.left + hc.width / 2) + 'px'; el.style.top = (hc.top - rc.top + hc.height * 0.17) + 'px';
     room.appendChild(el); setTimeout(function () { el.remove(); }, 1500);
     sparks(hc.left + hc.width / 2, hc.top + hc.height * 0.4, 14);
   }
@@ -518,6 +519,33 @@
     $('pet-hint-cancel').addEventListener('click', function () { endMode(); });
     $('pet-holder').addEventListener('pointerdown', onHolderDown);
     $('pet-shop').addEventListener('click', onShopClick);
+    $('pet-reset-btn').addEventListener('click', onResetClick);
+  }
+
+  /* reiniciar a Dopi (dos toques para confirmar) */
+  var resetTimer = null;
+  function resetDisarm() {
+    var b = $('pet-reset-btn'); if (!b) return;
+    clearTimeout(resetTimer); resetTimer = null;
+    b.classList.remove('is-armed'); b.textContent = 'Reiniciar a Dopi';
+    var n = $('pet-reset-note'); if (n) n.hidden = true;
+  }
+  function onResetClick() {
+    var b = $('pet-reset-btn');
+    if (!b.classList.contains('is-armed')) {
+      b.classList.add('is-armed'); b.textContent = 'Toca otra vez para confirmar';
+      var n = $('pet-reset-note'); if (n) n.hidden = false;
+      resetTimer = setTimeout(resetDisarm, 6000);
+      return;
+    }
+    resetDisarm();
+    if (busy) return;
+    busy = true; endMode(true);
+    L.PetStore.reset(ctx.fb, ctx.parejaId).then(function (r) {
+      busy = false; state = r.state; shopKey = ''; shopSel = null; shopSlot = 'hat'; acting = false;
+      toast('Dopi ha vuelto a ser un huevito 🥚');
+      render();
+    }).catch(function () { busy = false; toast('No se pudo reiniciar. Inténtalo de nuevo'); });
   }
 
   /* ---------- API pública ---------- */

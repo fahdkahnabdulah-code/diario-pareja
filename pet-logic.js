@@ -276,6 +276,15 @@
         });
       });
     },
+    reset: function (fb, coupleId) {
+      var ref = PetStore.ref(fb, coupleId);
+      return fb.runTransaction(fb.db, function (tx) {
+        return tx.get(ref).then(function () {
+          var s = newState(Date.now()); s.resetAt = Date.now();
+          tx.set(ref, s); return { state: s };
+        });
+      });
+    },
     equip: function (fb, coupleId, slot, id) {
       var patch = {}; patch['equipped.' + slot] = id;
       return fb.updateDoc(PetStore.ref(fb, coupleId), patch);
