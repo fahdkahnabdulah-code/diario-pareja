@@ -47,9 +47,9 @@
   var BLANKET = '<svg viewBox="0 0 48 36" width="52" height="40" aria-hidden="true"><rect x="2" y="4" width="44" height="28" rx="8" fill="#F6A9C6" stroke="#5A1E33" stroke-width="2.5"/><path d="M15 5v26M27 5v26M39 5v26" stroke="#17A493" stroke-width="3"/></svg>';
   var TOWEL = '<svg viewBox="0 0 48 36" width="52" height="40" aria-hidden="true"><rect x="3" y="5" width="42" height="26" rx="5" fill="#9ADBEF" stroke="#1F4E63" stroke-width="2.5"/><path d="M13 5v26M35 5v26" stroke="#fff" stroke-width="3.5"/><path d="M3 31c4 3 8 3 12 0s8-3 12 0 8 3 12 0" stroke="#1F4E63" stroke-width="2" fill="none"/></svg>';
   var STEPS = [
-    { key: 'soap',  tool: '🧽',  label: 'Enjabonar', dist: 380, mood: 'pet',   hint: 'Paso 1 de 3 · Enjabona a Dopi con la esponja 🫧' },
-    { key: 'rinse', tool: '🚿',  label: 'Aclarar',   dist: 300, mood: 'party', hint: 'Paso 2 de 3 · Aclara el jabón con la ducha 🚿' },
-    { key: 'dry',   tool: TOWEL, label: 'Secar',     dist: 320, mood: 'love',  hint: 'Paso 3 de 3 · Sécala con la toalla ☁️' }
+    { key: 'soap',  tool: '🧽',  label: 'Enjabonar', ms: 5000, mood: 'pet',   hint: 'Enjabona a Dopi con la esponja 🫧' },
+    { key: 'rinse', tool: '🚿',  label: 'Aclarar',   ms: 5000, mood: 'party', hint: 'Aclara el jabón con la ducha 🚿' },
+    { key: 'dry',   tool: TOWEL, label: 'Secar',     ms: 5000, mood: 'love',  hint: 'Sécala con la toalla ☁️' }
   ];
   var TOOLS = {
     feed: ['🍎', '🍪', '🍓', '🍕'],
@@ -425,7 +425,7 @@
     ghost.className = 'pet-ghost'; ghost.innerHTML = btn.innerHTML;
     document.body.appendChild(ghost);
     btn.classList.add('is-dragging');
-    drag = { type: type, step: step, ghost: ghost, btn: btn, sx: ev.clientX, sy: ev.clientY, lx: ev.clientX, ly: ev.clientY, moved: false, over: false, dist: (step >= 0 ? stepProg * STEPS[step].dist : 0), bub: 0, id: ev.pointerId };
+    drag = { type: type, step: step, ghost: ghost, btn: btn, sx: ev.clientX, sy: ev.clientY, lx: ev.clientX, ly: ev.clientY, moved: false, over: false, dist: 0, tl: 0, bub: 0, id: ev.pointerId };
     place(ev.clientX, ev.clientY);
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragUp);
@@ -446,8 +446,9 @@
     }
     if (d.type === 'clean' && over) {
       var st = STEPS[d.step], step = Math.hypot(dx, dy);
-      d.dist += step; d.bub += step;
-      stepProg = Math.min(1, d.dist / st.dist); updateDirt();
+      var now = Date.now(), dt = Math.min(120, now - (d.tl || now)); d.tl = now;
+      if (step >= 1.5) stepProg = Math.min(1, stepProg + dt / st.ms);   // ~5 s frotando
+      d.bub += step; updateDirt();
       if (d.bub > (d.step === 1 ? 14 : 24)) { d.bub = 0; washFx(d.step, e.clientX, e.clientY); }
       if (stepProg >= 1) { stepDone(); return; }
     }
