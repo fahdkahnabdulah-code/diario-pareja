@@ -1142,6 +1142,7 @@ function eventosDelMes(year, month) {
   const eventos = [{ dia: 10, nombre: 'Aniversario mensual', emoji: '💞' }];
   if (month === 1) eventos.push({ dia: 14, nombre: 'San Valentín', emoji: '💘' });
   if (month === 8) eventos.push({ dia: 21, nombre: 'Día de las Flores Amarillas', emoji: '🌼' });
+  if (month === 7) eventos.push({ dia: 1, nombre: 'Día de la novia', emoji: '👰' });
   CUMPLEANOS.forEach(c => {
     if (c.mes === month) eventos.push({ dia: c.dia, nombre: c.nombre, emoji: '🎂' });
   });
@@ -1210,6 +1211,7 @@ function loadFechasImportantes() {
     { nombre: 'Aniversario mensual', fecha: proximoAniversarioMensual(), emoji: '💞' },
     { nombre: 'San Valentín', fecha: proximaFecha(1, 14), emoji: '💘' },
     { nombre: 'Día de las Flores Amarillas', fecha: proximaFecha(8, 21), emoji: '🌼' },
+    { nombre: 'Día de la novia', fecha: proximaFecha(7, 1), emoji: '👰' },
     ...CUMPLEANOS.map(c => ({ nombre: c.nombre, fecha: proximaFecha(c.mes, c.dia), emoji: '🎂' }))
   ];
   eventosVisiblesParaMi().forEach(ev => {
