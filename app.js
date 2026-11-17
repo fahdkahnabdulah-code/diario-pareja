@@ -1652,7 +1652,7 @@ async function iniciarStreamCamara(facing) {
   try {
     checkinStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
     const video = $('checkin-video');
-    if (video) video.srcObject = checkinStream;
+    if (video) { video.srcObject = checkinStream; video.style.transform = facing === 'user' ? 'scaleX(-1)' : ''; }
   } catch (e) {
     $('checkin-body').innerHTML = '<p class="hint-text">No se pudo acceder a la cámara. Revisa los permisos del navegador.</p>';
   }
@@ -1671,7 +1671,7 @@ async function capturarFotoCheckin() {
   const canvas = document.createElement('canvas');
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
+  const cx = canvas.getContext('2d'); if (checkinPaso === 'frontal') { cx.translate(canvas.width, 0); cx.scale(-1, 1); } cx.drawImage(video, 0, 0);
   pararStreamCamara();
 
   if (checkinPaso === 'frontal') {
