@@ -184,7 +184,7 @@ async function initApp() {
   setupCalendar();
   setupEventos();
   setupAutoGrowTextareas();
-  pedirPermisoYSuscribirPush();
+  suscribirsePush(); if ('Notification' in window && Notification.permission === 'default') document.addEventListener('pointerup', () => pedirPermisoYSuscribirPush(), { once: true });
   if (currentRole.parejaId === 'demo') await seedDemoData();
   loadDeseoSemanal();
   loadPartnerPendingCount();
