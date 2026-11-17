@@ -37,7 +37,7 @@ self.addEventListener('push', e => {
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      badge: '/badge-96.png', renotify: true, vibrate: [120, 60, 120],
       tag: data.tag || 'dopamina'
     })
   );
