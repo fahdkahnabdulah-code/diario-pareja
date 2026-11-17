@@ -34,11 +34,11 @@ exports.handler = async (event) => {
       body: body || '',
       tag: tag || 'dopamina'
     });
-    await webpush.sendNotification(subscription, payload);
+    await webpush.sendNotification(subscription, payload, { TTL: 86400, urgency: 'high' });
     return { statusCode: 200, body: 'ok' };
   } catch (e) {
     // Un fallo aquí (suscripción caducada, red, etc.) no debe romper nada
     // en el cliente — solo lo dejamos registrado en los logs de Netlify.
-    return { statusCode: 200, body: 'no-op: ' + (e && e.message ? e.message : 'error desconocido') };
+    return { statusCode: (e && (e.statusCode === 404 || e.statusCode === 410)) ? 410 : 200, body: 'no-op: ' + (e && e.message ? e.message : 'error desconocido') };
   }
 };
