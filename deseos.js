@@ -1,18 +1,20 @@
 // ─────────────────────────────────────────────
-// Buzón de deseos 2.0
-//  · Cada deseo tiene tipo (detalle/plan/regalo/otro), tamaño (fácil/semana/especial)
-//    y visibilidad: 🔒 sorpresa (solo sale en el sorteo semanal) o 👀 pista
-//    (tu pareja lo ve en su tablero).
-//  · Estados: pendiente → en marcha (tu pareja se lo apunta) → cumplido.
-//  · Pestañas: 🎁 Misión (el sorteo de la semana), 🗂️ Tablero y ➕ Añadir.
-//  · Avisos push (sin spoilers) cuando tu pareja coge o cumple uno de tus deseos
-//    y cuando le das las gracias. Cumplir un deseo da ✦ a Dopi.
-// Datos: parejas/<id>/deseos/<deseo> y parejas/<id>/deseo_semanal/<rol>.
-// Compatible con los deseos antiguos (solo texto): salen como sorpresa pendiente
-// o cumplida, según tuvieran el campo "cumplido".
+// Buzón de deseos 2.0 (con llaves)
+//  · Cada deseo tiene tipo (detalle/plan/regalo/otro) y tamaño (fácil/semana/especial).
+//  · Los deseos de tu pareja se ven SIEMPRE bloqueados (texto desenfocado + candado).
+//    Cada semana tienes llaves (1 desde el lunes, 2 desde el jueves): una llave
+//    desbloquea el deseo que elijas y pasa a "en marcha".
+//  · Estados: pendiente (bloqueado) → en marcha (desbloqueado) → cumplido.
+//    Un cumplido se puede deshacer; un desbloqueo se puede volver a bloquear
+//    (devuelve la llave).
+//  · Pestañas: 💝 Deseos, 🗂️ Tablero y ➕ Añadir.
+//  · Avisos push sin spoilers; cumplir un deseo da ✦ a Dopi.
+// Datos: parejas/<id>/deseos/<deseo>. Las llaves se calculan a partir de los
+// deseos (desbloqueadoPor + desbloqueadoSemana), no hay otro documento.
+// Compatible con los deseos antiguos (solo texto, o con "visible"/"cumplido").
 // ─────────────────────────────────────────────
 import {
-  collection, doc, getDocs, getDoc, setDoc, addDoc, deleteDoc
+  collection, doc, getDocs, setDoc, addDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const TIPOS = [
@@ -33,16 +35,17 @@ const IDEAS = {
   otro: ['Un día sin prisas juntos', 'Un masaje de los buenos', 'Que me cuentes qué es lo que más te gusta de mí', 'Una foto nuestra impresa', 'Que planeemos algo para dentro de un año', 'Que me dejes elegir a mí todo un día']
 };
 const GRACIAS_EMOJIS = ['😍', '🥰', '💛', '🙏'];
-const MAX_CAMBIOS = 1;
+const LLAVES_LUNES = 1;   // llaves disponibles desde el lunes
+const LLAVES_JUEVES = 2;  // llaves en total desde el jueves
 
 let C = null;           // contexto que pasa app.js
 let enlazado = false;
 const S = {
-  wishes: [], draw: null,
-  tab: 'mision', vista: 'mios',
-  tipo: 'otro', tamano: 'semana', visible: false,
+  wishes: [],
+  tab: 'deseos', vista: 'mios',
+  tipo: 'otro', tamano: 'semana',
   ideasIdx: 0, graciasId: null, graciasEmoji: '💛', graciasNota: '',
-  msg: ''
+  confirmId: null, msg: ''
 };
 
 const $ = id => document.getElementById(id);
@@ -51,7 +54,6 @@ const escA = s => C.escapeAttr(String(s == null ? '' : s));
 const rol = () => C.role();
 const wishesCol = () => collection(C.db, 'parejas', rol().parejaId, 'deseos');
 const wishRef = id => doc(C.db, 'parejas', rol().parejaId, 'deseos', id);
-const drawRef = () => doc(C.db, 'parejas', rol().parejaId, 'deseo_semanal', rol().role);
 const ahora = () => new Date().toISOString();
 
 function estadoDe(w) { return w.estado || (w.cumplido ? 'hecho' : 'pendiente'); }
@@ -62,21 +64,28 @@ function fechaCorta(iso) {
   return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 }
 function semanaActual() { return C.isoWeekKey(new Date()); }
-function drawActual() { return S.draw && S.draw.semana === semanaActual() ? S.draw : null; }
-function deseoDelDraw() {
-  const d = drawActual();
-  return d ? S.wishes.find(w => w.id === d.wishId) || null : null;
-}
 function mios() { return S.wishes.filter(w => w.autor === rol().role); }
-function suyosPendientes() { return S.wishes.filter(w => w.autor === rol().partner && estadoDe(w) === 'pendiente'); }
+function suyos() { return S.wishes.filter(w => w.autor === rol().partner); }
+function suyosPendientes() { return suyos().filter(w => estadoDe(w) === 'pendiente'); }
+function misEnMarcha() { return suyos().filter(w => estadoDe(w) === 'enmarcha' && w.apuntadoPor === rol().role); }
+
+// ── Llaves: 1 desde el lunes, 2 desde el jueves (semana de lunes a domingo) ──
+function llavesTotales(fecha = new Date()) {
+  const dia = (fecha.getDay() + 6) % 7; // 0 = lunes
+  return dia >= 3 ? LLAVES_JUEVES : LLAVES_LUNES;
+}
+function llavesUsadas() {
+  const sem = semanaActual();
+  return suyos().filter(w => w.desbloqueadoPor === rol().role && w.desbloqueadoSemana === sem).length;
+}
+function llavesLibres() { return Math.max(0, llavesTotales() - llavesUsadas()); }
 
 async function cargar() {
   try {
-    const [snap, d] = await Promise.all([getDocs(wishesCol()), getDoc(drawRef())]);
+    const snap = await getDocs(wishesCol());
     const lista = [];
     snap.forEach(x => lista.push({ id: x.id, ...x.data() }));
     S.wishes = lista;
-    S.draw = d.exists() ? d.data() : null;
     return true;
   } catch (e) {
     return false;
@@ -89,40 +98,36 @@ async function crear() {
   if (!texto) { S.msg = 'Escribe primero el deseo ✍️'; render(); return; }
   await addDoc(wishesCol(), {
     autor: rol().role, texto: texto.slice(0, 280),
-    tipo: S.tipo, tamano: S.tamano, visible: !!S.visible,
+    tipo: S.tipo, tamano: S.tamano,
     estado: 'pendiente', cumplido: false, cumplidoFecha: null,
     creado: ahora()
   });
-  S.msg = S.visible ? '✓ Guardado: tu pareja lo verá en su tablero' : '✓ Guardado como sorpresa: solo le saldrá en el sorteo';
+  S.msg = '✓ Guardado: tu pareja lo verá bloqueado hasta que use una llave';
   S.tab = 'tablero'; S.vista = 'mios';
 }
 
-async function sacarDeseo() {
-  const cand = suyosPendientes();
-  if (!cand.length || drawActual()) return;
-  const w = cand[Math.floor(Math.random() * cand.length)];
-  await setDoc(drawRef(), { semana: semanaActual(), wishId: w.id, texto: w.texto, cambios: 0, fecha: ahora() });
+async function desbloquear(id) {
+  await cargar();
+  const w = S.wishes.find(x => x.id === id);
+  if (!w || estadoDe(w) !== 'pendiente' || w.autor === rol().role) return;
+  if (llavesLibres() < 1) { S.msg = 'No te quedan llaves esta semana 🔑'; return; }
+  await setDoc(wishRef(id), {
+    estado: 'enmarcha', cumplido: false,
+    apuntadoPor: rol().role, apuntadoFecha: ahora(),
+    desbloqueadoPor: rol().role, desbloqueadoSemana: semanaActual()
+  }, { merge: true });
+  S.confirmId = null;
+  S.msg = '🔓 Desbloqueado. ¡Ya puedes verlo!';
+  C.enviarPush(w.autor, '+Dopamina', `🔑 ${rol().displayName} ha desbloqueado uno de tus deseos`, 'deseo-apuntado');
 }
 
-async function cambiarDeseo() {
-  const d = drawActual();
-  if (!d || (d.cambios || 0) >= MAX_CAMBIOS) return;
-  const actual = deseoDelDraw();
-  if (actual && estadoDe(actual) !== 'pendiente') return;
-  const cand = suyosPendientes().filter(w => !actual || w.id !== actual.id);
-  if (!cand.length) { S.msg = 'No hay más deseos para cambiar por ahora'; return; }
-  const w = cand[Math.floor(Math.random() * cand.length)];
-  await setDoc(drawRef(), { semana: d.semana, wishId: w.id, texto: w.texto, cambios: (d.cambios || 0) + 1, fecha: ahora() });
-}
-
-async function apuntar(id) {
-  const w = S.wishes.find(x => x.id === id); if (!w) return;
-  await setDoc(wishRef(id), { estado: 'enmarcha', cumplido: false, apuntadoPor: rol().role, apuntadoFecha: ahora() }, { merge: true });
-  C.enviarPush(w.autor, '+Dopamina', `🎁 ${rol().displayName} ha cogido uno de tus deseos`, 'deseo-apuntado');
-}
-
+// Vuelve a bloquear un deseo desbloqueado (devuelve la llave)
 async function soltar(id) {
-  await setDoc(wishRef(id), { estado: 'pendiente', cumplido: false, apuntadoPor: null, apuntadoFecha: null }, { merge: true });
+  await setDoc(wishRef(id), {
+    estado: 'pendiente', cumplido: false,
+    apuntadoPor: null, apuntadoFecha: null, desbloqueadoPor: null, desbloqueadoSemana: null
+  }, { merge: true });
+  S.msg = '🔒 Vuelto a bloquear: tu llave está de nuevo disponible';
 }
 
 async function marcarHecho(id) {
@@ -138,12 +143,18 @@ async function marcarHecho(id) {
   }
 }
 
+// Deshace un "hecho" marcado sin querer
+async function deshacerHecho(id) {
+  const w = S.wishes.find(x => x.id === id); if (!w) return;
+  await setDoc(wishRef(id), {
+    estado: w.apuntadoPor ? 'enmarcha' : 'pendiente',
+    cumplido: false, cumplidoFecha: null, hechoPor: null, gracias: null
+  }, { merge: true });
+  S.msg = '↩ Deshecho: vuelve a estar pendiente';
+}
+
 async function borrar(id) { await deleteDoc(wishRef(id)); }
 
-async function cambiarVisibilidad(id) {
-  const w = S.wishes.find(x => x.id === id); if (!w) return;
-  await setDoc(wishRef(id), { visible: !w.visible }, { merge: true });
-}
 
 async function agradecer(id) {
   const w = S.wishes.find(x => x.id === id); if (!w) return;
@@ -158,8 +169,8 @@ async function agradecer(id) {
 // ── Pintado ──
 function chipsDeseo(w) {
   const t = tipoDe(w), z = tamanoDe(w);
-  const vis = w.visible ? '<span class="dw-chip dw-chip-vis" title="Tu pareja lo ve">👀 Pista</span>' : '<span class="dw-chip dw-chip-sec" title="Solo sale en el sorteo">🔒 Sorpresa</span>';
-  return `<div class="dw-chips">${t ? `<span class="dw-chip">${t.emoji} ${t.label}</span>` : ''}${z ? `<span class="dw-chip">${z.emoji} ${z.label}</span>` : ''}${w.autor === rol().role ? vis : ''}</div>`;
+  if (!t && !z) return '';
+  return `<div class="dw-chips">${t ? `<span class="dw-chip">${t.emoji} ${t.label}</span>` : ''}${z ? `<span class="dw-chip">${z.emoji} ${z.label}</span>` : ''}</div>`;
 }
 
 function htmlGracias(w) {
@@ -181,42 +192,67 @@ function htmlGracias(w) {
 
 function nombreDe(r) { return C.nombre(r) || 'tu pareja'; }
 
-function tarjetaTablero(w, vista) {
+// Texto de relleno para el deseo bloqueado: así el texto real no está en la página
+const RELLENO = 'Un deseo muy bonito que te hará mucha ilusión cumplir esta semana con todo el cariño';
+function textoBloqueado(w) {
+  const n = Math.max(18, Math.min(RELLENO.length, String(w.texto || '').length));
+  return RELLENO.slice(0, n);
+}
+
+function botonesDesbloqueo(w) {
+  const libres = llavesLibres();
+  if (S.confirmId === w.id) {
+    return `<div class="dw-confirm"><span>¿Usar 1 llave para verlo?</span>
+      <button class="dw-btn dw-btn-main" data-act="desbloquear" data-id="${escA(w.id)}">🔓 Sí, desbloquear</button>
+      <button class="dw-btn" data-act="confirmar-no">Cancelar</button></div>`;
+  }
+  return libres > 0
+    ? `<button class="dw-btn dw-btn-main" data-act="confirmar" data-id="${escA(w.id)}">🔑 Desbloquear</button>`
+    : `<button class="dw-btn" disabled>🔑 Sin llaves esta semana</button>`;
+}
+
+function tarjetaTablero(w) {
   const est = estadoDe(w);
   const soyAutor = w.autor === rol().role;
-  const drawId = drawActual()?.wishId;
-  const sorteado = !soyAutor && w.id === drawId;
   let cuerpo = '', acciones = '', pie = '';
+  let bloqueada = false;
 
-  // Quien lo escribió no ve el texto de una sorpresa mientras su pareja se encarga de ella
-  const ocultar = soyAutor && est === 'enmarcha' && !w.visible;
-  cuerpo = ocultar ? '<div class="dw-texto dw-texto-oculto">🎁 Sorpresa en camino…</div>' : `<div class="dw-texto">${esc(w.texto)}</div>`;
+  // El autor no ve el texto mientras su pareja se encarga de él: así sigue siendo sorpresa
+  const ocultar = soyAutor && est === 'enmarcha';
+  if (!soyAutor && est === 'pendiente') {
+    bloqueada = true;
+    cuerpo = `<div class="dw-lockwrap"><div class="dw-texto dw-blur" aria-hidden="true">${esc(textoBloqueado(w))}</div><div class="dw-lockicon" role="img" aria-label="Deseo bloqueado">🔒</div></div>`;
+  } else if (ocultar) {
+    cuerpo = '<div class="dw-texto dw-texto-oculto">🎁 Sorpresa en camino…</div>';
+  } else {
+    cuerpo = `<div class="dw-texto">${esc(w.texto)}</div>`;
+  }
 
   if (est === 'pendiente') {
     if (soyAutor) {
-      acciones = `<button class="dw-btn dw-btn-soft" data-act="vis" data-id="${escA(w.id)}" title="Cambiar entre sorpresa y pista">${w.visible ? '🔒 Hacer sorpresa' : '👀 Que lo vea'}</button>
-        <button class="dw-btn" data-act="hecho" data-id="${escA(w.id)}">✓ Ya está</button>
+      acciones = `<button class="dw-btn" data-act="hecho" data-id="${escA(w.id)}">✓ Ya está</button>
         <button class="dw-btn dw-btn-danger" data-act="borrar" data-id="${escA(w.id)}" aria-label="Eliminar">🗑</button>`;
     } else {
-      acciones = `<button class="dw-btn dw-btn-main" data-act="apuntar" data-id="${escA(w.id)}">🙋 Me lo apunto</button>`;
+      acciones = botonesDesbloqueo(w);
     }
   } else if (est === 'enmarcha') {
     const yo = w.apuntadoPor === rol().role;
     const quien = yo ? 'Tú' : nombreDe(w.apuntadoPor);
-    pie = `<div class="dw-pie">🏃 ${esc(quien)} ${yo ? 'te encargas' : 'se encarga'}${w.apuntadoFecha ? ' · desde el ' + esc(fechaCorta(w.apuntadoFecha)) : ''}</div>`;
-    if (w.apuntadoPor === rol().role) {
+    pie = `<div class="dw-pie">🔓 ${esc(quien)} ${yo ? 'te encargas' : 'se encarga'}${w.apuntadoFecha ? ' · desde el ' + esc(fechaCorta(w.apuntadoFecha)) : ''}</div>`;
+    if (yo) {
       acciones = `<button class="dw-btn dw-btn-main" data-act="hecho" data-id="${escA(w.id)}">✓ Hecho</button>
-        <button class="dw-btn" data-act="soltar" data-id="${escA(w.id)}">↩ Soltar</button>`;
+        <button class="dw-btn" data-act="soltar" data-id="${escA(w.id)}" title="Vuelve a bloquearlo y recupera la llave">↩ Volver a bloquear</button>`;
     } else if (soyAutor) {
       acciones = `<button class="dw-btn" data-act="hecho" data-id="${escA(w.id)}">✓ Ya está hecho</button>`;
     }
   } else {
     const por = w.hechoPor ? (w.hechoPor === rol().role ? 'Tú' : nombreDe(w.hechoPor)) : '';
     pie = `<div class="dw-pie">✅ ${por ? 'Cumplido por ' + esc(por) + ' · ' : 'Cumplido · '}${esc(fechaCorta(w.cumplidoFecha))}</div>`;
-    acciones = '';
+    if (soyAutor || w.hechoPor === rol().role) {
+      acciones = `<button class="dw-btn" data-act="deshacer" data-id="${escA(w.id)}" title="Si lo marcaste sin querer">↩ Deshacer</button>`;
+    }
   }
-  return `<article class="dw-card dw-estado-${est}${sorteado ? ' dw-sorteado' : ''}">
-      ${sorteado ? '<div class="dw-tag">🎲 La de esta semana</div>' : ''}
+  return `<article class="dw-card dw-estado-${est}${bloqueada ? ' dw-bloqueada' : ''}">
       ${cuerpo}
       ${ocultar ? '' : chipsDeseo(w)}
       ${pie}
@@ -228,29 +264,17 @@ function tarjetaTablero(w, vista) {
 function htmlTablero() {
   const soyYo = S.vista === 'mios';
   const partnerNombre = nombreDe(rol().partner);
-  let lista;
-  let ocultas = 0;
-  if (soyYo) {
-    lista = mios();
-  } else {
-    const drawId = drawActual()?.wishId;
-    const todos = S.wishes.filter(w => w.autor === rol().partner);
-    lista = todos.filter(w => w.visible || w.id === drawId || w.apuntadoPor === rol().role || w.hechoPor === rol().role);
-    ocultas = todos.filter(w => estadoDe(w) === 'pendiente' && !w.visible && w.id !== drawId).length;
-  }
+  const lista = soyYo ? mios() : suyos();
   const lanes = [
-    { id: 'pendiente', titulo: '💭 Ideas' },
-    { id: 'enmarcha', titulo: '🏃 En marcha' },
+    { id: 'pendiente', titulo: soyYo ? '💭 Ideas' : '🔒 Bloqueados' },
+    { id: 'enmarcha', titulo: '🔓 En marcha' },
     { id: 'hecho', titulo: '✅ Cumplidos' }
   ];
   const orden = (a, b) => String(b.creado || '').localeCompare(String(a.creado || ''));
   const columnas = lanes.map(l => {
     const items = lista.filter(w => estadoDe(w) === l.id).sort(l.id === 'hecho' ? (a, b) => String(b.cumplidoFecha || '').localeCompare(String(a.cumplidoFecha || '')) : orden);
-    let cuerpo = items.map(w => tarjetaTablero(w, S.vista)).join('');
+    let cuerpo = items.map(w => tarjetaTablero(w)).join('');
     if (!cuerpo) cuerpo = `<p class="dw-vacio">${l.id === 'pendiente' ? 'Nada por aquí' : l.id === 'enmarcha' ? 'Nada en marcha' : 'Aún no hay cumplidos'}</p>`;
-    if (l.id === 'pendiente' && !soyYo && ocultas > 0) {
-      cuerpo += `<p class="dw-secretas">🔒 ${ocultas} sorpresa${ocultas === 1 ? '' : 's'} guardada${ocultas === 1 ? '' : 's'}: salen en el sorteo semanal</p>`;
-    }
     return `<section class="dw-lane"><h3 class="dw-lane-t">${l.titulo} <span class="dw-count">${items.length}</span></h3>${cuerpo}</section>`;
   }).join('');
   return `<div class="dw-vista">
@@ -261,44 +285,33 @@ function htmlTablero() {
     <div class="dw-board">${columnas}</div>`;
 }
 
-function htmlMision() {
+// Pestaña principal: tus llaves, los deseos bloqueados de tu pareja y los que tienes en marcha
+function htmlDeseos() {
   const partnerNombre = nombreDe(rol().partner);
-  const d = drawActual();
-  const hechosPorMi = S.wishes.filter(w => w.hechoPor === rol().role && estadoDe(w) === 'hecho').length;
-  const stats = `<p class="dw-stats">Deseos cumplidos por ti: <strong>${hechosPorMi}</strong> 💛</p>`;
-  const cand = suyosPendientes();
-  let centro = '';
-  if (!d) {
-    centro = cand.length
-      ? `<div class="dw-hero"><div class="dw-hero-emoji">🎲</div><h3>Tu misión de esta semana</h3><p>Saca al azar uno de los deseos de ${esc(partnerNombre)} y hazlo realidad antes del domingo.</p><button class="dw-btn dw-btn-main dw-btn-big" data-act="sacar">Sacar deseo</button></div>`
-      : `<div class="dw-hero"><div class="dw-hero-emoji">🌙</div><h3>Sin misión por ahora</h3><p>Cuando ${esc(partnerNombre)} guarde algún deseo podrás sacar uno aquí.</p></div>`;
-  } else {
-    const w = deseoDelDraw();
-    if (!w) {
-      centro = `<div class="dw-hero"><div class="dw-hero-emoji">🤷</div><h3>Ese deseo ya no está</h3><p>${esc(partnerNombre)} lo ha quitado. ¡Puedes sacar otro!</p>${cand.length ? '<button class="dw-btn dw-btn-main dw-btn-big" data-act="sacar-otro">Sacar otro</button>' : ''}</div>`;
-    } else {
-      const est = estadoDe(w);
-      const t = tipoDe(w), z = tamanoDe(w);
-      const meta = `<div class="dw-chips dw-chips-c">${t ? `<span class="dw-chip">${t.emoji} ${t.label}</span>` : ''}${z ? `<span class="dw-chip">${z.emoji} ${z.label}</span>` : ''}</div>`;
-      let acc = '', estado = '';
-      if (est === 'pendiente') {
-        const quedan = MAX_CAMBIOS - (d.cambios || 0);
-        estado = `<p class="dw-hint">Esta semana te toca este deseo de ${esc(partnerNombre)}. ¿Te animas?</p>`;
-        acc = `<button class="dw-btn dw-btn-main dw-btn-big" data-act="apuntar" data-id="${escA(w.id)}">🙋 Me lo apunto</button>
-          ${quedan > 0 && cand.length > 1 ? `<button class="dw-btn" data-act="cambiar">🔄 Cambiar por otro (${quedan})</button>` : ''}`;
-      } else if (est === 'enmarcha') {
-        estado = `<p class="dw-hint">🏃 En marcha${w.apuntadoPor === rol().role ? ': ¡a por ello antes del domingo!' : ''}</p>`;
-        acc = w.apuntadoPor === rol().role
-          ? `<button class="dw-btn dw-btn-main dw-btn-big" data-act="hecho" data-id="${escA(w.id)}">✓ Hecho</button><button class="dw-btn" data-act="soltar" data-id="${escA(w.id)}">↩ Soltar</button>`
-          : '';
-      } else {
-        estado = `<p class="dw-hint">✅ ¡Cumplido! Buen trabajo 💛</p>`;
-        if (w.gracias) estado += `<div class="dw-gracias">${esc(w.gracias.emoji)} ${w.gracias.nota ? `<span>“${esc(w.gracias.nota)}”</span>` : ''}</div>`;
-      }
-      centro = `<div class="dw-hero dw-hero-deseo"><div class="dw-hero-emoji">🎁</div><h3>Misión de la semana</h3><div class="dw-hero-texto">${esc(w.texto)}</div>${meta}${estado}<div class="dw-actions dw-actions-c">${acc}</div></div>`;
-    }
+  const libres = llavesLibres(), total = llavesTotales();
+  const bloqueados = suyosPendientes().sort((a, b) => String(b.creado || '').localeCompare(String(a.creado || '')));
+  const enMarcha = misEnMarcha();
+  const hechosPorMi = suyos().filter(w => w.hechoPor === rol().role && estadoDe(w) === 'hecho').length;
+
+  const llaves = `<div class="dw-llaves${libres > 0 ? '' : ' dw-llaves-0'}">
+      <div class="dw-llaves-n">${Array.from({ length: LLAVES_JUEVES }, (_, i) => `<span class="dw-llave${i < libres ? ' on' : ''}">🔑</span>`).join('')}</div>
+      <div class="dw-llaves-t">${libres > 0
+        ? `Tienes <strong>${libres}</strong> llave${libres === 1 ? '' : 's'}: elige qué deseo de ${esc(partnerNombre)} desbloquear.`
+        : (total < LLAVES_JUEVES ? 'Ya has usado tu llave. Tienes otra desde el jueves.' : 'Ya has usado tus llaves. Tendrás nuevas el lunes.')}</div>
+    </div>`;
+
+  let marcha = '';
+  if (enMarcha.length) {
+    marcha = `<h3 class="dw-sec">🔓 En marcha <span class="dw-count">${enMarcha.length}</span></h3>${enMarcha.map(w => tarjetaTablero(w)).join('')}`;
   }
-  return `${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}${centro}${stats}`;
+  let bloq = '';
+  if (bloqueados.length) {
+    bloq = `<h3 class="dw-sec">🔒 Por desbloquear <span class="dw-count">${bloqueados.length}</span></h3>${bloqueados.map(w => tarjetaTablero(w)).join('')}`;
+  } else {
+    bloq = `<div class="dw-hero"><div class="dw-hero-emoji">🌙</div><h3>Nada por desbloquear</h3><p>Cuando ${esc(partnerNombre)} guarde deseos aparecerán aquí, bloqueados.</p></div>`;
+  }
+  return `${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}${llaves}${marcha}${bloq}
+    <p class="dw-stats">Deseos cumplidos por ti: <strong>${hechosPorMi}</strong> 💛</p>`;
 }
 
 function ideasActuales() {
@@ -320,11 +333,7 @@ function htmlAnadir() {
       <div class="dw-ideas">${ideas}</div>
       <div class="dw-sub">Tipo</div><div class="dw-picks">${tipos}</div>
       <div class="dw-sub">Tamaño</div><div class="dw-picks">${tam}</div>
-      <div class="dw-sub">¿Quién lo ve?</div>
-      <div class="dw-picks dw-picks-2">
-        <button type="button" class="dw-pick${!S.visible ? ' on' : ''}" data-act="vis-form" data-v="0">🔒 Sorpresa<small>Solo le saldrá en el sorteo</small></button>
-        <button type="button" class="dw-pick${S.visible ? ' on' : ''}" data-act="vis-form" data-v="1">👀 Pista<small>Lo verá en su tablero</small></button>
-      </div>
+      <p class="dw-hint-form">🔒 ${esc(nombreDe(rol().partner))} lo verá bloqueado y borroso hasta que use una llave para desbloquearlo.</p>
       <button class="dw-btn dw-btn-main dw-btn-big" data-act="guardar">Guardar deseo</button>
     </div>`;
 }
@@ -335,7 +344,7 @@ function render() {
   document.querySelectorAll('#deseos-screen .dw-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   // el texto que se está escribiendo no se pierde al repintar
   const previo = $('dw-texto')?.value || '';
-  body.innerHTML = S.tab === 'mision' ? htmlMision() : S.tab === 'tablero' ? htmlTablero() : htmlAnadir();
+  body.innerHTML = S.tab === 'deseos' ? htmlDeseos() : S.tab === 'tablero' ? htmlTablero() : htmlAnadir();
   if (S.tab === 'anadir' && previo) { const t = $('dw-texto'); if (t) t.value = previo; }
   S.msg = '';
 }
@@ -343,14 +352,19 @@ function render() {
 // ── Insignias y tarjeta de la pestaña Entrada ──
 function pintarInsignias() {
   const n = suyosPendientes().length;
+  const libres = llavesLibres();
   const badge = $('wishes-badge');
   const pill = $('partner-pending-pill');
-  if (n > 0) {
-    if (badge) { badge.textContent = String(n); badge.style.display = 'flex'; }
-    if (pill) { pill.textContent = `🎁 ${nombreDe(rol().partner)} tiene ${n} deseo${n === 1 ? '' : 's'} pendiente${n === 1 ? '' : 's'}`; pill.style.display = 'inline-flex'; }
-  } else {
-    if (badge) badge.style.display = 'none';
-    if (pill) pill.style.display = 'none';
+  if (n > 0 && libres > 0) {
+    if (badge) { badge.textContent = String(libres); badge.style.display = 'flex'; }
+  } else if (badge) badge.style.display = 'none';
+  if (pill) {
+    if (n > 0) {
+      pill.textContent = libres > 0
+        ? `🔑 ${libres} llave${libres === 1 ? '' : 's'} para desbloquear un deseo`
+        : `🔒 ${nombreDe(rol().partner)} tiene ${n} deseo${n === 1 ? '' : 's'} por desbloquear`;
+      pill.style.display = 'inline-flex';
+    } else pill.style.display = 'none';
   }
 }
 
@@ -358,19 +372,20 @@ function pintarTarjeta() {
   const card = $('recommendation-card');
   const btn = $('btn-rec-refresh');
   if (!card || !btn) return;
-  const d = drawActual();
-  const w = deseoDelDraw();
-  if (d && w) {
-    const est = estadoDe(w);
-    $('rec-text').textContent = w.texto;
-    $('rec-sub').textContent = est === 'enmarcha' ? '🏃 En marcha: ¡no se te olvide!' : est === 'hecho' ? '✅ Cumplido. Nueva misión el lunes.' : 'Tu misión de esta semana.';
-    btn.textContent = 'Abrir misión';
+  const label = card.querySelector('.rec-label');
+  const libres = llavesLibres(), n = suyosPendientes().length, marcha = misEnMarcha().length;
+  if (libres > 0 && n > 0) {
+    if (label) label.textContent = '🔑 Llave de deseos';
+    $('rec-text').textContent = `Tienes ${libres} llave${libres === 1 ? '' : 's'} para desbloquear un deseo.`;
+    $('rec-sub').textContent = `${nombreDe(rol().partner)} tiene ${n} esperándote, bloqueado${n === 1 ? '' : 's'}.`;
+    btn.textContent = 'Elegir deseo';
     btn.disabled = false;
     card.style.display = 'flex';
-  } else if (!d && suyosPendientes().length) {
-    $('rec-text').textContent = 'Tienes una misión nueva esta semana.';
-    $('rec-sub').textContent = `Descubre un deseo pendiente de ${nombreDe(rol().partner)}.`;
-    btn.textContent = 'Descubrir deseo';
+  } else if (marcha > 0) {
+    if (label) label.textContent = '🔓 Deseo en marcha';
+    $('rec-text').textContent = marcha === 1 ? 'Tienes un deseo por cumplir.' : `Tienes ${marcha} deseos por cumplir.`;
+    $('rec-sub').textContent = 'Cuando lo hagas, márcalo como hecho.';
+    btn.textContent = 'Abrir deseos';
     btn.disabled = false;
     card.style.display = 'flex';
   } else {
@@ -412,30 +427,29 @@ function cerrar() {
   S.graciasId = null;
 }
 
+
 function onClick(ev) {
   const el = ev.target.closest('[data-act]');
   if (!el) return;
   const act = el.dataset.act, id = el.dataset.id;
   switch (act) {
-    case 'tab': S.tab = el.dataset.tab; S.graciasId = null; render(); break;
-    case 'vista': S.vista = el.dataset.v; render(); break;
+    case 'tab': S.tab = el.dataset.tab; S.graciasId = null; S.confirmId = null; render(); break;
+    case 'vista': S.vista = el.dataset.v; S.confirmId = null; render(); break;
     case 'tipo': S.tipo = el.dataset.v; S.ideasIdx = 0; render(); break;
     case 'tamano': S.tamano = el.dataset.v; render(); break;
-    case 'vis-form': S.visible = el.dataset.v === '1'; render(); break;
     case 'idea': {
       const t = $('dw-texto'); if (!t) break;
       t.value = el.dataset.txt; t.focus(); break;
     }
     case 'idea-more': S.ideasIdx = (S.ideasIdx + 3) % (IDEAS[S.tipo] || IDEAS.otro).length; render(); break;
     case 'guardar': ejecutar(crear); break;
-    case 'sacar': ejecutar(sacarDeseo); break;
-    case 'sacar-otro': ejecutar(async () => { await setDoc(drawRef(), { semana: '', wishId: '', texto: '' }); await cargar(); await sacarDeseo(); }); break;
-    case 'cambiar': ejecutar(cambiarDeseo); break;
-    case 'apuntar': ejecutar(() => apuntar(id)); break;
+    case 'confirmar': S.confirmId = id; render(); break;
+    case 'confirmar-no': S.confirmId = null; render(); break;
+    case 'desbloquear': ejecutar(() => desbloquear(id)); break;
     case 'soltar': ejecutar(() => soltar(id)); break;
     case 'hecho': ejecutar(() => marcarHecho(id)); break;
+    case 'deshacer': ejecutar(() => deshacerHecho(id)); break;
     case 'borrar': ejecutar(() => borrar(id)); break;
-    case 'vis': ejecutar(() => cambiarVisibilidad(id)); break;
     case 'gracias-abrir': S.graciasId = id; S.graciasEmoji = '💛'; S.graciasNota = ''; render(); break;
     case 'gracias-emoji': S.graciasNota = $('dw-gracias-nota')?.value || S.graciasNota; S.graciasEmoji = el.dataset.e; render(); break;
     case 'gracias-enviar': S.graciasNota = $('dw-gracias-nota')?.value || ''; ejecutar(() => agradecer(id)); break;
@@ -448,14 +462,10 @@ function init(ctx) {
   C = ctx;
   if (enlazado) { refrescar(); return; }
   enlazado = true;
-  $('btn-wishes')?.addEventListener('click', () => abrir('mision'));
+  $('btn-wishes')?.addEventListener('click', () => abrir('deseos'));
   $('btn-close-deseos')?.addEventListener('click', cerrar);
   $('deseos-screen')?.addEventListener('click', onClick);
-  $('btn-rec-refresh')?.addEventListener('click', async () => {
-    if (!C) return;
-    if (!drawActual()) { await cargar(); await ejecutar(sacarDeseo); }
-    abrir('mision');
-  });
+  $('btn-rec-refresh')?.addEventListener('click', () => abrir('deseos'));
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('deseos-screen')?.hidden) cerrar(); });
   refrescar();
 }

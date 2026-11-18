@@ -16,6 +16,6 @@
 [functions."eventos-notifier"]
   schedule = "*/30 * * * *"
 
-# Misión semanal de deseos: lunes (nueva misión) y jueves (recordatorio). Cada 30 min, avisa una sola vez.
+# Llaves de deseos: lunes y jueves (llave nueva) y sábado (recordatorio). Cada 30 min, avisa una sola vez.
 [functions."deseos-notifier"]
   schedule = "*/30 * * * *"

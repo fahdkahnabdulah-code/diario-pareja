@@ -887,7 +887,7 @@ function wishesRef() {
   return collection(db, 'parejas', currentRole.parejaId, 'deseos');
 }
 
-// El buzón de deseos (misión semanal, tablero y añadir) vive en deseos.js
+// El buzón de deseos (llaves, tablero y añadir) vive en deseos.js
 
 function escapeHtml(str) {
   const div = document.createElement('div');

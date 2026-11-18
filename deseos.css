@@ -51,12 +51,10 @@ body.dw-abierto { overflow: hidden; }
 .dw-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .dw-estado-enmarcha { border-left: 3px solid var(--gold-mid); }
 .dw-estado-hecho { border-left: 3px solid var(--teal-dark); }
-.dw-sorteado { border-color: var(--pink-dark); }
-.dw-tag { font-size: 11px; font-weight: 700; color: var(--pink-dark); }
 .dw-texto { font-size: 14px; line-height: 1.4; word-break: break-word; }
 .dw-texto-oculto { color: var(--text-muted); font-style: italic; }
 .dw-pie { font-size: 12px; color: var(--text-muted); }
-.dw-secretas { font-size: 12px; color: var(--gold-dark); background: var(--gold-light); border-radius: var(--radius-sm); padding: 8px 10px; }
+.dw-secretas-old { font-size: 12px; color: var(--gold-dark); background: var(--gold-light); border-radius: var(--radius-sm); padding: 8px 10px; }
 .dw-gracias { font-size: 14px; background: var(--pink-light); border-radius: var(--radius-sm); padding: 8px 10px; }
 .dw-gracias span { font-style: italic; }
 .dw-gracias-form { display: flex; flex-direction: column; gap: 8px; }
@@ -79,3 +77,21 @@ body.dw-abierto { overflow: hidden; }
 .dw-pick small { display: block; font-size: 11px; font-weight: 400; color: var(--text-muted); margin-top: 2px; }
 .dw-picks-2 .dw-pick { flex: 1 1 45%; text-align: left; }
 #dw-body textarea, #dw-body input[type="text"] { width: 100%; }
+
+/* Llaves y deseos bloqueados */
+.dw-llaves { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, var(--gold-light), var(--pink-light)); border: 1px solid var(--border); border-radius: 18px; padding: 12px 14px; margin-bottom: 12px; }
+.dw-llaves-0 { background: var(--bg); }
+.dw-llaves-n { display: flex; gap: 4px; flex: none; }
+.dw-llave { font-size: 26px; filter: grayscale(1); opacity: .35; }
+.dw-llave.on { filter: none; opacity: 1; }
+.dw-llaves-t { font-size: 14px; line-height: 1.35; }
+.dw-sec { font-size: 14px; font-weight: 700; margin: 14px 2px 8px; display: flex; align-items: center; gap: 6px; }
+#dw-body > .dw-card { margin-bottom: 10px; }
+.dw-lockwrap { position: relative; min-height: 44px; display: flex; align-items: center; }
+.dw-blur { filter: blur(6px); user-select: none; -webkit-user-select: none; pointer-events: none; width: 100%; opacity: .85; }
+.dw-lockicon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 30px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.35)); }
+.dw-bloqueada { border-style: dashed; }
+.dw-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; font-size: 13px; }
+.dw-confirm span { flex: 1 0 100%; font-weight: 600; }
+.dw-hint-form { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+.dw-btn[disabled] { opacity: .55; cursor: default; }
