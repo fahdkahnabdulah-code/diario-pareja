@@ -54,6 +54,7 @@
     diary:        { pts: 20, xp: 10, dailyMax: 1, label: 'Escribir tu parte del diario' },
     photoCheck:   { pts: 15, xp: 8,  dailyMax: 1, label: 'Completar el check de fotos' },
     poke:         { pts: 2,  xp: 1,  dailyMax: 5, label: 'Enviar un poke' },
+    wishDone:     { pts: 25, xp: 12, dailyMax: 1, label: 'Cumplir un deseo de tu pareja' },
     teamDay:      { pts: 10, xp: 0,  dailyMax: 1, label: 'Día en equipo (los dos la cuidáis)' },
     weeklyStreak: { pts: 100, xp: 40, label: 'Racha semanal completa' },
     reunion:      { pts: 10, xp: 0,  label: 'Reencuentro tras 3+ días' }

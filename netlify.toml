@@ -15,3 +15,7 @@
 # Se comprueba cada 30 min y avisa una sola vez cada uno, a partir de las 09:00 de Madrid.
 [functions."eventos-notifier"]
   schedule = "*/30 * * * *"
+
+# Misión semanal de deseos: lunes (nueva misión) y jueves (recordatorio). Cada 30 min, avisa una sola vez.
+[functions."deseos-notifier"]
+  schedule = "*/30 * * * *"

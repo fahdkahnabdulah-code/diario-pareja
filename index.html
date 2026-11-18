@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="dopi.css" />
   <link rel="stylesheet" href="pet-ui.css" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="deseos.css" />
 </head>
 <body>
 
@@ -284,29 +285,20 @@
 
    </div><!-- /app-shell -->
 
-    <!-- MODAL: DESEOS -->
-    <div id="modal-deseos" class="modal-overlay" hidden>
-      <div class="modal-card">
-        <div class="modal-header">
-          <span class="modal-title">💭 Deseos</span>
+    <!-- DESEOS (pantalla completa: misión, tablero, añadir) -->
+    <div id="deseos-screen" class="dw-screen" hidden>
+      <div class="dw-wrap">
+        <div class="dw-head">
+          <span class="dw-title">💭 Deseos</span>
           <button id="btn-close-deseos" class="btn-icon" aria-label="Cerrar">✕</button>
         </div>
-        <div class="modal-body">
-          <div id="partner-pending-pill" class="partner-pill" style="display:none"></div>
-          <div class="field">
-            <label>Añade algo que te gustaría (un plan, un detalle, lo que sea)</label>
-            <textarea id="wish-input" placeholder="Escribe un deseo..."></textarea>
-          </div>
-          <button id="btn-wish-add" class="btn-primary">Guardar deseo</button>
-          <p class="hint-text">Tu pareja no ve esta lista directamente — de vez en cuando le llegará una idea suelta, sin saber que salió de aquí.</p>
-          <div class="wishes-section">
-            <div class="deseos-tabs">
-              <button id="btn-tab-pendientes" class="active">Pendientes</button>
-              <button id="btn-tab-cumplidos">Cumplidos</button>
-            </div>
-            <div id="wish-list"><p class="empty-state">Aún no has añadido nada.</p></div>
-          </div>
-        </div>
+        <div id="partner-pending-pill" class="partner-pill" style="display:none"></div>
+        <nav class="dw-tabs" role="tablist">
+          <button type="button" class="dw-tab on" data-act="tab" data-tab="mision" role="tab">🎁 Misión</button>
+          <button type="button" class="dw-tab" data-act="tab" data-tab="tablero" role="tab">🗂️ Tablero</button>
+          <button type="button" class="dw-tab" data-act="tab" data-tab="anadir" role="tab">➕ Añadir</button>
+        </nav>
+        <div id="dw-body"></div>
       </div>
     </div>
 

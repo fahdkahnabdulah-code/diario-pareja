@@ -1,0 +1,81 @@
+/* ── Buzón de deseos 2.0: pantalla completa, misión, tablero y añadir ── */
+.dw-screen[hidden] { display: none; }
+.dw-screen { position: fixed; inset: 0; z-index: 250; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+body.dw-abierto { overflow: hidden; }
+.dw-wrap { max-width: 760px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+.dw-head { display: flex; align-items: center; justify-content: space-between; }
+.dw-title { font-size: 20px; font-weight: 700; }
+.dw-tabs { display: flex; gap: 6px; background: var(--surface); padding: 4px; border-radius: 20px; border: 1px solid var(--border); position: sticky; top: 0; z-index: 2; }
+.dw-tab { flex: 1; border: none; background: transparent; padding: 10px 0; font-size: 13px; font-weight: 600; color: var(--text-muted); border-radius: 16px; cursor: pointer; font-family: inherit; }
+.dw-tab.on { background: var(--pink-light); color: var(--pink-dark); }
+#dw-body { display: flex; flex-direction: column; gap: 14px; }
+.dw-msg { font-size: 13px; color: var(--teal-dark); background: var(--teal-light); border-radius: var(--radius-sm); padding: 9px 12px; text-align: center; }
+.dw-vacio { font-size: 13px; color: var(--text-muted); text-align: center; padding: 18px 0; }
+
+/* botones */
+.dw-btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; padding: 9px 13px; border-radius: 999px; cursor: pointer; }
+.dw-btn:active { transform: scale(.97); }
+.dw-btn-main { background: var(--pink-dark); color: var(--bg); border-color: var(--pink-dark); }
+@media (prefers-color-scheme: light) { .dw-btn-main { color: #fff; } }
+.dw-btn-soft { background: var(--pink-light); color: var(--pink-dark); border-color: transparent; }
+.dw-btn-danger { color: #a32d2d; }
+.dw-btn-big { padding: 13px 20px; font-size: 15px; }
+.dw-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dw-actions-c { justify-content: center; }
+
+/* chips */
+.dw-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.dw-chips-c { justify-content: center; }
+.dw-chip { font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 9px; }
+.dw-chip-vis { color: var(--teal-dark); background: var(--teal-light); border-color: transparent; }
+.dw-chip-sec { color: var(--gold-dark); background: var(--gold-light); border-color: transparent; }
+
+/* misión */
+.dw-hero { background: linear-gradient(135deg, var(--pink-light), var(--teal-light)); border-radius: 22px; padding: 26px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; border: 1px solid var(--border); }
+.dw-hero-emoji { font-size: 42px; line-height: 1; }
+.dw-hero h3 { font-size: 17px; }
+.dw-hero p { font-size: 14px; color: var(--text-muted); line-height: 1.45; max-width: 36ch; }
+.dw-hero-texto { font-size: 19px; font-weight: 600; line-height: 1.35; word-break: break-word; }
+.dw-hint { font-size: 14px; color: var(--text-muted); }
+.dw-stats { font-size: 13px; color: var(--text-muted); text-align: center; }
+
+/* tablero */
+.dw-vista { display: flex; gap: 6px; background: var(--surface); padding: 4px; border-radius: 20px; border: 1px solid var(--border); }
+.dw-seg { flex: 1; border: none; background: transparent; padding: 9px 0; font-size: 13px; font-weight: 600; color: var(--text-muted); border-radius: 16px; cursor: pointer; font-family: inherit; }
+.dw-seg.on { background: var(--teal-light); color: var(--teal-dark); }
+.dw-board { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; scroll-padding: 0 16px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; -webkit-overflow-scrolling: touch; }
+.dw-lane { flex: 0 0 84%; scroll-snap-align: start; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 14px 12px 16px; display: flex; flex-direction: column; gap: 10px; align-self: flex-start; }
+.dw-lane-t { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.dw-count { font-size: 11px; font-weight: 700; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; color: var(--text-muted); }
+@media (min-width: 700px) { .dw-board { display: grid; grid-template-columns: repeat(3, 1fr); overflow: visible; margin: 0; padding: 0; } .dw-lane { flex: none; } }
+.dw-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.dw-estado-enmarcha { border-left: 3px solid var(--gold-mid); }
+.dw-estado-hecho { border-left: 3px solid var(--teal-dark); }
+.dw-sorteado { border-color: var(--pink-dark); }
+.dw-tag { font-size: 11px; font-weight: 700; color: var(--pink-dark); }
+.dw-texto { font-size: 14px; line-height: 1.4; word-break: break-word; }
+.dw-texto-oculto { color: var(--text-muted); font-style: italic; }
+.dw-pie { font-size: 12px; color: var(--text-muted); }
+.dw-secretas { font-size: 12px; color: var(--gold-dark); background: var(--gold-light); border-radius: var(--radius-sm); padding: 8px 10px; }
+.dw-gracias { font-size: 14px; background: var(--pink-light); border-radius: var(--radius-sm); padding: 8px 10px; }
+.dw-gracias span { font-style: italic; }
+.dw-gracias-form { display: flex; flex-direction: column; gap: 8px; }
+.dw-emojis { display: flex; gap: 6px; }
+.dw-emoji { font-size: 20px; border: 2px solid transparent; background: var(--pink-light); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.dw-emoji.on { border-color: var(--pink-dark); }
+
+/* añadir */
+.dw-form { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+.dw-label { font-size: 14px; font-weight: 600; }
+.dw-sub { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.dw-ideas-row { display: flex; align-items: center; justify-content: space-between; }
+.dw-more { border: none; background: transparent; font-size: 15px; cursor: pointer; width: 32px; height: 32px; }
+.dw-ideas { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.dw-idea { box-sizing: border-box; width: 100%; min-height: 34px; text-align: left; border: 1px dashed var(--border); background: transparent; color: var(--text-muted); font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 10px; cursor: pointer; }
+.dw-idea:active { transform: scale(.98); }
+.dw-picks { display: flex; gap: 6px; flex-wrap: wrap; }
+.dw-pick { flex: 1 1 auto; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; padding: 9px 12px; border-radius: 14px; cursor: pointer; }
+.dw-pick.on { background: var(--pink-light); color: var(--pink-dark); border-color: var(--pink-dark); }
+.dw-pick small { display: block; font-size: 11px; font-weight: 400; color: var(--text-muted); margin-top: 2px; }
+.dw-picks-2 .dw-pick { flex: 1 1 45%; text-align: left; }
+#dw-body textarea, #dw-body input[type="text"] { width: 100%; }
