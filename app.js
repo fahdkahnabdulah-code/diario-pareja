@@ -673,7 +673,8 @@ async function loadFotos() {
         id: docSnap.id,
         yo,
         suya: suya && suya.publicado && suya.fotoUrl ? suya : null,
-        reacciones: x.reacciones || {}
+        reacciones: x.reacciones || {},
+        comentarios: Array.isArray(x.comentarios) ? x.comentarios : []
       });
     });
     if (!dias.length) {
@@ -691,7 +692,13 @@ async function loadFotos() {
         const [yy, mm] = mes.split('-');
         html += `<h3 class="fotos-mes">${MESES_LARGO[+mm - 1] || mes} ${yy}</h3>`;
       }
-      const reac = Object.values(d.reacciones).filter(Boolean).map(em => `<span class="reaction-chip">${escapeHtml(em)}</span>`).join('');
+      // Reacciones y comentarios, como en el check (solo cuando las dos fotos ya están)
+      const reac = d.suya ? Object.entries(d.reacciones).filter(([, em]) => !!em).map(([rol, em]) =>
+        `<span class="foto-reac">${escapeHtml(em)} <small>${escapeHtml(rol === currentRole.role ? 'Tú' : nombreOtro)}</small></span>`).join('') : '';
+      const coms = d.suya ? [...d.comentarios].sort((a, b) => String(a.ts).localeCompare(String(b.ts))).map(c => {
+        const mio = c.autor === currentRole.role;
+        return `<div class="checkin-bubble ${mio ? 'b-me' : 'b-her'}"><small>${escapeHtml(mio ? 'Tú' : nombreOtro)}</small>${escapeHtml(c.texto)}</div>`;
+      }).join('') : '';
       const foto = (f, quien) => `
         <figure class="foto-item">
           <img src="${escapeAttr(f.fotoUrl)}" alt="Foto de ${escapeAttr(quien)}" loading="lazy" data-full="${escapeAttr(f.fotoUrl)}" />
@@ -706,6 +713,7 @@ async function loadFotos() {
             ${d.suya ? foto(d.suya, nombreOtro) : `<div class="foto-espera">⏳ Esperando la foto de ${escapeHtml(nombreOtro)}</div>`}
           </div>
           ${reac ? `<div class="foto-reacs">${reac}</div>` : ''}
+          ${coms ? `<div class="foto-comentarios">${coms}</div>` : ''}
         </div>`;
     });
     box.innerHTML = html;

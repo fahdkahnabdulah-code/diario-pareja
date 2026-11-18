@@ -634,3 +634,7 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .foto-reacs { display: flex; gap: 6px; font-size: 16px; }
 .foto-lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 12px; }
 .foto-lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; }
+.foto-reacs { flex-wrap: wrap; align-items: center; }
+.foto-reac { display: inline-flex; align-items: center; gap: 4px; background: var(--pink-light); border-radius: 999px; padding: 3px 10px; font-size: 16px; }
+.foto-reac small { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.foto-comentarios { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px; }
