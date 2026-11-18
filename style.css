@@ -594,3 +594,43 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .header-title,.header-subtitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .header-actions{flex:0 0 auto}
 .racha-badge{order:3;flex:0 0 auto}
+
+/* ── Pregunta del día (apartado propio) ───────────────────── */
+#history-list[hidden], .pregunta-section[hidden], .shared-section[hidden], .juntos-aviso[hidden], #history-fotos[hidden], .foto-lightbox[hidden] { display: none; }
+.pregunta-section { border-radius: var(--radius); padding: 20px 18px 22px; background: linear-gradient(135deg, var(--pink-light), var(--teal-light)); border: 1px solid var(--border); box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 14px; }
+.pregunta-kicker { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.pregunta-texto { font-size: 18px; font-weight: 600; line-height: 1.35; color: var(--text); }
+.pregunta-answers { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.pregunta-ans { display: flex; flex-direction: column; gap: 7px; }
+.pregunta-ans label { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+.pregunta-ans.self label { color: var(--pink-dark); }
+.pregunta-ans.partner label { color: var(--teal-dark); }
+.pregunta-ans.partner { display: none; }
+.pregunta-nota { font-size: 12px; color: var(--text-muted); font-style: italic; }
+#tab-nueva.viewing-full .pregunta-ans.partner { display: flex; }
+#tab-nueva.viewing-full .pregunta-nota { display: none; }
+@media (min-width: 521px) { #tab-nueva.viewing-full .pregunta-answers { grid-template-columns: 1fr 1fr; } }
+
+/* ── Juntos: solo abierto 1–2 días por semana ─────────────── */
+.juntos-aviso { font-size: 13px; line-height: 1.4; color: var(--text-muted); }
+.shared-section[data-estado="abierto"] .juntos-aviso { color: var(--pink-dark); font-weight: 600; }
+.shared-section[data-estado="cerrado"] .shared-grid { display: none; }
+.shared-section[data-estado="cerrado"] { gap: 8px; border-style: dashed; box-shadow: none; }
+
+/* ── Historial: pestañas Entradas / Fotos ──────────────────── */
+.hist-subtabs { display: flex; gap: 6px; background: var(--bg); padding: 4px; border-radius: 20px; border: 1px solid var(--border); }
+.hist-subtab { flex: 1; border: none; background: transparent; padding: 9px 0; font-size: 13px; font-weight: 600; color: var(--text-muted); border-radius: 16px; cursor: pointer; font-family: inherit; }
+.hist-subtab.active { background: var(--surface); color: var(--pink-dark); box-shadow: var(--shadow-card); }
+#history-fotos { display: flex; flex-direction: column; gap: 16px; }
+.fotos-mes { font-size: 13px; font-weight: 600; text-transform: capitalize; letter-spacing: .04em; color: var(--text-muted); margin-top: 4px; }
+.foto-dia { background: var(--surface); border-radius: 18px; padding: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 10px; }
+.foto-dia-fecha { font-size: 15px; font-weight: 600; }
+.foto-par { display: flex; gap: 10px; }
+.foto-item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.foto-item img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: var(--radius-sm); cursor: zoom-in; background: var(--bg); }
+.foto-item figcaption { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.foto-pie { font-size: 13px; font-style: italic; text-align: center; word-break: break-word; }
+.foto-espera { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; color: var(--gold-dark); background: var(--gold-light); border-radius: var(--radius-sm); padding: 12px; }
+.foto-reacs { display: flex; gap: 6px; font-size: 16px; }
+.foto-lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 12px; }
+.foto-lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; }

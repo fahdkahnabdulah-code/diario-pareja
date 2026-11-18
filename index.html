@@ -132,9 +132,27 @@
           </div>
         </div>
 
-        <!-- Sección compartida -->
-        <div class="shared-section">
+        <!-- Pregunta del día: apartado propio dentro del registro diario -->
+        <div class="pregunta-section" id="pregunta-section" hidden>
+          <div class="pregunta-kicker">💭 Pregunta del día</div>
+          <p class="pregunta-texto" id="pd-question"></p>
+          <div class="pregunta-answers">
+            <div class="pregunta-ans self">
+              <label for="self_pregunta" id="pd-label-self">Tu respuesta</label>
+              <textarea id="self_pregunta" placeholder="Lo primero que se te ocurra…"></textarea>
+            </div>
+            <div class="pregunta-ans partner">
+              <label for="partner_pregunta" id="pd-label-partner">Su respuesta</label>
+              <textarea id="partner_pregunta" placeholder=""></textarea>
+            </div>
+          </div>
+          <p class="pregunta-nota" id="pd-nota">Se verá junto a la respuesta de tu pareja cuando los dos hayáis escrito.</p>
+        </div>
+
+        <!-- Sección compartida: solo se abre 1–2 días por semana (lo decide ideas.js) -->
+        <div class="shared-section" id="shared-section" data-estado="abierto">
           <div class="shared-title">Juntos</div>
+          <p class="juntos-aviso" id="juntos-aviso"></p>
           <div class="shared-grid">
             <div class="field">
               <label>🗓️ Qué nos gustaría hacer</label>
@@ -168,9 +186,14 @@
     <!-- TAB: HISTORIAL -->
     <div id="tab-historial" class="tab-content">
       <div class="container">
+        <div class="hist-subtabs" role="tablist">
+          <button type="button" class="hist-subtab active" data-sub="entradas" role="tab">📝 Entradas</button>
+          <button type="button" class="hist-subtab" data-sub="fotos" role="tab">📸 Fotos</button>
+        </div>
         <div id="history-list">
           <p class="empty-state">Aún no hay entradas guardadas.</p>
         </div>
+        <div id="history-fotos" hidden></div>
       </div>
     </div>
 

@@ -5,3 +5,8 @@
 
 [functions."checkin-notifier"]
   schedule = "*/10 * * * *"
+
+# Aviso de los días que toca "Juntos" (1–2 por semana). Se comprueba cada 30 min
+# y avisa una sola vez, a partir de las 18:00 de Madrid.
+[functions."juntos-notifier"]
+  schedule = "*/30 * * * *"

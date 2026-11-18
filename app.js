@@ -60,7 +60,7 @@ function showTab(name) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
   $(`tab-${name}`).classList.add('active');
-  if (name === 'historial') loadHistory();
+  if (name === 'historial') cargarHistorialActivo();
   if (name === 'mascota' && window.MascotaUI) MascotaUI.show();
   if (name === 'fechas') {
     calMonthOffset = 0;
@@ -172,6 +172,7 @@ async function initApp() {
   prefillNames();
   setupAvatars();
   setupTabs();
+  setupHistorialSubtabs();
   setupSaveExport();
   setupEntryDateReload();
   setupVolverHoy();
@@ -296,13 +297,16 @@ function getFormData() {
     self: {
       sentimiento: $('self_sentimiento').value,
       gracias: $('self_gracias').value,
-      pendiente: $('self_pendiente').value
+      pendiente: $('self_pendiente').value,
+      pregunta: $('self_pregunta').value
     },
     partner: {
       sentimiento: $('partner_sentimiento').value,
       gracias: $('partner_gracias').value,
-      pendiente: $('partner_pendiente').value
+      pendiente: $('partner_pendiente').value,
+      pregunta: $('partner_pregunta').value
     },
+    preguntaDia: ($('pd-question')?.textContent || '').trim(),
     shared: {
       hacer: $('shared_hacer').value,
       recuerdo: $('shared_recuerdo').value,
@@ -362,14 +366,21 @@ async function saveEntry() {
 
     // Solo se escribe el propio lado (y lo compartido) para no pisar lo que
     // haya guardado ya la otra persona en esta misma fecha.
-    await setDoc(ref, {
+    const cuerpo = {
       date: data.date,
       autores: { [currentRole.role]: data.nombreSelf },
       respuestas: { [currentRole.role]: data.self },
       completado: { [currentRole.role]: true },
-      shared: data.shared,
       savedAt: data.savedAt
-    }, { merge: true });
+    };
+    // La pregunta del día se guarda con su texto, para que el historial la
+    // muestre tal cual fue ese día aunque cambie la lista de preguntas.
+    if (data.preguntaDia) cuerpo.preguntaDia = data.preguntaDia;
+    // "Juntos" solo se guarda los días que toca (o si ya tenía algo escrito),
+    // para no pisar con textos vacíos.
+    const haySharedEscrito = Object.values(data.shared).some(v => String(v).trim());
+    if (!window.Juntos || window.Juntos.esDia(data.date) || haySharedEscrito) cuerpo.shared = data.shared;
+    await setDoc(ref, cuerpo, { merge: true });
     setMsg('save-msg', '✓ Entrada guardada y sincronizada', '#0f6e56');
     setTimeout(() => setMsg('save-msg', ''), 3000);
     if (!yaCompletadaAntes) {
@@ -397,11 +408,13 @@ function exportEntry() {
     `Cómo me siento: ${d.self.sentimiento || '—'}`,
     `Te agradezco: ${d.self.gracias || '—'}`,
     `Algo que quiero decirte: ${d.self.pendiente || '—'}`,
+    `Pregunta del día${d.preguntaDia ? ' (' + d.preguntaDia + ')' : ''}: ${d.self.pregunta || '—'}`,
     ``,
     `=== ${n2} ===`,
     `Cómo me siento: ${d.partner.sentimiento || '—'}`,
     `Te agradezco: ${d.partner.gracias || '—'}`,
     `Algo que quiero decirte: ${d.partner.pendiente || '—'}`,
+    `Pregunta del día: ${d.partner.pregunta || '—'}`,
     ``,
     `=== Juntos ===`,
     `Qué nos gustaría hacer: ${d.shared.hacer || '—'}`,
@@ -509,7 +522,9 @@ async function enterComposeForDate(dateStr) {
   prefillNames();
   ['self_sentimiento', 'self_gracias', 'self_pendiente',
    'partner_sentimiento', 'partner_gracias', 'partner_pendiente',
+   'self_pregunta', 'partner_pregunta',
    'shared_hacer', 'shared_recuerdo', 'shared_sueno', 'shared_logro'].forEach(id => { $(id).value = ''; });
+  fijarPreguntaDia(null);
 
   let e = null;
   try {
@@ -525,10 +540,12 @@ async function enterComposeForDate(dateStr) {
     $('self_sentimiento').value = self.sentimiento || '';
     $('self_gracias').value = self.gracias || '';
     $('self_pendiente').value = self.pendiente || '';
+    $('self_pregunta').value = self.pregunta || '';
     $('shared_hacer').value = e.shared?.hacer || '';
     $('shared_recuerdo').value = e.shared?.recuerdo || '';
     $('shared_sueno').value = e.shared?.sueno || '';
     $('shared_logro').value = e.shared?.logro || '';
+    if (e.preguntaDia) fijarPreguntaDia(e.preguntaDia);
   }
 
   pintarBannerEstado(e, fecha);
@@ -567,6 +584,11 @@ function verEntradaCompleta(e) {
   $('partner_sentimiento').value = partner.sentimiento || '';
   $('partner_gracias').value = partner.gracias || '';
   $('partner_pendiente').value = partner.pendiente || '';
+  $('self_pregunta').value = self.pregunta || '';
+  $('partner_pregunta').value = partner.pregunta || '';
+  $('pd-label-self').textContent = nombreSelf || 'Tú';
+  $('pd-label-partner').textContent = nombrePartner || 'Tu pareja';
+  fijarPreguntaDia(e.preguntaDia || '', !!(e.preguntaDia || self.pregunta || partner.pregunta));
   $('shared_hacer').value = e.shared?.hacer || '';
   $('shared_recuerdo').value = e.shared?.recuerdo || '';
   $('shared_sueno').value = e.shared?.sueno || '';
@@ -582,6 +604,131 @@ function verEntradaCompleta(e) {
 
   showTab('nueva');
   document.querySelectorAll('#tab-nueva textarea').forEach(autoGrow);
+}
+
+// La pregunta del día la rellena ideas.js según la fecha. Si la entrada ya
+// tiene guardada la suya, se "fija" para que no se cambie por la de hoy.
+// null = vuelve al modo automático; texto = esa pregunta; visible=false oculta
+// el apartado (entradas antiguas sin pregunta).
+function fijarPreguntaDia(texto, visible = true) {
+  const q = $('pd-question');
+  const sec = $('pregunta-section');
+  if (!q || !sec) return;
+  if (texto === null) { delete q.dataset.fija; return; }
+  q.dataset.fija = '1';
+  q.textContent = texto;
+  sec.hidden = !(texto && visible);
+}
+
+// ─────────────────────────────────────────────
+// HISTORIAL: pestañas "Entradas" / "Fotos"
+// ─────────────────────────────────────────────
+let histSub = 'entradas';
+
+function setupHistorialSubtabs() {
+  document.querySelectorAll('.hist-subtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      histSub = btn.dataset.sub;
+      cargarHistorialActivo();
+    });
+  });
+}
+
+function cargarHistorialActivo() {
+  document.querySelectorAll('.hist-subtab').forEach(b => {
+    const on = b.dataset.sub === histSub;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  $('history-list').hidden = histSub !== 'entradas';
+  $('history-fotos').hidden = histSub !== 'fotos';
+  if (histSub === 'fotos') loadFotos(); else loadHistory();
+}
+
+const MESES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function fechaLegible(dateKey) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey || '');
+  if (!m) return dateKey || '';
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  const t = `${DIAS_SEMANA[d.getUTCDay()]} ${+m[3]} de ${MESES_LARGO[+m[2] - 1]}`;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+// Todas las fotos del check del día, agrupadas por mes. Mientras no hayas
+// subido la tuya de ese día no se enseña la de tu pareja (como en el check).
+async function loadFotos() {
+  const box = $('history-fotos');
+  box.innerHTML = '<p class="empty-state">Cargando...</p>';
+  try {
+    const snap = await getDocs(collection(db, 'parejas', currentRole.parejaId, 'checkins'));
+    const dias = [];
+    snap.forEach(docSnap => {
+      const x = docSnap.data() || {};
+      const yo = x[currentRole.role];
+      const suya = x[currentRole.partner];
+      if (!yo || !yo.publicado || !yo.fotoUrl) return;
+      dias.push({
+        id: docSnap.id,
+        yo,
+        suya: suya && suya.publicado && suya.fotoUrl ? suya : null,
+        reacciones: x.reacciones || {}
+      });
+    });
+    if (!dias.length) {
+      box.innerHTML = '<p class="empty-state">Aún no hay fotos. Aparecerán aquí las del check del día 📸</p>';
+      return;
+    }
+    dias.sort((a, b) => b.id.localeCompare(a.id));
+    const nombreOtro = nombrePorRol(currentRole.partner) || 'tu pareja';
+    let html = '';
+    let mesActual = '';
+    dias.forEach(d => {
+      const mes = d.id.slice(0, 7);
+      if (mes !== mesActual) {
+        mesActual = mes;
+        const [yy, mm] = mes.split('-');
+        html += `<h3 class="fotos-mes">${MESES_LARGO[+mm - 1] || mes} ${yy}</h3>`;
+      }
+      const reac = Object.values(d.reacciones).filter(Boolean).map(em => `<span class="reaction-chip">${escapeHtml(em)}</span>`).join('');
+      const foto = (f, quien) => `
+        <figure class="foto-item">
+          <img src="${escapeAttr(f.fotoUrl)}" alt="Foto de ${escapeAttr(quien)}" loading="lazy" data-full="${escapeAttr(f.fotoUrl)}" />
+          <figcaption>${escapeHtml(quien)}${f.tarde ? ' 🕐' : ''}</figcaption>
+          ${f.pie ? `<div class="foto-pie">“${escapeHtml(f.pie)}”</div>` : ''}
+        </figure>`;
+      html += `
+        <div class="foto-dia">
+          <div class="foto-dia-fecha">${escapeHtml(fechaLegible(d.id))}</div>
+          <div class="foto-par">
+            ${foto(d.yo, 'Tú')}
+            ${d.suya ? foto(d.suya, nombreOtro) : `<div class="foto-espera">⏳ Esperando la foto de ${escapeHtml(nombreOtro)}</div>`}
+          </div>
+          ${reac ? `<div class="foto-reacs">${reac}</div>` : ''}
+        </div>`;
+    });
+    box.innerHTML = html;
+    box.querySelectorAll('img[data-full]').forEach(img => {
+      img.addEventListener('click', () => abrirFotoGrande(img.dataset.full));
+    });
+  } catch (err) {
+    box.innerHTML = '<p class="empty-state">No se pudieron cargar las fotos. Comprueba tu conexión.</p>';
+  }
+}
+
+function abrirFotoGrande(url) {
+  let ov = $('foto-lightbox');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'foto-lightbox';
+    ov.className = 'foto-lightbox';
+    ov.innerHTML = '<img alt="Foto" />';
+    ov.addEventListener('click', () => { ov.hidden = true; });
+    document.body.appendChild(ov);
+  }
+  ov.querySelector('img').src = url;
+  ov.hidden = false;
 }
 
 // ─────────────────────────────────────────────
@@ -847,6 +994,11 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// Para meter texto dentro de un atributo HTML (comillas incluidas)
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // ─────────────────────────────────────────────

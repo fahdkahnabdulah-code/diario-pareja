@@ -1,8 +1,10 @@
 // ─────────────────────────────────────────────
 // Ideas para escribir — el diario sigue teniendo las mismas tres preguntas
 // de siempre (cómo me siento / te agradezco / algo que quiero decirte), pero
-// cada día se formulan de una manera distinta, hay una "pregunta de hoy" para
-// abrir conversación y unas frases para empezar si alguien se queda en blanco.
+// cada día se formulan de una manera distinta, la "pregunta del día" (apartado
+// propio, con su campo de respuesta) abre conversación, hay unas frases para
+// empezar si alguien se queda en blanco y la sección "Juntos" solo se abre 1–2
+// días por semana (al azar pero espaciados, igual para los dos).
 // Todo se elige a partir de la fecha de la entrada: los dos ven lo mismo, y
 // no se guarda nada nuevo. Independiente de app.js.
 // ─────────────────────────────────────────────
@@ -172,13 +174,6 @@
       '.idea-more:hover,.idea-more:focus-visible{color:var(--pink-dark,#993556)}',
       '.idea-more.is-spin{animation:idea-spin .35s ease}',
       '.person-col.readonly .idea-row,.viewing-full .idea-row{display:none}',
-      '.idea-today{display:flex;align-items:center;gap:12px;box-sizing:border-box;margin:0 0 14px;padding:12px 14px;border-radius:var(--radius,14px);border:1px dashed var(--border,rgba(128,128,128,.45))}',
-      '.idea-today .it-body{flex:1;min-width:0}',
-      '.idea-today .it-label{display:block;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#888)}',
-      '.idea-today .it-q{display:block;font-size:14px;line-height:1.35;margin-top:3px}',
-      '.idea-today .it-go{flex:none;border:1px solid var(--pink-dark,#993556);background:transparent;color:var(--pink-dark,#993556);font:inherit;font-size:12px;font-weight:500;line-height:1;padding:9px 14px;border-radius:999px;cursor:pointer}',
-      '.idea-today .it-go:active{transform:scale(.97)}',
-      '.viewing-full .idea-today{display:none}',
       '#tab-nueva .person-col label,#tab-nueva .shared-section label{font-size:14px;font-weight:600}',
       '#tab-nueva textarea::placeholder{font-size:14px}',
       '#tab-nueva:not(.viewing-full) .cols{grid-template-columns:1fr}',
@@ -267,27 +262,49 @@
     c.sync();
   }
 
-  var tarjeta = null;
+  // ── Juntos: 1–2 días por semana, al azar pero espaciados (igual para los dos) ──
+  // Misma lógica que netlify/functions/juntos-notifier.js (que manda el aviso).
+  function semanaDe(dia) { return Math.floor((dia + 3) / 7); } // semanas de lunes a domingo
+  function diasJuntosSemana(semana) {
+    var r = rng(semana * 7919 + 1234);
+    if (r() < 0.5) return [1 + Math.floor(r() * 4)];                       // 1 día: martes–viernes
+    return [Math.floor(r() * 3), 4 + Math.floor(r() * 2)];                  // 2 días: lunes–miércoles y viernes–sábado
+  }
+  function esDiaJuntos(dia) {
+    return diasJuntosSemana(semanaDe(dia)).indexOf((dia + 3) % 7) >= 0;
+  }
+  function proximoJuntos(dia) {
+    for (var i = 1; i <= 14; i++) if (esDiaJuntos(dia + i)) return dia + i;
+    return dia + 7;
+  }
+  function nombreDia(dia) {
+    var d = new Date(dia * 86400000);
+    var dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    return dias[d.getUTCDay()] + ' ' + d.getUTCDate() + ' de ' + meses[d.getUTCMonth()];
+  }
+  window.Juntos = { esDia: function (iso) { return esDiaJuntos(diaDe(iso)); } };
 
-  function montarPregunta() {
-    var cols = document.querySelector('#tab-nueva .cols');
-    if (!cols || tarjeta) return;
-    tarjeta = document.createElement('div');
-    tarjeta.className = 'idea-today';
-    tarjeta.innerHTML =
-      '<div class="it-body"><span class="it-label">💭 Pregunta de hoy</span><span class="it-q"></span></div>' +
-      '<button type="button" class="it-go">Responder</button>';
-    cols.parentNode.insertBefore(tarjeta, cols);
-    tarjeta.querySelector('.it-go').addEventListener('click', function () {
-      var ta = document.getElementById('self_pendiente');
-      var q = tarjeta.querySelector('.it-q').textContent;
-      if (!ta || ta.disabled || !q) return;
-      // no se pega nada: la pregunta queda como texto de ayuda del campo y se escribe a mano
-      campos.forEach(function (c) { if (c.ta === ta) c.fijo = '💭 ' + q; });
-      if (!ta.value) ta.placeholder = '💭 ' + q;
-      if (ta.scrollIntoView) ta.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      ta.focus({ preventScroll: true });
+  function aplicarJuntos(iso) {
+    var sec = document.getElementById('shared-section');
+    var aviso = document.getElementById('juntos-aviso');
+    if (!sec || !aviso) return;
+    var dia = diaDe(iso);
+    var conTexto = ['hacer', 'recuerdo', 'sueno', 'logro'].some(function (k) {
+      var t = document.getElementById('shared_' + k);
+      return t && t.value.trim();
     });
+    var toca = esDiaJuntos(dia);
+    var estado = (toca || conTexto) ? 'abierto' : 'cerrado';
+    var texto = toca
+      ? '✨ Hoy toca «Juntos»: planes, recuerdos y sueños para los dos.'
+      : (conTexto ? '' : '🔒 «Juntos» se abre 1–2 días por semana. La próxima vez: ' + nombreDia(proximoJuntos(dia)) + '.');
+    // al ver una entrada ya cerrada, "Juntos" solo se enseña si tenía algo escrito
+    var tab = document.getElementById('tab-nueva');
+    sec.hidden = !!(tab && tab.classList.contains('viewing-full')) && !conTexto;
+    if (sec.dataset.estado !== estado) sec.dataset.estado = estado;
+    if (aviso.textContent !== texto) aviso.textContent = texto;
+    aviso.hidden = !texto;
   }
 
   function aplicarDia(iso) {
@@ -304,11 +321,13 @@
       });
     });
 
-    // pregunta de hoy
-    if (tarjeta) {
+    // pregunta del día (si la entrada ya tiene la suya guardada, app.js la fija y aquí no se toca)
+    var pq = document.getElementById('pd-question');
+    var psec = document.getElementById('pregunta-section');
+    if (pq && psec && !pq.dataset.fija) {
       var q = PREGUNTAS_DIA[delDia(PREGUNTAS_DIA.length, dia, 4242)];
-      var el = tarjeta.querySelector('.it-q');
-      if (el.textContent !== q) { el.textContent = q; campos.forEach(function (c) { c.fijo = null; }); }
+      if (pq.textContent !== q) pq.textContent = q;
+      psec.hidden = false;
     }
 
     // frases del día (si se tocó 🔄 se mantienen las que salieron hasta cambiar de fecha)
@@ -316,7 +335,7 @@
       if (c.reponer) c.reponer(dia);
       c.idx = delDia(c.ideas.length, dia, hash(c.ta.id));
       if (!c.ta.value && document.activeElement !== c.ta && c.ta.id.indexOf('partner_') !== 0) {
-        c.ta.placeholder = c.fijo || c.ideas[c.idx];
+        c.ta.placeholder = c.ideas[c.idx];
       }
       c.sync();
     });
@@ -331,7 +350,6 @@
       // en "Juntos" solo rota el texto de ayuda, sin botones, para no recargar
       montarCampo(document.getElementById('shared_' + k), BANK[k].ideas, 0, false);
     });
-    montarPregunta();
 
     var fecha = document.getElementById('entry-date');
     var ultima = null;
@@ -339,6 +357,10 @@
       var v = fecha ? fecha.value : '';
       if (v !== ultima) { ultima = v; aplicarDia(v); }
       campos.forEach(function (c) { c.sync(); }); // por si la app rellena/vacía los campos
+      aplicarJuntos(v);
+      // la pregunta del día puede quedar libre otra vez (al volver a escribir hoy)
+      var pq2 = document.getElementById('pd-question');
+      if (pq2 && !pq2.dataset.fija && !pq2.textContent) aplicarDia(v);
     }
     vigilar();
     setInterval(vigilar, 800);
@@ -349,7 +371,6 @@
       setInterval(function () {
         campos.forEach(function (c) {
           if (c.ta.value || document.activeElement === c.ta || c.ta.disabled) return;
-          if (c.fijo) return;
           c.idx = (c.idx + 1) % c.ideas.length;
           c.ta.placeholder = c.ideas[c.idx];
         });
