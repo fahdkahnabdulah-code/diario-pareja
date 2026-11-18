@@ -1,10 +1,12 @@
 // ─────────────────────────────────────────────
-// Función programada (cron, cada 30 minutos): avisos de la misión semanal de deseos.
-//  - Lunes, desde las 10:00 (Madrid): "Nueva misión de deseo" a quien aún no ha sacado
-//    la de esta semana y cuya pareja tiene deseos pendientes.
-//  - Jueves, desde las 18:00 (Madrid): recordatorio a quien se apuntó un deseo y no lo
-//    ha marcado como hecho (sin decir cuál, por si es sorpresa).
+// Función programada (cron, cada 30 minutos): avisos de las llaves de deseos.
+//  - Lunes, desde las 10:00 (Madrid): llega la 1ª llave de la semana.
+//  - Jueves, desde las 10:00: llega la 2ª llave.
+//    (aviso solo si le queda alguna llave sin usar y su pareja tiene deseos bloqueados)
+//  - Sábado, desde las 12:00: recordatorio a quien tiene un deseo desbloqueado
+//    y aún no lo ha marcado como hecho (sin decir cuál).
 // Cada aviso se apunta en parejas/<id>/avisos para no repetirse.
+// Las llaves se calculan igual que en deseos.js (desbloqueadoPor + desbloqueadoSemana).
 // Necesita FIREBASE_SERVICE_ACCOUNT y las VAPID_*; sin ellas no hace nada.
 // ─────────────────────────────────────────────
 const PAREJA_ID = process.env.CHECKIN_PAREJA_ID || 'nuestra-pareja';
@@ -34,22 +36,28 @@ function diaSemana(fecha) { // 0 = lunes … 6 = domingo
 }
 function estadoDe(w) { return w.estado || (w.cumplido ? 'hecho' : 'pendiente'); }
 
-// Lógica pura. deseos: [{id,autor,estado,apuntadoPor,…}], sorteos: { rol: {semana} }
-function calcularAvisos(fecha, hora, deseos, sorteos) {
+// Lógica pura. deseos: [{id,autor,estado,apuntadoPor,desbloqueadoPor,desbloqueadoSemana,…}]
+function calcularAvisos(fecha, hora, deseos) {
   const semana = semanaIso(fecha), dia = diaSemana(fecha), out = [];
-  if (dia === 0 && hora >= 10) {
+  const llavesTotales = dia >= 3 ? 2 : 1;
+  const enLlave = (dia === 0 && hora >= 10) || (dia === 3 && hora >= 10);
+  if (enLlave) {
     for (const rol of ROLES) {
-      const yaSaco = sorteos[rol] && sorteos[rol].semana === semana;
-      const hayPendientes = deseos.some(w => w.autor === otro(rol) && estadoDe(w) === 'pendiente');
-      if (!yaSaco && hayPendientes) {
-        out.push({ key: `deseo-lunes_${semana}_${rol}`, rol, tag: 'deseo-mision', body: '🎲 Nueva misión de deseo disponible: saca el de esta semana' });
+      const usadas = deseos.filter(w => w.autor === otro(rol) && w.desbloqueadoPor === rol && w.desbloqueadoSemana === semana).length;
+      const libres = llavesTotales - usadas;
+      const hayBloqueados = deseos.some(w => w.autor === otro(rol) && estadoDe(w) === 'pendiente');
+      if (libres > 0 && hayBloqueados) {
+        out.push({
+          key: `deseo-llave${dia === 0 ? 1 : 2}_${semana}_${rol}`, rol, tag: 'deseo-llave',
+          body: libres === 1 ? '🔑 Tienes una llave para desbloquear un deseo de tu pareja' : '🔑 Tienes 2 llaves para desbloquear deseos de tu pareja'
+        });
       }
     }
   }
-  if (dia === 3 && hora >= 18) {
+  if (dia === 5 && hora >= 12) {
     for (const w of deseos) {
-      if (estadoDe(w) === 'enmarcha' && w.apuntadoPor && ROLES.includes(w.apuntadoPor)) {
-        out.push({ key: `deseo-recordatorio_${semana}_${w.id}`, rol: w.apuntadoPor, tag: 'deseo-recordatorio', body: '🎁 Te queda un deseo por cumplir esta semana. ¡Todavía llegas!' });
+      if (estadoDe(w) === 'enmarcha' && w.apuntadoPor && ROLES.includes(w.apuntadoPor) && w.autor !== w.apuntadoPor) {
+        out.push({ key: `deseo-recordatorio_${semana}_${w.id}`, rol: w.apuntadoPor, tag: 'deseo-recordatorio', body: '🎁 Tienes un deseo desbloqueado por cumplir. ¿Lo haces este finde?' });
       }
     }
   }
@@ -69,7 +77,7 @@ exports.handler = async () => {
   try {
     const { fecha, hora } = ahoraMadrid();
     const dia = diaSemana(fecha);
-    if (!((dia === 0 && hora >= 10) || (dia === 3 && hora >= 18))) return { statusCode: 200, body: 'hoy no hay avisos de deseos' };
+    if (!((dia === 0 && hora >= 10) || (dia === 3 && hora >= 10) || (dia === 5 && hora >= 12))) return { statusCode: 200, body: 'hoy no hay avisos de deseos' };
 
     const admin = require('firebase-admin');
     const webpush = require('web-push');
@@ -81,15 +89,9 @@ exports.handler = async () => {
 
     const deseos = [];
     (await db.collection(`parejas/${PAREJA_ID}/deseos`).get()).forEach(d => deseos.push({ id: d.id, ...d.data() }));
-    const sorteos = {};
-    for (const rol of ROLES) {
-      const s = await db.doc(`parejas/${PAREJA_ID}/deseo_semanal/${rol}`).get();
-      if (s.exists) sorteos[rol] = s.data();
-    }
-
     const subs = {};
     let enviados = 0;
-    for (const a of calcularAvisos(fecha, hora, deseos, sorteos)) {
+    for (const a of calcularAvisos(fecha, hora, deseos)) {
       const ref = db.doc(`parejas/${PAREJA_ID}/avisos/${a.key}`);
       if ((await ref.get()).exists) continue;
       if (!(a.rol in subs)) {
