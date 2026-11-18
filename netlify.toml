@@ -10,3 +10,8 @@
 # y avisa una sola vez, a partir de las 18:00 de Madrid.
 [functions."juntos-notifier"]
   schedule = "*/30 * * * *"
+
+# Avisos de fechas importantes y eventos (7 días, 3 días, el día anterior y el mismo día).
+# Se comprueba cada 30 min y avisa una sola vez cada uno, a partir de las 09:00 de Madrid.
+[functions."eventos-notifier"]
+  schedule = "*/30 * * * *"

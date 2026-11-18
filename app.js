@@ -1153,7 +1153,8 @@ async function enviarPush(rolDestino, title, body, tag) {
 // FECHAS IMPORTANTES
 // ─────────────────────────────────────────────
 const CUMPLEANOS = [
-  // { nombre: 'Cumpleaños de Cilia', mes: 0, dia: 0 }, // pendiente de añadir
+  { nombre: 'Cumpleaños de Alba', mes: 3, dia: 5 },   // 5 de abril
+  { nombre: 'Cumpleaños de Abdu', mes: 11, dia: 12 }  // 12 de diciembre
 ];
 
 // ── Eventos personalizados (creados desde la app, guardados en Firestore) ──
@@ -1175,7 +1176,8 @@ async function loadEventosCustom() {
 }
 
 function eventosVisiblesParaMi() {
-  return eventosCustomCache.filter(ev => ev.visibilidad !== 'propio' || ev.autor === currentRole.role);
+  // Los aniversarios ya son fechas fijas: si alguna vez se creó uno a mano, se oculta para no verlo duplicado
+  return eventosCustomCache.filter(ev => !/aniversario/i.test(ev.nombre || '') && (ev.visibilidad !== 'propio' || ev.autor === currentRole.role));
 }
 
 // Días del mes (year, month) en los que cae un evento personalizado, según su frecuencia
@@ -1299,7 +1301,10 @@ let calMonthOffset = 0;
 
 function eventosDelMes(year, month) {
   // month: 0 = enero ... 11 = diciembre
-  const eventos = [{ dia: 10, nombre: 'Aniversario mensual', emoji: '💞' }];
+  // Aniversario fijo: cada mes el día 10 (mensual) y, en el mes de febrero, el aniversario anual
+  const eventos = month === INICIO_RELACION.getMonth()
+    ? [{ dia: INICIO_RELACION.getDate(), nombre: 'Aniversario', emoji: '💞' }]
+    : [{ dia: 10, nombre: 'Aniversario mensual', emoji: '💞' }];
   if (month === 1) eventos.push({ dia: 14, nombre: 'San Valentín', emoji: '💘' });
   if (month === 8) eventos.push({ dia: 21, nombre: 'Día de las Flores Amarillas', emoji: '🌼' });
   if (month === 7) eventos.push({ dia: 1, nombre: 'Día de la novia', emoji: '👰' });
@@ -1367,8 +1372,13 @@ function setupCalendar() {
 function loadFechasImportantes() {
   const list = $('fechas-list');
   if (!list) return;
+  const aniv = proximaFecha(INICIO_RELACION.getMonth(), INICIO_RELACION.getDate());
+  const anios = aniv.getFullYear() - INICIO_RELACION.getFullYear();
+  const mensual = proximoAniversarioMensual();
   const eventos = [
-    { nombre: 'Aniversario mensual', fecha: proximoAniversarioMensual(), emoji: '💞' },
+    { nombre: `Aniversario (${anios} año${anios === 1 ? '' : 's'})`, fecha: aniv, emoji: '💞' },
+    // en febrero el aniversario anual sustituye al mensual
+    ...(mensual.getMonth() === INICIO_RELACION.getMonth() ? [] : [{ nombre: 'Aniversario mensual', fecha: mensual, emoji: '💞' }]),
     { nombre: 'San Valentín', fecha: proximaFecha(1, 14), emoji: '💘' },
     { nombre: 'Día de las Flores Amarillas', fecha: proximaFecha(8, 21), emoji: '🌼' },
     { nombre: 'Día de la novia', fecha: proximaFecha(7, 1), emoji: '👰' },
