@@ -638,3 +638,13 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .foto-reac { display: inline-flex; align-items: center; gap: 4px; background: var(--pink-light); border-radius: 999px; padding: 3px 10px; font-size: 16px; }
 .foto-reac small { font-size: 11px; font-weight: 600; color: var(--text-muted); }
 .foto-comentarios { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px; }
+
+/* Confirmación de cerrar sesión */
+#modal-logout { z-index: 300; }
+.logout-card { max-width: 340px; }
+.logout-body { padding: 24px 20px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.logout-emoji { font-size: 34px; line-height: 1; }
+.logout-title { font-size: 17px; font-weight: 700; }
+.logout-text { font-size: 14px; line-height: 1.45; color: var(--text-muted); }
+.logout-actions { display: flex; gap: 10px; width: 100%; margin-top: 8px; }
+.logout-actions button { flex: 1; }

@@ -111,7 +111,14 @@ $('btn-register').addEventListener('click', async () => {
   }
 });
 
-$('btn-logout').addEventListener('click', () => signOut(auth));
+// Cerrar sesión pide confirmación (la ✕ de arriba se pulsa fácil sin querer)
+function abrirConfirmLogout() { $('modal-logout').hidden = false; $('btn-logout-cancel').focus(); }
+function cerrarConfirmLogout() { $('modal-logout').hidden = true; }
+$('btn-logout').addEventListener('click', abrirConfirmLogout);
+$('btn-logout-cancel').addEventListener('click', cerrarConfirmLogout);
+$('btn-logout-ok').addEventListener('click', () => { cerrarConfirmLogout(); signOut(auth); });
+$('modal-logout').addEventListener('click', e => { if (e.target.id === 'modal-logout') cerrarConfirmLogout(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal-logout').hidden) cerrarConfirmLogout(); });
 
 // Si Firebase tarda demasiado (sin conexión, red lenta), no dejar la pantalla de carga para siempre
 const cargaTimeout = setTimeout(() => {
