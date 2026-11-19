@@ -95,3 +95,27 @@ body.dw-abierto { overflow: hidden; }
 .dw-confirm span { flex: 1 0 100%; font-weight: 600; }
 .dw-hint-form { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
 .dw-btn[disabled] { opacity: .55; cursor: default; }
+
+/* v3: centrado y pestañas */
+.dw-tabs::before { content: ''; position: absolute; left: -16px; right: -16px; top: -80px; bottom: -8px; background: var(--bg); z-index: -1; pointer-events: none; }
+.dw-card { align-items: stretch; text-align: center; }
+.dw-card .dw-texto { text-align: center; }
+.dw-card .dw-chips { justify-content: center; }
+.dw-card .dw-actions { justify-content: center; }
+.dw-card .dw-actions .dw-btn { flex: 1 1 auto; }
+.dw-card .dw-gracias { text-align: center; }
+.dw-estado-pill { align-self: center; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; line-height: 1.3; }
+.dw-pill-pendiente { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+.dw-pill-enmarcha { background: var(--gold-light); color: var(--gold-dark); }
+.dw-pill-hecho { background: var(--teal-light); color: var(--teal-dark); }
+.dw-blur { text-align: center; }
+.dw-resumen { font-size: 13px; color: var(--text-muted); text-align: center; }
+.dw-sec { justify-content: center; }
+.dw-det { display: flex; flex-direction: column; gap: 10px; }
+.dw-det > summary { cursor: pointer; font-size: 14px; font-weight: 700; text-align: center; list-style: none; padding: 6px 0; }
+.dw-det > summary::-webkit-details-marker { display: none; }
+.dw-det[open] > summary { margin-bottom: 8px; }
+.dw-llaves { justify-content: center; text-align: left; }
+.dw-confirm { justify-content: center; text-align: center; }
+.dw-stats { text-align: center; }
+.dw-card .dw-actions .dw-btn-danger { flex: 0 0 auto; padding-left: 20px; padding-right: 20px; }

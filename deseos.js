@@ -7,7 +7,7 @@
 //  · Estados: pendiente (bloqueado) → en marcha (desbloqueado) → cumplido.
 //    Un cumplido se puede deshacer; un desbloqueo se puede volver a bloquear
 //    (devuelve la llave).
-//  · Pestañas: 💝 Deseos, 🗂️ Tablero y ➕ Añadir.
+//  · Pestañas: 💝 De <pareja> (llaves y bloqueados), 📝 Míos (estado de los míos) y ➕ Añadir.
 //  · Avisos push sin spoilers; cumplir un deseo da ✦ a Dopi.
 // Datos: parejas/<id>/deseos/<deseo>. Las llaves se calculan a partir de los
 // deseos (desbloqueadoPor + desbloqueadoSemana), no hay otro documento.
@@ -42,7 +42,7 @@ let C = null;           // contexto que pasa app.js
 let enlazado = false;
 const S = {
   wishes: [],
-  tab: 'deseos', vista: 'mios',
+  tab: 'deseos',
   tipo: 'otro', tamano: 'semana',
   ideasIdx: 0, graciasId: null, graciasEmoji: '💛', graciasNota: '',
   confirmId: null, msg: ''
@@ -103,7 +103,7 @@ async function crear() {
     creado: ahora()
   });
   S.msg = '✓ Guardado: tu pareja lo verá bloqueado hasta que use una llave';
-  S.tab = 'tablero'; S.vista = 'mios';
+  S.tab = 'mios';
 }
 
 async function desbloquear(id) {
@@ -195,41 +195,43 @@ function nombreDe(r) { return C.nombre(r) || 'tu pareja'; }
 // Texto de relleno para el deseo bloqueado: así el texto real no está en la página
 const RELLENO = 'Un deseo muy bonito que te hará mucha ilusión cumplir esta semana con todo el cariño';
 function textoBloqueado(w) {
-  const n = Math.max(18, Math.min(RELLENO.length, String(w.texto || '').length));
+  const n = Math.max(40, Math.min(RELLENO.length, String(w.texto || '').length));
   return RELLENO.slice(0, n);
 }
 
 function botonesDesbloqueo(w) {
-  const libres = llavesLibres();
   if (S.confirmId === w.id) {
     return `<div class="dw-confirm"><span>¿Usar 1 llave para verlo?</span>
       <button class="dw-btn dw-btn-main" data-act="desbloquear" data-id="${escA(w.id)}">🔓 Sí, desbloquear</button>
       <button class="dw-btn" data-act="confirmar-no">Cancelar</button></div>`;
   }
-  return libres > 0
+  // Sin llaves no se muestra botón: el aviso de arriba ya lo explica
+  return llavesLibres() > 0
     ? `<button class="dw-btn dw-btn-main" data-act="confirmar" data-id="${escA(w.id)}">🔑 Desbloquear</button>`
-    : `<button class="dw-btn" disabled>🔑 Sin llaves esta semana</button>`;
+    : '';
 }
 
-function tarjetaTablero(w) {
+function pastilla(clase, html) { return `<div class="dw-estado-pill dw-pill-${clase}">${html}</div>`; }
+
+// Tarjeta de un deseo. Sirve para los de tu pareja (bloqueados / en marcha / cumplidos)
+// y para los tuyos (con el estado en que los tiene tu pareja).
+function tarjeta(w) {
   const est = estadoDe(w);
   const soyAutor = w.autor === rol().role;
-  let cuerpo = '', acciones = '', pie = '';
+  const otroNombre = nombreDe(rol().partner);
+  let cuerpo = '', acciones = '', pill = '';
   let bloqueada = false;
 
-  // El autor no ve el texto mientras su pareja se encarga de él: así sigue siendo sorpresa
-  const ocultar = soyAutor && est === 'enmarcha';
   if (!soyAutor && est === 'pendiente') {
     bloqueada = true;
     cuerpo = `<div class="dw-lockwrap"><div class="dw-texto dw-blur" aria-hidden="true">${esc(textoBloqueado(w))}</div><div class="dw-lockicon" role="img" aria-label="Deseo bloqueado">🔒</div></div>`;
-  } else if (ocultar) {
-    cuerpo = '<div class="dw-texto dw-texto-oculto">🎁 Sorpresa en camino…</div>';
   } else {
     cuerpo = `<div class="dw-texto">${esc(w.texto)}</div>`;
   }
 
   if (est === 'pendiente') {
     if (soyAutor) {
+      pill = pastilla('pendiente', `🔒 Sin revelar · ${esc(otroNombre)} aún no lo ha desbloqueado`);
       acciones = `<button class="dw-btn" data-act="hecho" data-id="${escA(w.id)}">✓ Ya está</button>
         <button class="dw-btn dw-btn-danger" data-act="borrar" data-id="${escA(w.id)}" aria-label="Eliminar">🗑</button>`;
     } else {
@@ -237,61 +239,41 @@ function tarjetaTablero(w) {
     }
   } else if (est === 'enmarcha') {
     const yo = w.apuntadoPor === rol().role;
-    const quien = yo ? 'Tú' : nombreDe(w.apuntadoPor);
-    pie = `<div class="dw-pie">🔓 ${esc(quien)} ${yo ? 'te encargas' : 'se encarga'}${w.apuntadoFecha ? ' · desde el ' + esc(fechaCorta(w.apuntadoFecha)) : ''}</div>`;
+    const desde = w.apuntadoFecha ? ' · desde el ' + esc(fechaCorta(w.apuntadoFecha)) : '';
     if (yo) {
+      pill = pastilla('enmarcha', `🔓 Desbloqueado por ti${desde}`);
       acciones = `<button class="dw-btn dw-btn-main" data-act="hecho" data-id="${escA(w.id)}">✓ Hecho</button>
         <button class="dw-btn" data-act="soltar" data-id="${escA(w.id)}" title="Vuelve a bloquearlo y recupera la llave">↩ Volver a bloquear</button>`;
-    } else if (soyAutor) {
-      acciones = `<button class="dw-btn" data-act="hecho" data-id="${escA(w.id)}">✓ Ya está hecho</button>`;
+    } else {
+      pill = pastilla('enmarcha', `🔓 ${esc(nombreDe(w.apuntadoPor))} lo está preparando${desde}`);
+      if (soyAutor) acciones = `<button class="dw-btn" data-act="hecho" data-id="${escA(w.id)}">✓ Ya está hecho</button>`;
     }
   } else {
-    const por = w.hechoPor ? (w.hechoPor === rol().role ? 'Tú' : nombreDe(w.hechoPor)) : '';
-    pie = `<div class="dw-pie">✅ ${por ? 'Cumplido por ' + esc(por) + ' · ' : 'Cumplido · '}${esc(fechaCorta(w.cumplidoFecha))}</div>`;
+    const por = w.hechoPor ? (w.hechoPor === rol().role ? 'ti' : nombreDe(w.hechoPor)) : '';
+    pill = pastilla('hecho', `✅ Cumplido${por ? ' por ' + esc(por) : ''} · ${esc(fechaCorta(w.cumplidoFecha))}`);
     if (soyAutor || w.hechoPor === rol().role) {
       acciones = `<button class="dw-btn" data-act="deshacer" data-id="${escA(w.id)}" title="Si lo marcaste sin querer">↩ Deshacer</button>`;
     }
   }
   return `<article class="dw-card dw-estado-${est}${bloqueada ? ' dw-bloqueada' : ''}">
+      ${pill}
       ${cuerpo}
-      ${ocultar ? '' : chipsDeseo(w)}
-      ${pie}
+      ${chipsDeseo(w)}
       ${est === 'hecho' ? htmlGracias(w) : ''}
       ${acciones ? `<div class="dw-actions">${acciones}</div>` : ''}
     </article>`;
 }
 
-function htmlTablero() {
-  const soyYo = S.vista === 'mios';
-  const partnerNombre = nombreDe(rol().partner);
-  const lista = soyYo ? mios() : suyos();
-  const lanes = [
-    { id: 'pendiente', titulo: soyYo ? '💭 Ideas' : '🔒 Bloqueados' },
-    { id: 'enmarcha', titulo: '🔓 En marcha' },
-    { id: 'hecho', titulo: '✅ Cumplidos' }
-  ];
-  const orden = (a, b) => String(b.creado || '').localeCompare(String(a.creado || ''));
-  const columnas = lanes.map(l => {
-    const items = lista.filter(w => estadoDe(w) === l.id).sort(l.id === 'hecho' ? (a, b) => String(b.cumplidoFecha || '').localeCompare(String(a.cumplidoFecha || '')) : orden);
-    let cuerpo = items.map(w => tarjetaTablero(w)).join('');
-    if (!cuerpo) cuerpo = `<p class="dw-vacio">${l.id === 'pendiente' ? 'Nada por aquí' : l.id === 'enmarcha' ? 'Nada en marcha' : 'Aún no hay cumplidos'}</p>`;
-    return `<section class="dw-lane"><h3 class="dw-lane-t">${l.titulo} <span class="dw-count">${items.length}</span></h3>${cuerpo}</section>`;
-  }).join('');
-  return `<div class="dw-vista">
-      <button class="dw-seg${soyYo ? ' on' : ''}" data-act="vista" data-v="mios">Mis deseos</button>
-      <button class="dw-seg${!soyYo ? ' on' : ''}" data-act="vista" data-v="suyos">De ${esc(partnerNombre)}</button>
-    </div>
-    ${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}
-    <div class="dw-board">${columnas}</div>`;
-}
+const porFecha = (campo) => (a, b) => String(b[campo] || '').localeCompare(String(a[campo] || ''));
 
-// Pestaña principal: tus llaves, los deseos bloqueados de tu pareja y los que tienes en marcha
+// Pestaña "De <pareja>": tus llaves, lo que tienes en marcha, lo bloqueado y lo ya cumplido
 function htmlDeseos() {
   const partnerNombre = nombreDe(rol().partner);
   const libres = llavesLibres(), total = llavesTotales();
-  const bloqueados = suyosPendientes().sort((a, b) => String(b.creado || '').localeCompare(String(a.creado || '')));
-  const enMarcha = misEnMarcha();
-  const hechosPorMi = suyos().filter(w => w.hechoPor === rol().role && estadoDe(w) === 'hecho').length;
+  const lista = suyos();
+  const bloqueados = lista.filter(w => estadoDe(w) === 'pendiente').sort(porFecha('creado'));
+  const enMarcha = misEnMarcha().sort(porFecha('apuntadoFecha'));
+  const cumplidos = lista.filter(w => estadoDe(w) === 'hecho' && w.hechoPor === rol().role).sort(porFecha('cumplidoFecha'));
 
   const llaves = `<div class="dw-llaves${libres > 0 ? '' : ' dw-llaves-0'}">
       <div class="dw-llaves-n">${Array.from({ length: LLAVES_JUEVES }, (_, i) => `<span class="dw-llave${i < libres ? ' on' : ''}">🔑</span>`).join('')}</div>
@@ -300,18 +282,36 @@ function htmlDeseos() {
         : (total < LLAVES_JUEVES ? 'Ya has usado tu llave. Tienes otra desde el jueves.' : 'Ya has usado tus llaves. Tendrás nuevas el lunes.')}</div>
     </div>`;
 
-  let marcha = '';
-  if (enMarcha.length) {
-    marcha = `<h3 class="dw-sec">🔓 En marcha <span class="dw-count">${enMarcha.length}</span></h3>${enMarcha.map(w => tarjetaTablero(w)).join('')}`;
-  }
-  let bloq = '';
+  const sec = (t, n, items) => `<h3 class="dw-sec">${t} <span class="dw-count">${n}</span></h3>${items.map(tarjeta).join('')}`;
+  let html = `${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}${llaves}`;
+  if (enMarcha.length) html += sec('🔓 En marcha', enMarcha.length, enMarcha);
   if (bloqueados.length) {
-    bloq = `<h3 class="dw-sec">🔒 Por desbloquear <span class="dw-count">${bloqueados.length}</span></h3>${bloqueados.map(w => tarjetaTablero(w)).join('')}`;
-  } else {
-    bloq = `<div class="dw-hero"><div class="dw-hero-emoji">🌙</div><h3>Nada por desbloquear</h3><p>Cuando ${esc(partnerNombre)} guarde deseos aparecerán aquí, bloqueados.</p></div>`;
+    html += sec('🔒 Por desbloquear', bloqueados.length, bloqueados);
+  } else if (!enMarcha.length) {
+    html += `<div class="dw-hero"><div class="dw-hero-emoji">🌙</div><h3>Nada por desbloquear</h3><p>Cuando ${esc(partnerNombre)} guarde deseos aparecerán aquí, bloqueados.</p></div>`;
   }
-  return `${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}${llaves}${marcha}${bloq}
-    <p class="dw-stats">Deseos cumplidos por ti: <strong>${hechosPorMi}</strong> 💛</p>`;
+  if (cumplidos.length) {
+    html += `<details class="dw-det"><summary>✅ Cumplidos por ti <span class="dw-count">${cumplidos.length}</span></summary>${cumplidos.map(tarjeta).join('')}</details>`;
+  }
+  return html;
+}
+
+// Pestaña "Míos": mis deseos en una lista, con el estado en que los tiene mi pareja
+function htmlMios() {
+  const orden = { enmarcha: 0, pendiente: 1, hecho: 2 };
+  const lista = mios().sort((a, b) => {
+    const d = orden[estadoDe(a)] - orden[estadoDe(b)];
+    if (d) return d;
+    return estadoDe(a) === 'hecho' ? porFecha('cumplidoFecha')(a, b) : porFecha('creado')(a, b);
+  });
+  const n = k => lista.filter(w => estadoDe(w) === k).length;
+  const resumen = lista.length
+    ? `<p class="dw-resumen">🔓 ${n('enmarcha')} en marcha · 🔒 ${n('pendiente')} sin revelar · ✅ ${n('hecho')} cumplidos</p>`
+    : '';
+  const cuerpo = lista.length
+    ? lista.map(tarjeta).join('')
+    : `<div class="dw-hero"><div class="dw-hero-emoji">✍️</div><h3>Aún no has escrito deseos</h3><p>Añade uno y ${esc(nombreDe(rol().partner))} lo verá bloqueado hasta que use una llave.</p><button class="dw-btn dw-btn-main" data-act="tab" data-tab="anadir">➕ Añadir deseo</button></div>`;
+  return `${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}${resumen}${cuerpo}`;
 }
 
 function ideasActuales() {
@@ -344,7 +344,9 @@ function render() {
   document.querySelectorAll('#deseos-screen .dw-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   // el texto que se está escribiendo no se pierde al repintar
   const previo = $('dw-texto')?.value || '';
-  body.innerHTML = S.tab === 'deseos' ? htmlDeseos() : S.tab === 'tablero' ? htmlTablero() : htmlAnadir();
+  const tabDeseos = document.querySelector('#deseos-screen .dw-tab[data-tab="deseos"]');
+  if (tabDeseos) tabDeseos.textContent = `💝 De ${nombreDe(rol().partner)}`;
+  body.innerHTML = S.tab === 'deseos' ? htmlDeseos() : S.tab === 'mios' ? htmlMios() : htmlAnadir();
   if (S.tab === 'anadir' && previo) { const t = $('dw-texto'); if (t) t.value = previo; }
   S.msg = '';
 }
@@ -434,7 +436,6 @@ function onClick(ev) {
   const act = el.dataset.act, id = el.dataset.id;
   switch (act) {
     case 'tab': S.tab = el.dataset.tab; S.graciasId = null; S.confirmId = null; render(); break;
-    case 'vista': S.vista = el.dataset.v; S.confirmId = null; render(); break;
     case 'tipo': S.tipo = el.dataset.v; S.ideasIdx = 0; render(); break;
     case 'tamano': S.tamano = el.dataset.v; render(); break;
     case 'idea': {
