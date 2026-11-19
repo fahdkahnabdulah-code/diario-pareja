@@ -1,8 +1,7 @@
 // ─────────────────────────────────────────────
 // Función programada (cron, cada 30 minutos): avisos de las llaves de deseos.
-//  - Lunes, desde las 10:00 (Madrid): llega la 1ª llave de la semana.
-//  - Jueves, desde las 10:00: llega la 2ª llave.
-//    (aviso solo si le queda alguna llave sin usar y su pareja tiene deseos bloqueados)
+//  - Lunes, desde las 10:00 (Madrid): llega la llave de la semana (1 por semana).
+//    (aviso solo si aún no la ha usado y su pareja tiene deseos bloqueados)
 //  - Sábado, desde las 12:00: recordatorio a quien tiene un deseo desbloqueado
 //    y aún no lo ha marcado como hecho (sin decir cuál).
 // Cada aviso se apunta en parejas/<id>/avisos para no repetirse.
@@ -39,8 +38,8 @@ function estadoDe(w) { return w.estado || (w.cumplido ? 'hecho' : 'pendiente'); 
 // Lógica pura. deseos: [{id,autor,estado,apuntadoPor,desbloqueadoPor,desbloqueadoSemana,…}]
 function calcularAvisos(fecha, hora, deseos) {
   const semana = semanaIso(fecha), dia = diaSemana(fecha), out = [];
-  const llavesTotales = dia >= 3 ? 2 : 1;
-  const enLlave = (dia === 0 && hora >= 10) || (dia === 3 && hora >= 10);
+  const llavesTotales = 1;
+  const enLlave = dia === 0 && hora >= 10;
   if (enLlave) {
     for (const rol of ROLES) {
       const usadas = deseos.filter(w => w.autor === otro(rol) && w.desbloqueadoPor === rol && w.desbloqueadoSemana === semana).length;
@@ -48,8 +47,8 @@ function calcularAvisos(fecha, hora, deseos) {
       const hayBloqueados = deseos.some(w => w.autor === otro(rol) && estadoDe(w) === 'pendiente');
       if (libres > 0 && hayBloqueados) {
         out.push({
-          key: `deseo-llave${dia === 0 ? 1 : 2}_${semana}_${rol}`, rol, tag: 'deseo-llave',
-          body: libres === 1 ? '🔑 Tienes una llave para desbloquear un deseo de tu pareja' : '🔑 Tienes 2 llaves para desbloquear deseos de tu pareja'
+          key: `deseo-llave_${semana}_${rol}`, rol, tag: 'deseo-llave',
+          body: '🔑 Tienes una llave nueva para desbloquear un deseo de tu pareja'
         });
       }
     }
@@ -77,7 +76,7 @@ exports.handler = async () => {
   try {
     const { fecha, hora } = ahoraMadrid();
     const dia = diaSemana(fecha);
-    if (!((dia === 0 && hora >= 10) || (dia === 3 && hora >= 10) || (dia === 5 && hora >= 12))) return { statusCode: 200, body: 'hoy no hay avisos de deseos' };
+    if (!((dia === 0 && hora >= 10) || (dia === 5 && hora >= 12))) return { statusCode: 200, body: 'hoy no hay avisos de deseos' };
 
     const admin = require('firebase-admin');
     const webpush = require('web-push');
