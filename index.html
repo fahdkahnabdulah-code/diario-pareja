@@ -288,16 +288,18 @@
     <!-- DESEOS (pantalla completa: de tu pareja, míos, añadir) -->
     <div id="deseos-screen" class="dw-screen" hidden>
       <div class="dw-wrap">
-        <div class="dw-head">
-          <span class="dw-title">💭 Deseos</span>
-          <button id="btn-close-deseos" class="btn-icon" aria-label="Cerrar">✕</button>
+        <div class="dw-top">
+          <div class="dw-head">
+            <span class="dw-title">💭 Deseos</span>
+            <button id="btn-close-deseos" class="btn-icon" aria-label="Cerrar">✕</button>
+          </div>
+          <nav class="dw-tabs" role="tablist">
+            <button type="button" class="dw-tab on" data-act="tab" data-tab="deseos" role="tab">💝 De tu pareja</button>
+            <button type="button" class="dw-tab" data-act="tab" data-tab="mios" role="tab">📝 Míos</button>
+            <button type="button" class="dw-tab" data-act="tab" data-tab="anadir" role="tab">➕ Añadir</button>
+          </nav>
         </div>
         <div id="partner-pending-pill" class="partner-pill" style="display:none"></div>
-        <nav class="dw-tabs" role="tablist">
-          <button type="button" class="dw-tab on" data-act="tab" data-tab="deseos" role="tab">💝 De tu pareja</button>
-          <button type="button" class="dw-tab" data-act="tab" data-tab="mios" role="tab">📝 Míos</button>
-          <button type="button" class="dw-tab" data-act="tab" data-tab="anadir" role="tab">➕ Añadir</button>
-        </nav>
         <div id="dw-body"></div>
       </div>
     </div>
