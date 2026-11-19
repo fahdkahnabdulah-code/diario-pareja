@@ -16,6 +16,6 @@
 [functions."eventos-notifier"]
   schedule = "*/30 * * * *"
 
-# Llaves de deseos: lunes y jueves (llave nueva) y sábado (recordatorio). Cada 30 min, avisa una sola vez.
+# Llave de deseos: lunes (llave nueva) y sábado (recordatorio). Cada 30 min, avisa una sola vez.
 [functions."deseos-notifier"]
   schedule = "*/30 * * * *"

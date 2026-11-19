@@ -1,12 +1,12 @@
 // ─────────────────────────────────────────────
 // Buzón de deseos 2.0 (con llaves)
-//  · Cada deseo tiene tipo (detalle/plan/regalo/otro) y tamaño (fácil/semana/especial).
+//  · Cada deseo tiene tipo (detalle/plan/regalo/otro) y nivel de dificultad (fácil/media/difícil).
 //  · Los deseos de tu pareja se ven SIEMPRE bloqueados (texto desenfocado + candado).
-//    Cada semana tienes llaves (1 desde el lunes, 2 desde el jueves): una llave
-//    desbloquea el deseo que elijas y pasa a "en marcha".
+//    Cada semana (de lunes a domingo) tienes 1 llave: desbloquea el deseo que elijas
+//    y pasa a "en marcha".
 //  · Estados: pendiente (bloqueado) → en marcha (desbloqueado) → cumplido.
 //    Un cumplido se puede deshacer; un desbloqueo se puede volver a bloquear
-//    (devuelve la llave).
+//    (devuelve la llave), pero solo una vez por semana.
 //  · Pestañas: 💝 De <pareja> (llaves y bloqueados), 📝 Míos (estado de los míos) y ➕ Añadir.
 //  · Avisos push sin spoilers; cumplir un deseo da ✦ a Dopi.
 // Datos: parejas/<id>/deseos/<deseo>. Las llaves se calculan a partir de los
@@ -23,10 +23,10 @@ const TIPOS = [
   { id: 'regalo', emoji: '🎁', label: 'Regalo' },
   { id: 'otro', emoji: '✨', label: 'Otro' }
 ];
-const TAMANOS = [
-  { id: 'facil', emoji: '🌱', label: 'Fácil' },
-  { id: 'semana', emoji: '🌿', label: 'Esta semana' },
-  { id: 'especial', emoji: '🌳', label: 'Especial' }
+const TAMANOS = [   // nivel de dificultad (se conservan los ids antiguos)
+  { id: 'facil', emoji: '🟢', label: 'Fácil' },
+  { id: 'semana', emoji: '🟡', label: 'Media' },
+  { id: 'especial', emoji: '🔴', label: 'Difícil' }
 ];
 const IDEAS = {
   detalle: ['Que me prepares un café por la mañana', 'Una notita escondida donde la encuentre', 'Que me escuches sin móvil un rato', 'Un abrazo largo al llegar a casa', 'Que me traigas algo rico sin motivo', 'Que me digas algo bonito hoy'],
@@ -35,8 +35,7 @@ const IDEAS = {
   otro: ['Un día sin prisas juntos', 'Un masaje de los buenos', 'Que me cuentes qué es lo que más te gusta de mí', 'Una foto nuestra impresa', 'Que planeemos algo para dentro de un año', 'Que me dejes elegir a mí todo un día']
 };
 const GRACIAS_EMOJIS = ['😍', '🥰', '💛', '🙏'];
-const LLAVES_LUNES = 1;   // llaves disponibles desde el lunes
-const LLAVES_JUEVES = 2;  // llaves en total desde el jueves
+const LLAVES_SEMANA = 1;  // llaves que se renuevan cada lunes
 
 let C = null;           // contexto que pasa app.js
 let enlazado = false;
@@ -44,6 +43,8 @@ const S = {
   wishes: [],
   tab: 'deseos',
   tipo: 'otro', tamano: 'semana',
+  abiertos: { marcha: true, bloq: true, cumpl: false },
+  sinLlaveId: null, soltarId: null,
   ideasIdx: 0, graciasId: null, graciasEmoji: '💛', graciasNota: '',
   confirmId: null, msg: ''
 };
@@ -69,16 +70,18 @@ function suyos() { return S.wishes.filter(w => w.autor === rol().partner); }
 function suyosPendientes() { return suyos().filter(w => estadoDe(w) === 'pendiente'); }
 function misEnMarcha() { return suyos().filter(w => estadoDe(w) === 'enmarcha' && w.apuntadoPor === rol().role); }
 
-// ── Llaves: 1 desde el lunes, 2 desde el jueves (semana de lunes a domingo) ──
-function llavesTotales(fecha = new Date()) {
-  const dia = (fecha.getDay() + 6) % 7; // 0 = lunes
-  return dia >= 3 ? LLAVES_JUEVES : LLAVES_LUNES;
-}
+// ── Llaves: 1 por semana (de lunes a domingo) ──
+function llavesTotales() { return LLAVES_SEMANA; }
 function llavesUsadas() {
   const sem = semanaActual();
   return suyos().filter(w => w.desbloqueadoPor === rol().role && w.desbloqueadoSemana === sem).length;
 }
 function llavesLibres() { return Math.max(0, llavesTotales() - llavesUsadas()); }
+// Volver a bloquear (y recuperar la llave) solo se puede una vez por semana
+function devolucionUsada() {
+  const sem = semanaActual();
+  return suyos().some(w => w.soltadoPor === rol().role && w.soltadoSemana === sem);
+}
 
 async function cargar() {
   try {
@@ -121,13 +124,22 @@ async function desbloquear(id) {
   C.enviarPush(w.autor, '+Dopamina', `🔑 ${rol().displayName} ha desbloqueado uno de tus deseos`, 'deseo-apuntado');
 }
 
-// Vuelve a bloquear un deseo desbloqueado (devuelve la llave)
+// Vuelve a bloquear un deseo desbloqueado. Si se había desbloqueado con la llave de esta
+// semana, la devuelve (solo una vez por semana).
 async function soltar(id) {
-  await setDoc(wishRef(id), {
+  await cargar();
+  const w = S.wishes.find(x => x.id === id);
+  if (!w || estadoDe(w) !== 'enmarcha' || w.apuntadoPor !== rol().role) return;
+  const devuelve = w.desbloqueadoSemana === semanaActual();
+  if (devuelve && devolucionUsada()) { S.msg = 'Esta semana ya has recuperado una llave 🔑'; return; }
+  const cambios = {
     estado: 'pendiente', cumplido: false,
     apuntadoPor: null, apuntadoFecha: null, desbloqueadoPor: null, desbloqueadoSemana: null
-  }, { merge: true });
-  S.msg = '🔒 Vuelto a bloquear: tu llave está de nuevo disponible';
+  };
+  if (devuelve) { cambios.soltadoPor = rol().role; cambios.soltadoSemana = semanaActual(); }
+  await setDoc(wishRef(id), cambios, { merge: true });
+  S.soltarId = null;
+  S.msg = devuelve ? '🔒 Vuelto a bloquear: tu llave está de nuevo disponible' : '🔒 Vuelto a bloquear';
 }
 
 async function marcarHecho(id) {
@@ -170,7 +182,7 @@ async function agradecer(id) {
 function chipsDeseo(w) {
   const t = tipoDe(w), z = tamanoDe(w);
   if (!t && !z) return '';
-  return `<div class="dw-chips">${t ? `<span class="dw-chip">${t.emoji} ${t.label}</span>` : ''}${z ? `<span class="dw-chip">${z.emoji} ${z.label}</span>` : ''}</div>`;
+  return `<div class="dw-chips">${t ? `<span class="dw-chip">${t.emoji} ${t.label}</span>` : ''}${z ? `<span class="dw-chip" title="Nivel de dificultad">${z.emoji} Dificultad ${z.label.toLowerCase()}</span>` : ''}</div>`;
 }
 
 function htmlGracias(w) {
@@ -201,14 +213,28 @@ function textoBloqueado(w) {
 
 function botonesDesbloqueo(w) {
   if (S.confirmId === w.id) {
-    return `<div class="dw-confirm"><span>¿Usar 1 llave para verlo?</span>
+    return `<div class="dw-confirm"><span>¿Usar tu llave de la semana para verlo?</span>
       <button class="dw-btn dw-btn-main" data-act="desbloquear" data-id="${escA(w.id)}">🔓 Sí, desbloquear</button>
       <button class="dw-btn" data-act="confirmar-no">Cancelar</button></div>`;
   }
-  // Sin llaves no se muestra botón: el aviso de arriba ya lo explica
-  return llavesLibres() > 0
-    ? `<button class="dw-btn dw-btn-main" data-act="confirmar" data-id="${escA(w.id)}">🔑 Desbloquear</button>`
-    : '';
+  // Sin llave el botón sigue ahí: al tocarlo sale un mensaje explicando por qué no se puede
+  const sinLlave = S.sinLlaveId === w.id
+    ? '<p class="dw-sinllave">🔑 Ya has usado tu llave de esta semana. Tendrás una nueva el lunes.</p>' : '';
+  return `${sinLlave}<button class="dw-btn ${llavesLibres() > 0 ? 'dw-btn-main' : 'dw-btn-off'}" data-act="candado" data-id="${escA(w.id)}">🔑 Desbloquear</button>`;
+}
+
+function botonesSoltar(w) {
+  const devuelve = w.desbloqueadoSemana === semanaActual();
+  if (S.soltarId === w.id) {
+    return `<div class="dw-confirm"><span>${devuelve
+      ? '¿Volver a bloquearlo y recuperar la llave? Solo puedes hacerlo una vez por semana.'
+      : '¿Volver a bloquearlo? (Este desbloqueo es de otra semana: no recuperas llave.)'}</span>
+      <button class="dw-btn dw-btn-main" data-act="soltar-si" data-id="${escA(w.id)}">↩ Sí, volver a bloquear</button>
+      <button class="dw-btn" data-act="soltar-no">Cancelar</button></div>`;
+  }
+  const bloqueado = devuelve && devolucionUsada();
+  return `<button class="dw-btn${bloqueado ? ' dw-btn-off' : ''}" data-act="${bloqueado ? 'soltar-ya' : 'soltar-pedir'}" data-id="${escA(w.id)}">↩ Volver a bloquear</button>
+    ${S.sinLlaveId === 'soltar-' + w.id ? '<p class="dw-sinllave">Esta semana ya has recuperado una llave. Podrás volver a hacerlo la semana que viene.</p>' : ''}`;
 }
 
 function pastilla(clase, html) { return `<div class="dw-estado-pill dw-pill-${clase}">${html}</div>`; }
@@ -224,7 +250,7 @@ function tarjeta(w) {
 
   if (!soyAutor && est === 'pendiente') {
     bloqueada = true;
-    cuerpo = `<div class="dw-lockwrap"><div class="dw-texto dw-blur" aria-hidden="true">${esc(textoBloqueado(w))}</div><div class="dw-lockicon" role="img" aria-label="Deseo bloqueado">🔒</div></div>`;
+    cuerpo = `<div class="dw-lockwrap" data-act="candado" data-id="${escA(w.id)}"><div class="dw-texto dw-blur" aria-hidden="true">${esc(textoBloqueado(w))}</div><div class="dw-lockicon" role="img" aria-label="Deseo bloqueado">🔒</div></div>`;
   } else {
     cuerpo = `<div class="dw-texto">${esc(w.texto)}</div>`;
   }
@@ -242,8 +268,7 @@ function tarjeta(w) {
     const desde = w.apuntadoFecha ? ' · desde el ' + esc(fechaCorta(w.apuntadoFecha)) : '';
     if (yo) {
       pill = pastilla('enmarcha', `🔓 Desbloqueado por ti${desde}`);
-      acciones = `<button class="dw-btn dw-btn-main" data-act="hecho" data-id="${escA(w.id)}">✓ Hecho</button>
-        <button class="dw-btn" data-act="soltar" data-id="${escA(w.id)}" title="Vuelve a bloquearlo y recupera la llave">↩ Volver a bloquear</button>`;
+      acciones = `<button class="dw-btn dw-btn-main" data-act="hecho" data-id="${escA(w.id)}">✓ Hecho</button>${botonesSoltar(w)}`;
     } else {
       pill = pastilla('enmarcha', `🔓 ${esc(nombreDe(w.apuntadoPor))} lo está preparando${desde}`);
       if (soyAutor) acciones = `<button class="dw-btn" data-act="hecho" data-id="${escA(w.id)}">✓ Ya está hecho</button>`;
@@ -259,6 +284,7 @@ function tarjeta(w) {
       ${pill}
       ${cuerpo}
       ${chipsDeseo(w)}
+      ${bloqueada && w.creado ? `<div class="dw-pie">📅 Añadido el ${esc(fechaCorta(w.creado))}</div>` : ''}
       ${est === 'hecho' ? htmlGracias(w) : ''}
       ${acciones ? `<div class="dw-actions">${acciones}</div>` : ''}
     </article>`;
@@ -266,33 +292,34 @@ function tarjeta(w) {
 
 const porFecha = (campo) => (a, b) => String(b[campo] || '').localeCompare(String(a[campo] || ''));
 
-// Pestaña "De <pareja>": tus llaves, lo que tienes en marcha, lo bloqueado y lo ya cumplido
+// Orden en que se fueron añadiendo (los más antiguos primero)
+const porAntiguedad = (a, b) => String(a.creado || '9999').localeCompare(String(b.creado || '9999'));
+
+// Pestaña "De <pareja>": tu llave, lo que tienes en marcha, lo bloqueado y lo ya cumplido
 function htmlDeseos() {
   const partnerNombre = nombreDe(rol().partner);
-  const libres = llavesLibres(), total = llavesTotales();
+  const libres = llavesLibres();
   const lista = suyos();
-  const bloqueados = lista.filter(w => estadoDe(w) === 'pendiente').sort(porFecha('creado'));
+  const bloqueados = lista.filter(w => estadoDe(w) === 'pendiente').sort(porAntiguedad);
   const enMarcha = misEnMarcha().sort(porFecha('apuntadoFecha'));
   const cumplidos = lista.filter(w => estadoDe(w) === 'hecho' && w.hechoPor === rol().role).sort(porFecha('cumplidoFecha'));
 
   const llaves = `<div class="dw-llaves${libres > 0 ? '' : ' dw-llaves-0'}">
-      <div class="dw-llaves-n">${Array.from({ length: LLAVES_JUEVES }, (_, i) => `<span class="dw-llave${i < libres ? ' on' : ''}">🔑</span>`).join('')}</div>
+      <div class="dw-llaves-n"><span class="dw-llave${libres > 0 ? ' on' : ''}">🔑</span></div>
       <div class="dw-llaves-t">${libres > 0
-        ? `Tienes <strong>${libres}</strong> llave${libres === 1 ? '' : 's'}: elige qué deseo de ${esc(partnerNombre)} desbloquear.`
-        : (total < LLAVES_JUEVES ? 'Ya has usado tu llave. Tienes otra desde el jueves.' : 'Ya has usado tus llaves. Tendrás nuevas el lunes.')}</div>
+        ? `Tienes <strong>1 llave</strong> esta semana: elige qué deseo de ${esc(partnerNombre)} desbloquear.`
+        : 'Ya has usado tu llave de esta semana. Tendrás una nueva el lunes.'}</div>
     </div>`;
 
-  const sec = (t, n, items) => `<h3 class="dw-sec">${t} <span class="dw-count">${n}</span></h3>${items.map(tarjeta).join('')}`;
+  const sec = (k, titulo, items) => `<details class="dw-det"${S.abiertos[k] ? ' open' : ''}><summary data-act="sec" data-k="${k}">${titulo} <span class="dw-count">${items.length}</span></summary>${items.map(tarjeta).join('')}</details>`;
   let html = `${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}${llaves}`;
-  if (enMarcha.length) html += sec('🔓 En marcha', enMarcha.length, enMarcha);
+  if (enMarcha.length) html += sec('marcha', '🔓 En marcha', enMarcha);
   if (bloqueados.length) {
-    html += sec('🔒 Por desbloquear', bloqueados.length, bloqueados);
+    html += sec('bloq', '🔒 Por desbloquear', bloqueados);
   } else if (!enMarcha.length) {
     html += `<div class="dw-hero"><div class="dw-hero-emoji">🌙</div><h3>Nada por desbloquear</h3><p>Cuando ${esc(partnerNombre)} guarde deseos aparecerán aquí, bloqueados.</p></div>`;
   }
-  if (cumplidos.length) {
-    html += `<details class="dw-det"><summary>✅ Cumplidos por ti <span class="dw-count">${cumplidos.length}</span></summary>${cumplidos.map(tarjeta).join('')}</details>`;
-  }
+  if (cumplidos.length) html += sec('cumpl', '✅ Cumplidos por ti', cumplidos);
   return html;
 }
 
@@ -332,7 +359,7 @@ function htmlAnadir() {
       <div class="dw-ideas-row"><span class="dw-sub">Ideas para empezar</span><button type="button" class="dw-more" data-act="idea-more" aria-label="Otras ideas">🔄</button></div>
       <div class="dw-ideas">${ideas}</div>
       <div class="dw-sub">Tipo</div><div class="dw-picks">${tipos}</div>
-      <div class="dw-sub">Tamaño</div><div class="dw-picks">${tam}</div>
+      <div class="dw-sub">Nivel de dificultad</div><div class="dw-picks">${tam}</div>
       <p class="dw-hint-form">🔒 ${esc(nombreDe(rol().partner))} lo verá bloqueado y borroso hasta que use una llave para desbloquearlo.</p>
       <button class="dw-btn dw-btn-main dw-btn-big" data-act="guardar">Guardar deseo</button>
     </div>`;
@@ -435,7 +462,7 @@ function onClick(ev) {
   if (!el) return;
   const act = el.dataset.act, id = el.dataset.id;
   switch (act) {
-    case 'tab': S.tab = el.dataset.tab; S.graciasId = null; S.confirmId = null; render(); break;
+    case 'tab': S.tab = el.dataset.tab; S.graciasId = null; S.confirmId = null; S.sinLlaveId = null; S.soltarId = null; render(); break;
     case 'tipo': S.tipo = el.dataset.v; S.ideasIdx = 0; render(); break;
     case 'tamano': S.tamano = el.dataset.v; render(); break;
     case 'idea': {
@@ -444,10 +471,17 @@ function onClick(ev) {
     }
     case 'idea-more': S.ideasIdx = (S.ideasIdx + 3) % (IDEAS[S.tipo] || IDEAS.otro).length; render(); break;
     case 'guardar': ejecutar(crear); break;
+    case 'candado':
+      if (llavesLibres() > 0) { S.confirmId = id; S.sinLlaveId = null; } else { S.sinLlaveId = id; S.confirmId = null; }
+      render(); break;
     case 'confirmar': S.confirmId = id; render(); break;
+    case 'sec': ev.preventDefault(); S.abiertos[el.dataset.k] = !S.abiertos[el.dataset.k]; render(); break;
+    case 'soltar-pedir': S.soltarId = id; render(); break;
+    case 'soltar-no': S.soltarId = null; render(); break;
+    case 'soltar-ya': S.sinLlaveId = 'soltar-' + id; render(); break;
+    case 'soltar-si': ejecutar(() => soltar(id)); break;
     case 'confirmar-no': S.confirmId = null; render(); break;
     case 'desbloquear': ejecutar(() => desbloquear(id)); break;
-    case 'soltar': ejecutar(() => soltar(id)); break;
     case 'hecho': ejecutar(() => marcarHecho(id)); break;
     case 'deshacer': ejecutar(() => deshacerHecho(id)); break;
     case 'borrar': ejecutar(() => borrar(id)); break;

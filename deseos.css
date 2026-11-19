@@ -119,3 +119,14 @@ body.dw-abierto { overflow: hidden; }
 .dw-confirm { justify-content: center; text-align: center; }
 .dw-stats { text-align: center; }
 .dw-card .dw-actions .dw-btn-danger { flex: 0 0 auto; padding-left: 20px; padding-right: 20px; }
+
+/* v4: llave única, secciones plegables, mensajes */
+.dw-lockwrap { cursor: pointer; }
+.dw-btn-off { opacity: .6; border-style: dashed; }
+.dw-sinllave { width: 100%; font-size: 13px; line-height: 1.4; color: var(--gold-dark); background: var(--gold-light); border-radius: var(--radius-sm); padding: 8px 10px; text-align: center; margin: 0; }
+.dw-det { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px 12px; }
+.dw-det > summary { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 0; }
+.dw-det > summary::after { content: '▾'; font-size: 12px; color: var(--text-muted); transition: transform .15s; }
+.dw-det:not([open]) > summary::after { transform: rotate(-90deg); }
+.dw-det:not([open]) { padding-bottom: 6px; }
+.dw-det[open] > summary { margin-bottom: 4px; }
