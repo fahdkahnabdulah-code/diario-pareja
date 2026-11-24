@@ -110,6 +110,15 @@
   function curState() { return state || L.newState(Date.now()); }
   function hourMadrid(t) { return +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hour12: false }).format(new Date(t)); }
   function timeOfDay(t) { var h = hourMadrid(t); return h < 7 ? 'night' : h < 12 ? 'morning' : h < 19 ? 'day' : h < 22 ? 'evening' : 'night'; }
+  // icono del sprite si existe (iconos2.svg); si no, el emoji de siempre
+  function ico(id, fallback, px) {
+    if (!id || !document.getElementById('ic-' + id)) return fallback || '';
+    return '<svg class="dp-ic" style="--ic:' + (px || 34) + 'px" aria-hidden="true"><use href="#ic-' + id + '"/></svg>';
+  }
+  function recordsOf(toyId) {
+    var rec = (curState().records || {})[toyId] || {}, me = ctx.role, other = ctx.people.filter(function (p) { return p.uid !== me; })[0];
+    return { me: rec[me] || 0, partner: other ? (rec[other.uid] || 0) : 0, partnerName: other ? other.name : '' };
+  }
   function nameOf(uid) { var p = ctx.people.filter(function (x) { return x.uid === uid; })[0]; return p ? p.name : 'Alguien'; }
 
   function ensureSvg() {
@@ -445,6 +454,7 @@
         if (ctx.push) ctx.push(ctx.partner, '+Dopamina', '✨ ¡Dopi ha evolucionado! Ahora es ' + D.STAGES[e.stage], 'dopi-evolucion');
       }
       if (e.kind === 'evolveWaiting') toast('Dopi quiere evolucionar, pero primero necesita cuidados 💗');
+      if (e.kind === 'record') toast('Nuevo récord: ' + e.score + (e.pts ? ' · +' + e.pts + ' ✦' : '') + (e.beatPartner ? ' · ¡superas a ' + nameOf(ctx.people.filter(function (p) { return p.uid !== ctx.role; })[0].uid) + '!' : ''));
       if (e.reward === 'reunion') toast('¡Reencuentro con Dopi! +10 ✦');
     });
   }
@@ -548,10 +558,20 @@
     playKey = key;
     tray.className = 'pet-tray is-food is-toys';
     tray.innerHTML = list.map(function (t) {
-      return '<div class="pet-tool-wrap"><button class="pet-tool" data-toy="' + t.id + '" aria-label="' + esc(t.name) + ': ' + esc(t.label) + '"><span class="pet-emoji">' + t.emoji + '</span></button>' +
-        '<span class="pet-tool-lbl">' + esc(t.name) + '</span></div>';
+      return '<div class="pet-tool-wrap"><button class="pet-tool" data-toy="' + t.id + '" aria-label="' + esc(t.name) + ': ' + esc(t.label) + '"><span class="pet-emoji">' + ico(t.ic, t.emoji, 34) + '</span></button>' +
+        '<span class="pet-tool-lbl">' + esc(t.name) + '</span>' + recLabel(t) + '</div>';
     }).join('') + '<div class="pet-tool-wrap"><button type="button" class="pet-tool pet-more" data-go-toys="1" aria-label="Más juguetes">＋</button><span class="pet-tool-lbl">Tienda</span></div>';
     tray.hidden = false;
+  }
+  function recLabel(t) {
+    var r = recordsOf(t.id); if (!r.me && !r.partner) return '';
+    return '<span class="pet-tool-rec">' + (r.me ? 'Tú ' + r.me : '') + (r.me && r.partner ? ' · ' : '') + (r.partner ? esc(r.partnerName) + ' ' + r.partner : '') + '</span>';
+  }
+  function recLineHtml(T, score) {
+    var r = recordsOf(T.id), nuevo = score > r.me && score > 0, l = '';
+    l += nuevo ? '<small class="pg-rec is-new">¡Nuevo récord tuyo!</small>' : (r.me ? '<small class="pg-rec">Tu récord: ' + r.me + '</small>' : '');
+    if (r.partnerName && r.partner) l += '<small class="pg-rec">' + (score > r.partner ? '¡Superas el récord de ' + esc(r.partnerName) + '!' : 'Récord de ' + esc(r.partnerName) + ': ' + r.partner) + '</small>';
+    return l;
   }
   function starsFor(T, score) { return score >= T.stars[2] ? 3 : score >= T.stars[1] ? 2 : score >= T.stars[0] ? 1 : 0; }
   function estGain(T, score) { return Math.round(T.mood * (0.55 + 0.15 * starsFor(T, score))); }
@@ -563,6 +583,7 @@
     if (left > 0) return toast('Dopi descansa un poco · volved a jugar en ' + fmt(left));
     if (L.decay(curState(), Date.now()).energy < L.MIN_PLAY_ENERGY) return toast('Está muy cansada para jugar 😴 Déjala dormir un poco');
     var room = $('pet-room'), h = $('pet-holder'); if (!room || !h || !svg) return;
+    if (T.game.kind === 'car' || T.game.kind === 'jump') return startBigGame(T);
     var rc = room.getBoundingClientRect();
     var layer = document.createElement('div'); layer.className = 'pet-game';
     layer.innerHTML = '<div class="pg-hud"><span class="pg-time">⏱ ' + Math.round(T.game.ms / 1000) + '</span><span class="pg-score">⭐ 0</span></div><button class="pg-x" aria-label="Salir del juego">✕</button><div class="pg-count"></div>';
@@ -583,6 +604,19 @@
           game.timers.push(setTimeout(function () { if (!game) return; cnt.remove(); game.started = true; game.t0 = performance.now(); game.last = game.t0; game.nextSpawn = game.t0; game.raf = requestAnimationFrame(gameLoop); }, 500));
         }
       }, i * 650));
+    });
+  }
+  // Juegos a pantalla completa (coche y saltos): juegos.js dibuja y avisa al terminar; aquí se guardan puntos y récords
+  function startBigGame(T) {
+    if (!root.DopiJuegos) return toast('El juego no se ha cargado. Recarga la app');
+    var s = curState(), rec = recordsOf(T.id);
+    acting = true; $('pet-tray').hidden = true;
+    root.DopiJuegos.start(T.game.kind, {
+      dopi: D.svg({ stage: s.stage, mood: 'play', mix: s.harmony.mix }), dopiSad: D.svg({ stage: s.stage, mood: 'sad', mix: s.harmony.mix }),
+      best: { me: rec.me, partner: rec.partner }, partnerName: rec.partnerName, stars: T.stars,
+      onDone: function (score, info) { acting = false; commit('play', { toy: T.id, stars: info.stars, score: score }); },
+      onExit: function () { acting = false; showHint('play'); render(); },
+      onClose: function () { setTimeout(function () { if (mode === 'play' && !game) endMode(); }, 300); }
     });
   }
   function gameX(e) { return e.clientX - game.rc.left; }
@@ -684,10 +718,10 @@
     if (cancel) { g.layer.remove(); acting = false; showHint('play'); render(); return; }
     var stars = starsFor(g.T, g.score);
     g.layer.innerHTML = '<div class="pg-result"><b>' + ['¡Buen intento!', '¡Bien jugado!', '¡Genial!', '¡Increíble!'][stars] + '</b><span class="pg-stars">' +
-      [0, 1, 2].map(function (i) { return '<i class="' + (i < stars ? 'on' : '') + '">★</i>'; }).join('') + '</span><small>' + g.score + ' aciertos</small></div>';
+      [0, 1, 2].map(function (i) { return '<i class="' + (i < stars ? 'on' : '') + '">★</i>'; }).join('') + '</span><small>' + g.score + ' aciertos</small>' + recLineHtml(g.T, g.score) + '</div>';
     g.layer.style.pointerEvents = 'none';
     setTimeout(function () { g.layer.remove(); }, 2300);
-    acting = false; commit('play', { toy: g.T.id, stars: stars });
+    acting = false; commit('play', { toy: g.T.id, stars: stars, score: g.score });
     setTimeout(function () { if (mode === 'play' && !game) endMode(); }, 2400);
   }
 

@@ -27,15 +27,22 @@ const HORIZONTES = [
   { id: 'algun', label: 'Algún día' }
 ];
 const MAX_CARTA = 2500;
+// Pelis y series (dentro de Lista): se guardan en la misma colección 'planes' con tipo 'pelis'
+//   { texto: título, tipo: 'pelis', formato: 'peli'|'serie', plataforma, autor, estado, hechoFecha, creado, nota_fahd, nota_cilia }
+const FORMATOS = [
+  { id: 'peli', label: 'Película', icono: ['clapper', 'foto'] },
+  { id: 'serie', label: 'Serie', icono: ['tv', 'lista'] }
+];
+const PLATAFORMAS = ['Netflix', 'HBO Max', 'Disney+', 'Prime Video', 'Apple TV+', 'Cine', 'Otra'];
 
 let C = null;
 let enlazado = false;
 const S = {
-  sub: 'lista',
+  sub: 'lista', lista: 'cosas', formato: 'peli', plat: '',
   planes: [], cartas: [], logros: {},
   cat: 'otro', horizonte: 'proximos',
   borrarId: null, redactando: false, msg: '',
-  abiertos: { hechasLista: false, hechasPlanes: false, enviadas: true, archivo: true },
+  abiertos: { vistas: false, hechasLista: false, hechasPlanes: false, enviadas: true, archivo: true },
   cargado: false,
   pospuesta: false,          // "Más tarde" del pop-up: hasta la próxima vez que se abra la app
   cola: [],                  // logros por celebrar
@@ -51,6 +58,7 @@ const col = nombre => collection(C.db, 'parejas', rol().parejaId, nombre);
 const ref = (nombre, id) => doc(C.db, 'parejas', rol().parejaId, nombre, id);
 const ahora = () => new Date().toISOString();
 const nombreDe = r => C.nombre(r) || 'tu pareja';
+const icOr = (nombres, s) => ic([].concat(nombres).find(n => document.getElementById('ic-' + n)) || [].concat(nombres).slice(-1)[0], s);
 const ic = (n, s) => `<svg class="dp-ic"${s ? ` style="--ic:${s}px"` : ''} aria-hidden="true"><use href="#ic-${n}"/></svg>`;
 const chispa = n => `<span class="nos-pts">${n}${window.DpChispa ? DpChispa.svg({ tam: 16, borde: false }) : '✦'}</span>`;
 function fechaCorta(iso) {
@@ -87,6 +95,7 @@ async function refrescar() {
 // Planes (lista + planes a futuro)
 // ─────────────────────────────────────────────
 const planesDe = tipo => S.planes.filter(p => (p.tipo || 'hacer') === tipo);
+const deLista = () => S.planes.filter(p => p.tipo !== 'pelis');
 const estaHecho = p => p.estado === 'hecho';
 
 async function crearPlan(tipo) {
@@ -116,7 +125,7 @@ async function alternarPlan(id) {
   Object.assign(p, cambios);
   render();
   try { await updateDoc(ref('planes', id), cambios); } catch (e) { await refrescar(); return; }
-  if (hecho) {
+  if (hecho && p.tipo !== 'pelis') {
     C.enviarPush(rol().partner, '+Dopamina', `Habéis cumplido algo de vuestra lista: ${p.texto.slice(0, 60)}`, 'plan-hecho');
     evaluar();
   }
@@ -156,11 +165,71 @@ function seccionHechas(lista, clave, titulo) {
   const abierto = S.abiertos[clave];
   return `<details class="nos-det" ${abierto ? 'open' : ''}><summary data-act="sec" data-k="${clave}">${titulo} <span class="nos-cnt">${lista.length}</span></summary><ul class="nos-list">${lista.map(filaPlan).join('')}</ul></details>`;
 }
+function selectorLista() {
+  const b = (id, t) => `<button type="button" class="nos-seg-b ${S.lista === id ? 'on' : ''}" data-act="lista" data-v="${id}">${t}</button>`;
+  return `<div class="nos-seg" role="tablist">${b('cosas', 'Por hacer')}${b('pelis', 'Pelis y series')}</div>`;
+}
+// ── Pelis y series ──
+const pelisPend = () => planesDe('pelis').filter(p => !estaHecho(p)).sort(ordenarPorCreado);
+const pelisVistas = () => planesDe('pelis').filter(estaHecho).sort((a, b) => String(b.hechoFecha || '').localeCompare(String(a.hechoFecha || '')));
+const formatoDe = id => FORMATOS.find(f => f.id === id) || FORMATOS[0];
+async function crearPeli() {
+  const inp = $('nos-texto'), texto = (inp?.value || '').trim();
+  if (!texto) { S.msg = 'Escribe el título.'; return render(); }
+  const p = { texto: texto.slice(0, 100), autor: rol().role, tipo: 'pelis', formato: S.formato, plataforma: S.plat, estado: 'pendiente', creado: ahora() };
+  try {
+    const r = await addDoc(col('planes'), p); S.planes.push({ id: r.id, ...p });
+    S.msg = ''; if (inp) inp.value = '';
+    C.enviarPush(rol().partner, '+Dopamina', `${rol().displayName} ha añadido ${S.formato === 'serie' ? 'una serie' : 'una peli'} para ver juntos`, 'peli-nueva');
+  } catch (e) { S.msg = 'No se pudo guardar. Inténtalo de nuevo.'; }
+  render();
+}
+async function ponerNota(id, v) {
+  const p = S.planes.find(x => x.id === id); if (!p) return;
+  const k = 'nota_' + rol().role, nueva = p[k] === v ? 0 : v;
+  p[k] = nueva; render();
+  try { await updateDoc(ref('planes', id), { [k]: nueva }); } catch (e) { await refrescar(); }
+}
+function estrellas(p, quien) {
+  const k = 'nota_' + quien, n = p[k] || 0, mio = quien === rol().role;
+  let h = '';
+  for (let i = 1; i <= 5; i++) {
+    const svg = `<svg class="dp-ic ${i <= n ? '' : 'nos-off'}" style="--ic:${mio ? 22 : 16}px" aria-hidden="true"><use href="#ic-estrella"/></svg>`;
+    h += mio ? `<button type="button" class="nos-star" data-act="nota" data-id="${esc(p.id)}" data-v="${i}" aria-label="${i} de 5">${svg}</button>` : `<span class="nos-star">${svg}</span>`;
+  }
+  return `<span class="nos-rate"><span class="nos-rate-n">${mio ? 'Tú' : esc(nombreDe(quien))}</span><span class="nos-stars">${h}</span></span>`;
+}
+function filaPeli(p) {
+  const hecho = estaHecho(p), f = formatoDe(p.formato), confirmar = S.borrarId === p.id;
+  const meta = [f.label, p.plataforma, nombreDe(p.autor), hecho ? 'vista ' + fechaCorta(p.hechoFecha) : ''].filter(Boolean).join(' · ');
+  const otro = rol().partner;
+  return `<li class="nos-item nos-peli ${hecho ? 'is-hecho is-vista' : ''} ${p.autor === rol().role ? 'es-mio' : 'es-suyo'}">
+    <button type="button" class="nos-check" data-act="toggle" data-id="${esc(p.id)}" aria-pressed="${hecho}" aria-label="${hecho ? 'Marcar como pendiente' : 'Marcar como vista'}">${hecho ? ic('check', 18) : ''}</button>
+    <span class="nos-item-ic">${icOr(f.icono, 22)}</span>
+    <span class="nos-item-main"><span class="nos-item-t">${esc(p.texto)}</span><span class="nos-item-m">${esc(meta)}</span>${hecho ? `<span class="nos-rates">${estrellas(p, rol().role)}${estrellas(p, otro)}</span>` : ''}</span>
+    ${confirmar
+      ? `<span class="nos-conf"><button type="button" class="nos-mini nos-mini-no" data-act="borrar-no">No</button><button type="button" class="nos-mini nos-mini-si" data-act="borrar-si" data-id="${esc(p.id)}">Borrar</button></span>`
+      : `<button type="button" class="nos-del" data-act="borrar-pedir" data-id="${esc(p.id)}" aria-label="Borrar">${ic('cerrar', 14)}</button>`}
+  </li>`;
+}
+function htmlPelis() {
+  const fmt = FORMATOS.map(f => `<button type="button" class="nos-chip ${S.formato === f.id ? 'on' : ''}" data-act="formato" data-v="${f.id}">${icOr(f.icono, 18)}<span>${f.label}</span></button>`).join('');
+  const plat = PLATAFORMAS.map(n => `<button type="button" class="nos-chip nos-chip-txt ${S.plat === n ? 'on' : ''}" data-act="plat" data-v="${esc(n)}">${esc(n)}</button>`).join('');
+  const pend = pelisPend(), vistas = pelisVistas();
+  const vacio = !pend.length && !vistas.length ? `<div class="nos-vacio">${icOr(['clapper', 'foto'], 40)}<p>Apuntad aquí las pelis y series que queréis ver juntos. Al verlas, cada uno les pone nota.</p></div>` : '';
+  return selectorLista() + `<div class="nos-form">
+    <div class="nos-row"><input id="nos-texto" type="text" maxlength="100" placeholder="Título: Stranger Things, Up…" autocomplete="off" /><button type="button" class="btn-primary nos-add" data-act="crear-peli">Añadir</button></div>
+    <div class="nos-chips">${fmt}</div><div class="nos-chips nos-chips-h">${plat}</div>
+    ${S.msg ? `<p class="nos-msg">${esc(S.msg)}</p>` : ''}</div>` +
+    (pend.length ? `<h3 class="nos-h">Por ver</h3><ul class="nos-list">${pend.map(filaPeli).join('')}</ul>` : '') + vacio +
+    (vistas.length ? `<details class="nos-det" ${S.abiertos.vistas ? 'open' : ''}><summary data-act="sec" data-k="vistas">Vistas juntos <span class="nos-cnt">${vistas.length}</span></summary><ul class="nos-list">${vistas.map(filaPeli).join('')}</ul></details>` : '');
+}
 function htmlLista() {
+  if (S.lista === 'pelis') return htmlPelis();
   const todos = planesDe('hacer').sort(ordenarPorCreado);
   const pend = todos.filter(p => !estaHecho(p)), hechos = todos.filter(estaHecho).reverse();
   const vacio = !todos.length ? `<div class="nos-vacio">${ic('lista', 40)}<p>Aquí van las cosas que queréis hacer juntos, grandes o pequeñas.</p></div>` : '';
-  return formPlan('hacer') +
+  return selectorLista() + formPlan('hacer') +
     (pend.length ? `<ul class="nos-list">${pend.map(filaPlan).join('')}</ul>` : '') + vacio +
     seccionHechas(hechos, 'hechasLista', 'Hechas juntos');
 }
@@ -379,7 +448,7 @@ function rachaSemanas(entradas) {
   return racha;
 }
 function cumple(l, d) {
-  const hechos = S.planes.filter(estaHecho);
+  const hechos = deLista().filter(estaHecho);
   switch (l.id) {
     case 'primera-pagina': return d.entradas.some(e => e.completado && e.completado.fahd && e.completado.cilia);
     case 'mes-sin-soltarnos': return d.racha >= 4;
@@ -392,7 +461,7 @@ function cumple(l, d) {
     case 'dopi-nace': return d.stage >= 2;
     case 'dopi-crece': return d.stage >= 3;
     case 'alma-gemela': return d.stage >= 5;
-    case 'sonadores': return S.planes.length >= 10;
+    case 'sonadores': return deLista().length >= 10;
     case 'primer-plan': return hechos.length >= 1;
     case 'primer-viaje': return hechos.some(p => p.categoria === 'viaje');
     case 'rincon-nuestro': return hechos.some(p => p.categoria === 'hogar');
@@ -482,6 +551,11 @@ function onClick(ev) {
   if (a === 'sec') { ev.preventDefault(); const d = el.parentElement; S.abiertos[el.dataset.k] = !d.open; d.open = !d.open; return; }
   if (a === 'cat') { S.cat = el.dataset.v; return render(); }
   if (a === 'hor') { S.horizonte = el.dataset.v; return render(); }
+  if (a === 'lista') { S.lista = el.dataset.v; S.msg = ''; S.borrarId = null; return render(); }
+  if (a === 'formato') { S.formato = el.dataset.v; return render(); }
+  if (a === 'plat') { S.plat = S.plat === el.dataset.v ? '' : el.dataset.v; return render(); }
+  if (a === 'crear-peli') return crearPeli();
+  if (a === 'nota') return ponerNota(id, +el.dataset.v);
   if (a === 'crear-hacer') return crearPlan('hacer');
   if (a === 'crear-futuro') return crearPlan('futuro');
   if (a === 'toggle') return alternarPlan(id);

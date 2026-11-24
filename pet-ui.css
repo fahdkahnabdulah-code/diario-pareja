@@ -127,3 +127,6 @@
 .pet-ui .chip-gold .dp-ch,.pet-ui .pet-item-tag .dp-ch,.pet-ui .pet-buy-btn .dp-ch{margin-right:1px}
 .pet-ui .float-pts .dp-ch{vertical-align:-3px}
 .poke-toast .dp-ic{vertical-align:-3px;margin:0 2px}
+.pet-tool-rec { display: block; font-size: 9.5px; color: var(--text-muted); line-height: 1.2; margin-top: 1px; white-space: nowrap; }
+.pg-rec { display: block; font-size: 11.5px; margin-top: 3px; }
+.pg-rec.is-new { color: var(--gold-dark); font-weight: 700; }

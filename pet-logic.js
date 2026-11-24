@@ -25,16 +25,16 @@
   ];
   // Juguetes: cada uno lanza un minijuego distinto. 'ball' viene de serie.
   var TOYS = [
-    { id: 'ball',    emoji: '⚽', name: 'Pelota',   price: 0,  mood: 14, energy: 6,  game: { kind: 'catch', ms: 15000, rate: 800, speed: 150 }, stars: [5, 9, 13],  hint: 'Mueve a Dopi con el dedo y atrapa las pelotas ⚽', label: 'Atrapa' },
-    { id: 'balloon', emoji: '🎈', name: 'Globos',   price: 8,  mood: 16, energy: 4,  game: { kind: 'pop', mode: 'float', ms: 15000, rate: 650 },             stars: [6, 10, 14], hint: 'Toca los globos antes de que se escapen 🎈', label: 'Explota' },
-    { id: 'yarn',    emoji: '🧶', name: 'Ovillo',   price: 14, mood: 20, energy: 6,  game: { kind: 'pop', mode: 'roll', ms: 15000, rate: 800 },              stars: [6, 10, 14], hint: 'Toca los ovillos antes de que rueden fuera 🧶', label: 'Persigue' },
-    { id: 'frisbee', emoji: '🥏', name: 'Frisbi',   price: 20, mood: 24, energy: 8,  game: { kind: 'catch', ms: 15000, rate: 600, speed: 215 },             stars: [7, 11, 16], hint: 'Mueve a Dopi y atrapa los frisbis 🥏', label: 'Atrapa' },
-    { id: 'teddy',   emoji: '🧸', name: 'Peluche',  price: 30, mood: 28, energy: 3,  love: 4, game: { kind: 'catch', ms: 15000, rate: 900, speed: 120 },   stars: [6, 10, 14], hint: 'Atrapa los peluches 🧸 y esquiva las arañas', label: 'Atrapa' },
-    { id: 'console', emoji: '🎮', name: 'Consola',  price: 50, mood: 38, energy: 10, game: { kind: 'pop', mode: 'flash', ms: 15000, rate: 560 },             stars: [8, 13, 18], hint: 'Toca las estrellas ⭐ ¡rápido!', label: 'Reflejos' }
+    { id: 'ball',    emoji: '⚽', ic: 'pelota',  name: 'Pelota',  price: 0,  mood: 14, energy: 6,  game: { kind: 'catch', ms: 15000, rate: 800, speed: 150 }, stars: [5, 9, 13],     hint: 'Mueve a Dopi con el dedo y atrapa las pelotas', label: 'Atrapa' },
+    { id: 'car',     emoji: '🚗', ic: 'coche',   name: 'Coche',   price: 0,  mood: 30, energy: 8,  game: { kind: 'car' },                                      stars: [150, 400, 800], hint: 'Conduce a Dopi: acelera, frena y recoge chispas y gasolina', label: 'Conduce' },
+    { id: 'jump',    emoji: '☁️', ic: 'plataforma-nube', name: 'Saltos', price: 0, mood: 26, energy: 8, game: { kind: 'jump' },                                  stars: [60, 150, 300],  hint: 'Salta de plataforma en plataforma sin caer', label: 'Salta' },
+    { id: 'console', emoji: '🎮', ic: 'estrella', name: 'Reflejos', price: 50, mood: 38, energy: 10, game: { kind: 'pop', mode: 'flash', ms: 15000, rate: 560 },    stars: [8, 13, 18],    hint: 'Toca las estrellas, ¡rápido!', label: 'Reflejos' }
   ];
+  var FREE_TOYS = ['ball', 'car', 'jump'];
   var MIN_PLAY_ENERGY = 15;
+  var RECORD_BONUS = 3;                // ✦ extra por batir tu propio récord
   function toyById(id) { return TOYS.filter(function (t) { return t.id === id; })[0]; }
-  function toyOwned(state, id) { return id === 'ball' || !!(state && state.owned && state.owned.indexOf('toy-' + id) >= 0); }
+  function toyOwned(state, id) { return FREE_TOYS.indexOf(id) >= 0 || !!(state && state.owned && state.owned.indexOf('toy-' + id) >= 0); }
   var START_FOOD = { apple: 10 };
   var FULL_AT = 96;                    // a partir de aquí no quiere más comida
   function foodById(id) { return FOODS.filter(function (f) { return f.id === id; })[0]; }
@@ -183,6 +183,18 @@
     var counter = type === 'pet' ? 'pets' : type === 'feed' ? 'feeds' : type === 'play' ? 'plays' : null;
     var counts = !counter || (d[uid][counter] = (d[uid][counter] || 0) + 1) <= A.dailyMax;
     var gained = counts ? earn(s, d, uid, A.pts + bonus) : 0;
+    if (type === 'play' && toy) {                       // récords por juguete: s.records[juguete][uid]
+      var sc = Math.max(0, Math.min(99999, (opts && opts.score) | 0));
+      if (sc > 0) {
+        s.records = s.records || {}; var rec = s.records[toy.id] = s.records[toy.id] || {};
+        var prevBest = rec[uid] || 0, other = (people || []).filter(function (p) { return p.uid !== uid; })[0], otherBest = other ? (rec[other.uid] || 0) : 0;
+        if (sc > prevBest) {
+          rec[uid] = sc;
+          var extra = prevBest > 0 ? earn(s, d, uid, RECORD_BONUS) : 0; gained += extra;
+          events.push({ kind: 'record', toy: toy.id, score: sc, prev: prevBest, partner: otherBest, beatPartner: otherBest > 0 && sc > otherBest && prevBest <= otherBest, pts: extra });
+        }
+      }
+    }
     if (counts) events.push(addXp(s, d, A.xp + bonus, now));
     events.push({ kind: 'action', type: type, uid: uid, pts: gained, food: food ? food.id : null, toy: toy ? toy.id : null, stars: stars });
 

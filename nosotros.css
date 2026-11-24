@@ -88,3 +88,19 @@
 .logro-win { position: relative; width: 0; height: 0; }
 #logro-stage .btn-primary { width: 100%; }
 @media (prefers-reduced-motion: reduce) { .logro-art-big, .carta-papel { animation: none; } }
+
+/* Pelis y series */
+.nos-seg { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--border); padding: 3px; border-radius: 999px; margin-bottom: 12px; }
+.nos-seg-b { flex: 1; border: none; background: transparent; padding: 8px 0; font-size: 13px; font-weight: 600; color: var(--text-muted); border-radius: 999px; cursor: pointer; font-family: inherit; }
+.nos-seg-b.on { background: var(--surface); color: var(--pink-dark); box-shadow: var(--shadow-card); }
+.nos-chips-h { margin-top: -2px; }
+.nos-peli .nos-item-main { gap: 3px; }
+.nos-rates { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.nos-rate { display: flex; align-items: center; gap: 8px; }
+.nos-rate-n { font-size: 11.5px; color: var(--text-muted); width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nos-stars { display: inline-flex; gap: 2px; }
+.nos-star { background: none; border: none; padding: 0; display: inline-flex; cursor: default; line-height: 0; }
+button.nos-star { cursor: pointer; padding: 2px; }
+.nos-item.is-vista { opacity: 1; }
+.nos-item.is-vista .nos-item-t { text-decoration: none; }
+.nos-off { filter: grayscale(1); opacity: .35; }

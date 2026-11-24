@@ -66,6 +66,7 @@ chispa.js             DpChispa: svg de la moneda y animación de ganar puntos
 iconos.svg            Fuente del sprite de iconos (no se sirve; está inlinado en index.html)
 dopi.js / dopi.css    Componente SVG de la mascota Dopi
 pet-logic.js          Lógica pura de Dopi (necesidades, puntos, tienda) + helper de Firestore
+juegos.js / .css      Juegos a pantalla completa de Dopi en <canvas>: coche (Hill Drive: gasolina, chispas, volteretas) y saltos de plataformas. DopiJuegos.start(kind, opts)
 mascota-ui.js         UI interactiva de la pestaña "Dopi" (arrastrar, limpiar, tienda…)
 pet-ui.css            Estilos de la pestaña Dopi
 sw.js, manifest.json, iconos
@@ -202,6 +203,7 @@ Todas las funciones son **no-op seguras** si faltan las variables de entorno. Lo
 
 Formato de cada entrada: `AAAA-MM-DD · área · qué cambió · archivos · por qué/decisión del usuario`.
 
+- 2026-11-24 · Dopi/Nosotros · **Juegos nuevos**: coche (pedales Acelerar/Frenar, gasolina, chispas) y saltos de plataformas (nube que se rompe, resortes, arañas); se mantienen Atrapa (pelota) y Reflejos (consola); se eliminan globos, ovillo, frisbi y peluche. **Récords por juguete** en `mascota/estado.records[juguete][rol]` (el marcador enseña tu récord y el de tu pareja; batir el propio da +3 ✦ con el tope diario). Coche y saltos son gratis, Reflejos 50 ✦. **Lista > Pelis y series** (guardadas en `planes` con `tipo:'pelis'`, campos formato/plataforma, nota 1-5 de cada uno) · `juegos.js/.css`, `pet-logic.js`, `mascota-ui.js`, `nosotros.js/.css`, `index.html`.
 - 2026-11-24 · Nosotros · Nueva 5.ª pestaña: **Lista**, **Planes**, **Cartas** (sobre que se rasga + pop-up al entrar, push, "Más tarde") y **24 Logros** que suman ✦ a Dopi · `nosotros.js/.css`, `logros.js`, `sobre.js/.css`, `chispa.js`, `dopamina-art.css`, `index.html`, `app.js`.
 - 2026-11-24 · Diseño · Iconos propios (header, pestañas) y **chispa** como moneda en vez de ✦ · `index.html`, `mascota-ui.js`, `pet-ui.css`, `app.js`.
 - 2026-11-24 · Dopi · **Economía más difícil**: recompensas más bajas, tope 60 ✦/persona/día, cosméticos ×3, evolución más lenta · `pet-logic.js`.
