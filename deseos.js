@@ -166,7 +166,7 @@ async function deshacerHecho(id) {
     estado: w.apuntadoPor ? 'enmarcha' : 'pendiente',
     cumplido: false, cumplidoFecha: null, hechoPor: null, gracias: null
   }, { merge: true });
-  S.msg = '↩ Deshecho: vuelve a estar pendiente';
+  S.msg = 'Deshecho: vuelve a estar pendiente';
 }
 
 async function borrar(id) { await deleteDoc(wishRef(id)); }
@@ -233,11 +233,11 @@ function botonesSoltar(w) {
     return `<div class="dw-confirm"><span>${devuelve
       ? '¿Volver a bloquearlo y recuperar la llave? Solo puedes hacerlo una vez por semana.'
       : '¿Volver a bloquearlo? (Este desbloqueo es de otra semana: no recuperas llave.)'}</span>
-      <button class="dw-btn dw-btn-main" data-act="soltar-si" data-id="${escA(w.id)}">↩ Sí, volver a bloquear</button>
+      <button class="dw-btn dw-btn-main" data-act="soltar-si" data-id="${escA(w.id)}">Sí, volver a bloquear</button>
       <button class="dw-btn" data-act="soltar-no">Cancelar</button></div>`;
   }
   const bloqueado = devuelve && devolucionUsada();
-  return `<button class="dw-btn${bloqueado ? ' dw-btn-off' : ''}" data-act="${bloqueado ? 'soltar-ya' : 'soltar-pedir'}" data-id="${escA(w.id)}">↩ Volver a bloquear</button>
+  return `<button class="dw-btn${bloqueado ? ' dw-btn-off' : ''}" data-act="${bloqueado ? 'soltar-ya' : 'soltar-pedir'}" data-id="${escA(w.id)}">Volver a bloquear</button>
     ${S.sinLlaveId === 'soltar-' + w.id ? '<p class="dw-sinllave">Esta semana ya has recuperado una llave. Podrás volver a hacerlo la semana que viene.</p>' : ''}`;
 }
 
@@ -281,7 +281,7 @@ function tarjeta(w) {
     const por = w.hechoPor ? (w.hechoPor === rol().role ? 'ti' : nombreDe(w.hechoPor)) : '';
     pill = pastilla('hecho', `${ICO('check', 14)}Cumplido${por ? ' por ' + esc(por) : ''} · ${esc(fechaCorta(w.cumplidoFecha))}`);
     if (soyAutor || w.hechoPor === rol().role) {
-      acciones = `<button class="dw-btn" data-act="deshacer" data-id="${escA(w.id)}" title="Si lo marcaste sin querer">↩ Deshacer</button>`;
+      acciones = `<button class="dw-btn" data-act="deshacer" data-id="${escA(w.id)}" title="Si lo marcaste sin querer">Deshacer</button>`;
     }
   }
   return `<article class="dw-card dw-estado-${est}${bloqueada ? ' dw-bloqueada' : ''}">
