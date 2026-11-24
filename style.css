@@ -633,7 +633,13 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .foto-espera { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; color: var(--gold-dark); background: var(--gold-light); border-radius: var(--radius-sm); padding: 12px; }
 .foto-reacs { display: flex; gap: 6px; font-size: 16px; }
 .foto-lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 12px; }
-.foto-lightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; }
+.foto-lightbox { flex-direction: column; gap: 10px; }
+.foto-lightbox img { max-width: 100%; max-height: calc(100% - 90px); border-radius: 10px; }
+.foto-lb-bar { display: flex; gap: 8px; }
+.foto-lb-btn { background: var(--pink, #f4b8cc); color: #3a1626; border: none; border-radius: 999px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+.foto-lb-btn[data-lb="entera"] { background: rgba(255,255,255,.14); color: #fff; }
+.foto-lb-msg { margin: 0; color: #fff; font-size: 13px; text-align: center; }
+.foto-lb-msg[hidden] { display: none; }
 .foto-reacs { flex-wrap: wrap; align-items: center; }
 .foto-reac { display: inline-flex; align-items: center; gap: 4px; background: var(--pink-light); border-radius: 999px; padding: 3px 10px; font-size: 16px; }
 .foto-reac small { font-size: 11px; font-weight: 600; color: var(--text-muted); }

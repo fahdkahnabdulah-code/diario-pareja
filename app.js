@@ -746,12 +746,46 @@ function abrirFotoGrande(url) {
     ov = document.createElement('div');
     ov.id = 'foto-lightbox';
     ov.className = 'foto-lightbox';
-    ov.innerHTML = '<img alt="Foto" />';
-    ov.addEventListener('click', () => { ov.hidden = true; });
+    ov.innerHTML = '<img alt="Foto" /><div class="foto-lb-bar"><button type="button" class="foto-lb-btn" data-lb="peque">Solo la pequeña</button><button type="button" class="foto-lb-btn" data-lb="entera">Entera</button></div><p class="foto-lb-msg" hidden></p>';
+    ov.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-lb]');
+      if (!b) { ov.hidden = true; return; }
+      e.stopPropagation();
+      if (b.dataset.lb === 'peque') recortarPequena(ov); else { ov.querySelector('img').src = ov.dataset.url; ov.querySelector('.foto-lb-msg').hidden = true; }
+    });
     document.body.appendChild(ov);
   }
+  ov.dataset.url = url;
+  ov.querySelector('.foto-lb-msg').hidden = true;
   ov.querySelector('img').src = url;
   ov.hidden = false;
+}
+
+// La foto del check es una composición: la trasera de fondo y la frontal
+// pequeña arriba a la izquierda (32 % del ancho, margen 4 %). Aquí se recorta esa pequeña.
+async function recortarPequena(ov) {
+  const msg = ov.querySelector('.foto-lb-msg'), img = ov.querySelector('img');
+  msg.hidden = false; msg.textContent = 'Recortando…';
+  try {
+    const blob = await (await fetch(ov.dataset.url)).blob();
+    const bmp = await createImageBitmap(blob);
+    const W = bmp.width, H = bmp.height;
+    const pad = W * 0.04, w = W * 0.32, h = Math.min(H - pad, w * (H / W));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w); c.height = Math.round(h);
+    c.getContext('2d').drawImage(bmp, pad, pad, w, h, 0, 0, c.width, c.height);
+    const out = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
+    img.src = URL.createObjectURL(out);
+    msg.textContent = 'Mantén pulsada la foto para guardarla.';
+    const file = new File([out], 'foto-pequena.jpg', { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      msg.textContent = '';
+      await navigator.share({ files: [file] }).catch(() => {});
+      msg.textContent = 'Mantén pulsada la foto para guardarla.';
+    }
+  } catch (e) {
+    msg.textContent = 'No se pudo recortar. Haz captura de pantalla o recórtala desde Fotos.';
+  }
 }
 
 // ─────────────────────────────────────────────
