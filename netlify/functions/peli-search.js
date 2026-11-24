@@ -5,6 +5,7 @@
 //   GET ?q=titulo             → lista de sugerencias
 //   GET ?tipo=movie|tv&id=123 → ficha completa (duración, temporadas, plataformas)
 // Sin TMDB_KEY solo busca series (TVMaze, sin clave) y avisa de que faltan las pelis.
+// Con clave: busca en español e inglés, sin tildes y sin exigir el título exacto.
 // ─────────────────────────────────────────────
 const KEY = process.env.TMDB_KEY || '';
 const TMDB = 'https://api.themoviedb.org/3';
@@ -41,9 +42,46 @@ function deTmdb(r) {
   };
 }
 
+// Búsqueda flexible: sin tildes, ignora palabras de relleno (de, con, el…),
+// busca en español e inglés y, si no sale nada claro, prueba palabra a palabra.
+const norm = t => (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const RELLENO = new Set('de del la el los las lo con en y e a un una unos unas por para al the of and in on to with at'.split(' '));
+const claves = q => norm(q).split(' ').filter(w => w && !RELLENO.has(w));
+
+function puntuar(r, toks) {
+  if (!toks.length) return 0;
+  const txt = ' ' + norm([r.title, r.name, r.original_title, r.original_name].join(' ')) + ' ';
+  let ok = 0;
+  toks.forEach(w => { if (txt.includes(' ' + w) || (w.length > 4 && txt.includes(w.slice(0, -1)))) ok++; });
+  return ok / toks.length;
+}
+
 async function buscarTmdb(q) {
-  const d = await tmdb('/search/multi', { query: q, language: 'es-ES', include_adult: 'false', page: '1' });
-  return (d.results || []).filter(r => r.media_type === 'movie' || r.media_type === 'tv').slice(0, 8).map(deTmdb);
+  const toks = claves(q), limpia = toks.join(' ');
+  const consultas = new Set([q]);
+  if (limpia && limpia !== norm(q)) consultas.add(limpia);
+  const unicos = new Map();
+  const lanzar = async (consulta, lang) => {
+    try {
+      const d = await tmdb('/search/multi', { query: consulta, language: lang, include_adult: 'false', page: '1' });
+      (d.results || []).forEach(r => {
+        if (r.media_type !== 'movie' && r.media_type !== 'tv') return;
+        const k = r.media_type + r.id;
+        if (!unicos.has(k) || lang === 'es-ES') unicos.set(k, r);   // preferimos el título en español
+      });
+    } catch (e) { if (!unicos.size && consulta === q && lang === 'es-ES') throw e; }
+  };
+  await Promise.all([...consultas].flatMap(c => ['es-ES', 'en-US'].map(l => lanzar(c, l))));
+  const mejor = () => Math.max(0, ...[...unicos.values()].map(r => puntuar(r, toks)));
+  if (unicos.size < 3 || mejor() < 0.75) {
+    const palabras = toks.filter(w => w.length >= 4).sort((x, y) => y.length - x.length).slice(0, 3);
+    await Promise.all(palabras.flatMap(w => ['es-ES', 'en-US'].map(l => lanzar(w, l))));
+  }
+  return [...unicos.values()]
+    .map(r => ({ r, p: puntuar(r, toks) + Math.min(0.2, (r.popularity || 0) / 500) }))
+    .sort((x, y) => y.p - x.p)
+    .slice(0, 10)
+    .map(x => deTmdb(x.r));
 }
 
 async function fichaTmdb(tipo, id) {
