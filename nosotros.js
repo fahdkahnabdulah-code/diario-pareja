@@ -435,7 +435,7 @@ async function datosLogros() {
   await leer('entradas', q => q.forEach(x => d.entradas.push(x.data())));
   await leer('checkins', q => q.forEach(x => d.checkins.push(x.data())));
   try { const s = await getDoc(ref('nosotros', 'stats')); if (s.exists()) d.stats = s.data(); } catch (e) { }
-  try { const m = await getDoc(ref('mascota', 'estado')); if (m.exists()) d.stage = m.data().stage || 1; } catch (e) { }
+  try { const m = await getDoc(ref('mascota', 'estado')); if (m.exists()) { const md = m.data(); d.stage = md.stage || 1; d.cycles = md.cycles || 0; d.recovered = md.recovered || 0; d.speciesDone = md.speciesDone || []; } } catch (e) { }
   cacheDatos = d; cacheAt = Date.now();
   return d;
 }
@@ -458,9 +458,12 @@ function cumple(l, d) {
     case 'primera-carta': return S.cartas.length >= 1;
     case 'sello-roto': return S.cartas.some(c => c.abiertaEn);
     case 'buzon-lleno': return S.cartas.length >= 10;
-    case 'dopi-nace': return d.stage >= 2;
-    case 'dopi-crece': return d.stage >= 3;
-    case 'alma-gemela': return d.stage >= 5;
+    case 'dopi-nace': return d.stage >= 3;            // eclosiona (fase 3 de 10)
+    case 'dopi-crece': return d.stage >= 7;           // joven
+    case 'alma-gemela': return d.stage >= 10;         // forma final
+    case 'ciclo-nuevo': return (d.cycles || 0) >= 1;
+    case 'vuelve-a-casa': return (d.recovered || 0) >= 1;
+    case 'tres-especies': return ['a', 'b', 'c'].every(k => (d.speciesDone || []).includes(k));
     case 'sonadores': return deLista().length >= 10;
     case 'primer-plan': return hechos.length >= 1;
     case 'primer-viaje': return hechos.some(p => p.categoria === 'viaje');

@@ -61,8 +61,14 @@
   };
 
   // Evolución: XP acumulada (nunca baja) + requisito de días en equipo
-  var STAGE_XP = [null, 0, 60, 600, 1800, 4000];
-  var STAGE_TEAMDAYS = [null, 0, 1, 8, 25, 50];
+  // 10 fases: del huevo al "alma gemela". Mucho más lento que antes (≈ 4-5 meses cuidándola los dos).
+  var STAGE_MAX = 10;
+  var STAGE_XP = [null, 0, 60, 400, 1000, 2000, 3500, 5500, 8000, 11000, 15000];
+  var STAGE_TEAMDAYS = [null, 0, 1, 4, 10, 20, 34, 52, 75, 100, 130];
+  var SPECIES = ['a', 'b', 'c'];
+  var RESET_VER = 2;                   // sube este número para reiniciar a Dopi una vez (la primera vez que alguien abra la app)
+  var RECOVER_PRICE = 600;             // ✦ para recuperar un Dopi del álbum
+  var ALBUM_MAX = 8;
   var DAILY_PTS_CAP = 60;              // ✦ máx. por persona y día (rachas y logros quedan fuera)
   var DAILY_XP_CAP = { solo: 40, team: 80 };
   var TEAM_MULT = 1.5;
@@ -262,16 +268,24 @@
 
   function checkEvolution(s, now) {
     var next = s.stage + 1;
-    if (next > 5) return null;
+    if (next > STAGE_MAX) return null;
     if (s.xp < STAGE_XP[next] || (s.teamDaysTotal || 0) < STAGE_TEAMDAYS[next]) return null;
     if (isSick(s.needs)) { s.evolvePending = true; return { kind: 'evolveWaiting' }; }   // espera a que se recupere
     s.stage = next; s.evolvePending = false;
     s.evolvedAt = s.evolvedAt || {}; s.evolvedAt[next] = now;
+    if (next >= STAGE_MAX) markDone(s, now);
     return { kind: 'evolve', stage: next };
   }
 
+  function markDone(s, now) {
+    var sp = s.species || 'a';
+    s.speciesDone = s.speciesDone || [];
+    if (s.speciesDone.indexOf(sp) < 0) s.speciesDone.push(sp);
+    s.finishedAt = s.finishedAt || now;
+  }
+
   function progress(s) {
-    if (s.stage >= 5) return { pct: 100, xpLeft: 0, teamLeft: 0 };
+    if (s.stage >= STAGE_MAX) return { pct: 100, xpLeft: 0, teamLeft: 0 };
     var a = STAGE_XP[s.stage], b = STAGE_XP[s.stage + 1];
     return {
       pct: Math.min(100, Math.round((s.xp - a) / (b - a) * 100)),
@@ -282,7 +296,7 @@
 
   function newState(now) {
     return {
-      name: 'Dopi', stage: 1, xp: 0, points: 0,
+      ver: RESET_VER, species: null, name: 'Dopi', nameSet: false, stage: 1, xp: 0, points: 0, album: [], cycles: 0, recovered: 0, speciesDone: [],
       needs: { hunger: 80, mood: 80, energy: 80, love: 80, clean: 80 }, lastTick: now, sleepingUntil: 0,
       harmony: { mix: 0.5, share: 0.5, teamDays14: 0 }, teamDaysTotal: 0,
       equipped: { hat: 'none', face: 'none', neck: 'none', room: 'cozy' }, owned: ['cozy'],
@@ -305,6 +319,24 @@
   /* -------- Firestore (SDK modular v9+). Pasa las funciones que uses:
      import { doc, runTransaction, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore'
      PetStore.act({ db, doc, runTransaction, collection }, coupleId, people, uid, 'feed')         */
+
+  function cleanName(n) { return String(n || '').replace(/\s+/g, ' ').trim().slice(0, 14) || 'Dopi'; }
+  var PER_DOPI = ['species', 'name', 'nameSet', 'stage', 'xp', 'teamDaysTotal', 'evolvedAt', 'evolvePending', 'finishedAt', 'cycleAsked'];
+  function snapOf(s) {
+    var o = { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), savedAt: Date.now() };
+    PER_DOPI.forEach(function (k) { if (s[k] !== undefined) o[k] = s[k]; });
+    return o;
+  }
+  function applySnap(s, o) {
+    PER_DOPI.forEach(function (k) { if (o[k] !== undefined) s[k] = o[k]; else delete s[k]; });
+    s.nameSet = true;
+  }
+  function freshFrom(s, species, name) {
+    var n = newState(Date.now());
+    PER_DOPI.forEach(function (k) { if (n[k] !== undefined) s[k] = n[k]; else delete s[k]; });
+    s.species = species; s.name = name; s.nameSet = true;
+  }
+
   var PetStore = {
     ref: function (fb, coupleId) { return fb.doc(fb.db, 'parejas', coupleId, 'mascota', 'estado'); },
     act: function (fb, coupleId, people, uid, type, opts) {
@@ -380,8 +412,77 @@
     reset: function (fb, coupleId) {
       var ref = PetStore.ref(fb, coupleId);
       return fb.runTransaction(fb.db, function (tx) {
-        return tx.get(ref).then(function () {
+        return tx.get(ref).then(function (snap) {
+          var old = snap.exists() ? snap.data() : {};
           var s = newState(Date.now()); s.resetAt = Date.now();
+          if (old.records) s.records = old.records;            // los récords de los juegos se conservan
+          tx.set(ref, s); return { state: s };
+        });
+      });
+    },
+    /* reinicio de una sola vez cuando sube RESET_VER (nueva versión de Dopi) */
+    resetIfOld: function (fb, coupleId) {
+      var ref = PetStore.ref(fb, coupleId);
+      return fb.runTransaction(fb.db, function (tx) {
+        return tx.get(ref).then(function (snap) {
+          if (!snap.exists()) return { skipped: true };
+          var old = snap.data();
+          if ((old.ver || 0) >= RESET_VER) return { skipped: true, state: old };
+          var s = newState(Date.now()); s.resetAt = Date.now();
+          if (old.records) s.records = old.records;
+          tx.set(ref, s); return { state: s, reset: true };
+        });
+      });
+    },
+    /* elegir huevo (especie) y nombre: solo la primera vez de cada Dopi; gana quien lo guarde antes */
+    start: function (fb, coupleId, species, name) {
+      var ref = PetStore.ref(fb, coupleId);
+      return fb.runTransaction(fb.db, function (tx) {
+        return tx.get(ref).then(function (snap) {
+          var s = snap.exists() ? snap.data() : newState(Date.now());
+          if (s.species && s.nameSet) return { state: s, already: true };
+          s.species = SPECIES.indexOf(species) >= 0 ? species : 'a';
+          s.name = cleanName(name); s.nameSet = true; s.ver = RESET_VER;
+          tx.set(ref, s); return { state: s };
+        });
+      });
+    },
+    /* ya la tenéis crecida: seguir con ella (no volver a preguntar) */
+    keep: function (fb, coupleId) {
+      return fb.updateDoc(PetStore.ref(fb, coupleId), { cycleAsked: true });
+    },
+    /* terminar el ciclo: la Dopi actual pasa al álbum y llega un huevo nuevo */
+    newCycle: function (fb, coupleId, species, name) {
+      var ref = PetStore.ref(fb, coupleId);
+      return fb.runTransaction(fb.db, function (tx) {
+        return tx.get(ref).then(function (snap) {
+          var s = snap.data();
+          if (!s || s.stage < STAGE_MAX) return { error: 'no-crecida' };
+          var album = (s.album || []).slice();
+          if (album.length >= ALBUM_MAX) return { error: 'album-lleno' };
+          markDone(s, Date.now());
+          album.push(snapOf(s));
+          freshFrom(s, SPECIES.indexOf(species) >= 0 ? species : 'a', cleanName(name));
+          s.album = album; s.cycles = (s.cycles || 0) + 1;
+          tx.set(ref, s); return { state: s };
+        });
+      });
+    },
+    /* recuperar del álbum: se intercambia con la actual (la actual no se pierde) */
+    recover: function (fb, coupleId, albumId) {
+      var ref = PetStore.ref(fb, coupleId);
+      return fb.runTransaction(fb.db, function (tx) {
+        return tx.get(ref).then(function (snap) {
+          var s = snap.data(); if (!s) return { error: 'sin-estado' };
+          var album = (s.album || []).slice();
+          var i = album.findIndex(function (a) { return a.id === albumId; });
+          if (i < 0) return { error: 'no-existe' };
+          if ((s.points || 0) < RECOVER_PRICE) return { error: 'faltan-chispas', left: RECOVER_PRICE - (s.points || 0) };
+          var back = album[i], cur = snapOf(s);
+          album[i] = cur;
+          s.points -= RECOVER_PRICE;
+          applySnap(s, back);
+          s.album = album; s.recovered = (s.recovered || 0) + 1;
           tx.set(ref, s); return { state: s };
         });
       });
@@ -400,25 +501,25 @@
     { id: 'flowers', slot: 'hat',  name: 'Diadema de flores', price: 420 },
     { id: 'horns',   slot: 'hat',  name: 'Cuernitos',         price: 480 },
     { id: 'party',   slot: 'hat',  name: 'Gorro de fiesta',   price: 300 },
-    { id: 'crown',   slot: 'hat',  name: 'Corona',            price: 1350, stage: 4 },
+    { id: 'crown',   slot: 'hat',  name: 'Corona',            price: 1350, stage: 8 },
     { id: 'round',   slot: 'face', name: 'Gafas redondas',    price: 330 },
     { id: 'hearts',  slot: 'face', name: 'Gafas corazón',     price: 480 },
     { id: 'stache',  slot: 'face', name: 'Bigote postizo',    price: 240 },
     { id: 'scarf',   slot: 'neck', name: 'Bufanda a rayas',   price: 360 },
     { id: 'bowtie',  slot: 'neck', name: 'Pajarita',          price: 270 },
-    { id: 'collar',  slot: 'neck', name: 'Collar con corazón',price: 660, stage: 3 },
+    { id: 'collar',  slot: 'neck', name: 'Collar con corazón',price: 660, stage: 5 },
     { id: 'bandana', slot: 'neck', name: 'Pañuelo',           price: 270 },
     { id: 'cozy',    slot: 'room', name: 'Cuarto acogedor',   price: 0 },
     { id: 'beach',   slot: 'room', name: 'Playa',             price: 960 },
     { id: 'garden',  slot: 'room', name: 'Jardín',            price: 840 },
-    { id: 'attic',   slot: 'room', name: 'Buhardilla de estrellas', price: 1200, stage: 3 }
+    { id: 'attic',   slot: 'room', name: 'Buhardilla de estrellas', price: 1200, stage: 5 }
   ];
 
   root.PetLogic = {
     TOYS: TOYS, MIN_PLAY_ENERGY: MIN_PLAY_ENERGY, toyById: toyById, toyOwned: toyOwned,
     FOODS: FOODS, FULL_AT: FULL_AT, foodById: foodById, foodOf: foodOf,
     NEEDS: NEEDS, NEED_LABEL: NEED_LABEL, ACTIONS: ACTIONS, REWARDS: REWARDS, SHOP: SHOP,
-    STAGE_XP: STAGE_XP, STAGE_TEAMDAYS: STAGE_TEAMDAYS,
+    STAGE_XP: STAGE_XP, STAGE_TEAMDAYS: STAGE_TEAMDAYS, STAGE_MAX: STAGE_MAX, SPECIES: SPECIES, RESET_VER: RESET_VER, RECOVER_PRICE: RECOVER_PRICE, ALBUM_MAX: ALBUM_MAX,
     newState: newState, decay: decay, resolveMood: resolveMood, applyAction: applyAction, award: award,
     cooldownLeft: cooldownLeft, progress: progress, isSick: isSick, logLine: logLine, ago: ago, dayId: dayId,
     PetStore: PetStore

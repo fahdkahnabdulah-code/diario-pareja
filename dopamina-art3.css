@@ -1,0 +1,41 @@
+/* +Dopamina · dopamina-art3.css  (PROPUESTA · va DESPUÉS de dopamina-art.css)
+   Ojos y cara de Dopi + barra de necesidad (.dp-nb). Solo tokens --d-* y las variables de la app (--surface, --text, --bg). */
+
+/* ojos: esclera clara con pupila oscura en claro; en oscuro se invierte para que sigan leyendo como ojos */
+:root{--d-ojo-es:var(--surface);--d-ojo-pu:var(--text)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]):not(.light){--d-ojo-es:var(--text);--d-ojo-pu:var(--bg)}}
+:root[data-theme="dark"],:root.dark,body.dark{--d-ojo-es:var(--text);--d-ojo-pu:var(--bg)}
+.dp-sh{fill:color-mix(in srgb,var(--d-tinta) 10%,transparent);stroke:none}
+.dp-oj-es{fill:var(--d-ojo-es);stroke:var(--d-ojo-pu);stroke-width:var(--sw)}
+.dp-oj-pu{fill:var(--d-ojo-pu);stroke:none}
+.dp-oj-gl{fill:var(--d-ojo-es);stroke:none}
+
+
+/* ===== Barra de necesidad · pegatina blanda ===== */
+.dp-nb{--c:var(--d-oro-2);--crit:var(--d-rosa-2);--v:.7;display:flex;align-items:center;gap:10px;color:var(--d-tinta);font:600 13px/1 -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+.dp-nb-ic{flex:none;width:28px;height:28px}
+.dp-nb-pista{position:relative;flex:1 1 auto;min-width:60px;height:16px;box-sizing:border-box;border:2.5px solid var(--d-tinta);border-radius:999px;
+  background:color-mix(in srgb,var(--d-tinta) 7%,var(--d-papel));overflow:hidden}
+.dp-nb-rel{position:absolute;left:0;top:0;bottom:0;width:max(12px,calc(var(--v) * 100%));border-radius:999px;background:var(--c);
+  box-shadow:inset -2.5px 0 0 color-mix(in srgb,var(--c) 45%,var(--d-tinta));transition:width .45s ease}
+.dp-nb-rel::after{content:"";position:absolute;left:5px;top:2px;width:7px;height:2.5px;border-radius:2px;background:var(--d-brillo)}
+.dp-nb-n{flex:none;min-width:2.1em;text-align:right;font-variant-numeric:tabular-nums}
+.dp-nb.is-vacio .dp-nb-rel{display:none}
+.dp-nb-fino .dp-nb-pista{height:10px;border-width:2px}
+.dp-nb-fino .dp-nb-rel::after{top:1.5px;width:5px;height:2px}
+.dp-nb-comida{--c:var(--d-oro-2)}
+.dp-nb-animo{--c:color-mix(in srgb,var(--d-oro-2) 45%,var(--d-rosa-2))}
+.dp-nb-energia{--c:var(--d-teal-2)}
+.dp-nb-carino{--c:var(--d-rosa-2);--crit:var(--d-rosa-3)}
+.dp-nb-limpieza{--c:color-mix(in srgb,var(--d-teal-2) 50%,var(--d-papel))}
+/* bajo (menos de 30 %): la pista late suave en rosa. crítico (menos de 12 %): además el relleno pasa a rosa y respira */
+.dp-nb.is-bajo .dp-nb-pista,.dp-nb.is-critico .dp-nb-pista{animation:dp-nb-pulso 2.6s ease-in-out infinite}
+.dp-nb.is-critico .dp-nb-pista{animation-duration:1.7s}
+.dp-nb.is-critico .dp-nb-rel{background:var(--crit);animation:dp-nb-resp 1.7s ease-in-out infinite}
+.dp-nb.is-bajo .dp-nb-n,.dp-nb.is-critico .dp-nb-n{color:var(--d-rosa-3)}
+@keyframes dp-nb-pulso{0%,100%{background-color:color-mix(in srgb,var(--d-tinta) 7%,var(--d-papel));border-color:var(--d-tinta)}
+  50%{background-color:color-mix(in srgb,var(--d-rosa-2) 70%,var(--d-papel));border-color:var(--d-rosa-3)}}
+@keyframes dp-nb-resp{0%,100%{opacity:1}50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){
+  .dp-nb.is-bajo .dp-nb-pista,.dp-nb.is-critico .dp-nb-pista,.dp-nb.is-critico .dp-nb-rel{animation:none}
+  .dp-nb.is-bajo .dp-nb-pista,.dp-nb.is-critico .dp-nb-pista{background:color-mix(in srgb,var(--d-rosa-2) 55%,var(--d-papel));border-color:var(--d-rosa-3)}}

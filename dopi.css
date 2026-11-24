@@ -1,7 +1,7 @@
 /* =========================================================
    DOPI — mascota compartida de +Dopamina
    Un solo SVG (ver dopi.js) controlado por data-attributes:
-     data-stage  1..5            (huevo, cría, joven, adulto, alma gemela)
+     data-species a|b|c  · data-stage 1..10 (huevo -> alma gemela)
      data-mood   happy | hungry | sleepy | sad | love | sick |
                  eat | play | pet | party
      data-hat    none | beanie | beret | cap | crown | flowers | horns | party
@@ -60,25 +60,6 @@
 .dopi .d-belly-b{fill:var(--dopi-b);mix-blend-mode:multiply;transform-box:fill-box;transform-origin:center;
   transform:translateX(calc(3px + 9px * (1 - var(--mix)))) scale(calc(1.3 - .6 * var(--share)))}
 
-/* ---------- etapas ---------- */
-.dopi .only-1,.dopi .from-2,.dopi .from-3,.dopi .from-4,.dopi .only-5,.dopi .s23,.dopi .only-3{display:none}
-.dopi[data-stage="1"] .only-1,
-.dopi[data-stage="2"] .from-2,.dopi[data-stage="3"] .from-2,.dopi[data-stage="4"] .from-2,.dopi[data-stage="5"] .from-2,
-.dopi[data-stage="3"] .from-3,.dopi[data-stage="4"] .from-3,.dopi[data-stage="5"] .from-3,
-.dopi[data-stage="4"] .from-4,.dopi[data-stage="5"] .from-4,
-.dopi[data-stage="5"] .only-5,
-.dopi[data-stage="2"] .s23,.dopi[data-stage="3"] .s23,
-.dopi[data-stage="3"] .only-3{display:inline}
-
-.dopi .d-scale{transform-origin:100px 182px}
-.dopi[data-stage="1"] .d-scale{transform:scale(.8)}
-.dopi[data-stage="2"] .d-scale{transform:scale(.7)}
-.dopi[data-stage="3"] .d-scale{transform:scale(.84)}
-.dopi[data-stage="4"] .d-scale{transform:scale(.95)}
-.dopi[data-stage="5"] .d-scale{transform:scale(1)}
-/* el huevo no tiene mejillas ni boca visible en "dormido" */
-.dopi[data-stage="1"] .d-cheeks{display:none}
-
 /* ---------- caras (estados) ---------- */
 .dopi .m-happy,.dopi .m-hungry,.dopi .m-sleepy,.dopi .m-sad,.dopi .m-love,
 .dopi .m-sick,.dopi .m-eat,.dopi .m-play,.dopi .m-pet,.dopi .m-party{display:none}
@@ -88,25 +69,12 @@
 .dopi[data-mood="eat"] .m-eat,.dopi[data-mood="play"] .m-play,
 .dopi[data-mood="pet"] .m-pet,.dopi[data-mood="party"] .m-party{display:inline}
 
-.dopi .d-eye{fill:var(--dopi-eye)}
-.dopi .d-glint{fill:var(--dopi-glint)}
-.dopi .d-mouth{fill:none;stroke:var(--dopi-eye);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
-.dopi .d-mouth-in{fill:#7A1F3D;stroke:var(--dopi-eye);stroke-width:2.5;stroke-linejoin:round}
-.dopi .d-tongue{fill:#F27BA0}
-.dopi .d-drool,.dopi .d-tear{fill:#9AD8F2;stroke:#4A9CC0;stroke-width:1.2}
-.dopi .d-eyeheart-a{fill:var(--dopi-a);stroke:var(--dopi-line);stroke-width:2;stroke-linejoin:round}
-.dopi .d-eyeheart-b{fill:var(--dopi-b);stroke:var(--dopi-line);stroke-width:2;stroke-linejoin:round}
-.dopi .d-star{fill:var(--dopi-gold);stroke:#9A6A10;stroke-width:1.5;stroke-linejoin:round}
-.dopi .d-blush{fill:none;stroke:var(--dopi-a);stroke-width:2;stroke-linecap:round;opacity:.75}
-.dopi .d-bandage rect{fill:#F4E3C8;stroke:#B9986A;stroke-width:1.5}
-.dopi .d-bandage .d-bandage-pad{fill:#E8CFA8}
-
 /* colores por estado */
-.dopi[data-mood="sick"]{--dopi-body:#E8DCE1;--dopi-shade:#D6C5CC;--dopi-a:#C98AA4;--dopi-b:#82B5AE;--dopi-a-soft:#DDB9C7}
-.dopi[data-mood="sad"]{--dopi-body:#F3D7E0;--dopi-shade:#E3B9C7}
-.dopi[data-mood="love"] .d-cheek,.dopi[data-mood="pet"] .d-cheek{opacity:.85;transform:scale(1.15)}
-.dopi[data-mood="eat"] .d-cheek{opacity:.7;transform:scale(1.35)}
-.dopi[data-mood="sick"] .d-cheek{opacity:.25}
+.dopi[data-mood="sick"]{filter:saturate(.55) brightness(1.03)}
+.dopi[data-mood="sad"]{filter:saturate(.85)}
+.dopi{--sw:3}
+.dopi *{stroke-linejoin:round;stroke-linecap:round}
+.dopi .d-body{transition:opacity .2s}
 
 /* ---------- accesorios ---------- */
 .dopi .acc{display:none}
@@ -118,11 +86,7 @@
 .dopi[data-face="stache"] .a-face-stache,
 .dopi[data-neck="scarf"] .a-neck-scarf,.dopi[data-neck="bowtie"] .a-neck-bowtie,
 .dopi[data-neck="collar"] .a-neck-collar,.dopi[data-neck="bandana"] .a-neck-bandana{display:inline}
-/* los gorros tapan el brote; diadema y cuernitos lo dejan ver */
-.dopi[data-hat="beanie"] .d-tuft,.dopi[data-hat="beret"] .d-tuft,.dopi[data-hat="cap"] .d-tuft,
-.dopi[data-hat="crown"] .d-tuft,.dopi[data-hat="party"] .d-tuft{display:none}
 /* con gafas de sol la cara se ve igual pero los ojos quedan detrás */
-.dopi[data-face="hearts"] .d-eye,.dopi[data-face="hearts"] .d-glint{opacity:.0}
 
 .dopi .a-pink{fill:var(--dopi-a)}
 .dopi .a-teal{fill:var(--dopi-b)}
@@ -257,3 +221,8 @@
 }
 .dopi.is-still,.dopi.is-still *{animation:none !important}
 .dopi.is-still .fx-rise,.dopi.is-still .fx-float,.dopi.is-still .fx-fall,.dopi.is-still .fx-twinkle,.dopi.is-still .fx-drop-in,.dopi.is-still .d-tear{opacity:1}
+
+/* las sobrecapas de expresiones.svg sustituyen a estas partículas antiguas */
+.dopi .m-sleepy,.dopi .m-sad,.dopi .m-sick{display:none!important}
+.dopi .m-eat .fx-cookie,.dopi .m-eat .fx-chip{display:none}
+.dopi .dp-sobre{pointer-events:none}

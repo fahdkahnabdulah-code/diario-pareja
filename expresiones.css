@@ -1,0 +1,34 @@
+/* +Dopamina · expresiones.css · animaciones de las sobrecapas de expresiones.svg (se carga después de dopamina-art.css) */
+.dp-sobre{pointer-events:none}
+.dp-sobre[hidden]{display:none}
+.dp-ex-z{opacity:0;animation:dp-ex-zsube 2.6s ease-in-out infinite}
+.dp-ex-z2{animation-delay:.55s}.dp-ex-z3{animation-delay:1.1s}
+@keyframes dp-ex-zsube{0%{opacity:0;transform:translate(0,7px)}25%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translate(7px,-12px)}}
+.dp-ex-gota{animation:dp-ex-gotea 2.4s ease-in infinite}
+.dp-ex-gota2{animation-delay:.5s}
+@keyframes dp-ex-gotea{0%{transform:translateY(-3px);opacity:0}15%{opacity:1}80%{transform:translateY(8px);opacity:1}100%{transform:translateY(11px);opacity:0}}
+.dp-ex-sube{opacity:0;animation:dp-ex-flota 3.2s ease-out infinite}
+.dp-ex-s2{animation-delay:.8s}.dp-ex-s3{animation-delay:1.6s}.dp-ex-s4{animation-delay:2.2s}
+@keyframes dp-ex-flota{0%{opacity:0;transform:translateY(10px)}20%{opacity:1}100%{opacity:0;transform:translateY(-22px)}}
+.dp-ex-chispa{transform-box:fill-box;transform-origin:center;animation:dp-ex-brilla 1.8s ease-in-out infinite}
+.dp-ex-c2{animation-delay:.4s}.dp-ex-c3{animation-delay:.9s}.dp-ex-c4{animation-delay:1.3s}
+@keyframes dp-ex-brilla{0%,100%{transform:scale(.7);opacity:.7}50%{transform:scale(1.15);opacity:1}}
+.dp-ex-latido{transform-box:fill-box;transform-origin:center;animation:dp-ex-late 1.1s ease-in-out infinite}
+@keyframes dp-ex-late{0%,100%{transform:scale(1)}40%{transform:scale(1.14)}}
+.dp-ex-gira{transform-box:fill-box;transform-origin:center;animation:dp-ex-rota 1.6s linear infinite}
+.dp-ex-gira-inv{animation-direction:reverse}
+@keyframes dp-ex-rota{to{transform:rotate(360deg)}}
+.dp-ex-pop{transform-box:fill-box;transform-origin:50% 100%;animation:dp-ex-salta 1.6s ease-in-out infinite}
+@keyframes dp-ex-salta{0%,60%,100%{transform:scale(1)}75%{transform:scale(1.12) translateY(-2px)}}
+.dp-ex-nota{transform-box:fill-box;transform-origin:center;animation:dp-ex-bota 1.5s ease-in-out infinite}
+.dp-ex-nota2{animation-delay:.6s}
+@keyframes dp-ex-bota{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
+.dp-ex-babeo{transform-box:fill-box;transform-origin:50% 0;animation:dp-ex-baba 2.6s ease-in-out infinite}
+@keyframes dp-ex-baba{0%,100%{transform:scaleY(.7)}60%{transform:scaleY(1.15)}}
+.dp-ex-vapor{animation:dp-ex-sube-v 2.2s ease-in-out infinite}
+.dp-ex-v2{animation-delay:.7s}
+@keyframes dp-ex-sube-v{0%{opacity:0;transform:translateY(4px)}40%{opacity:.6}100%{opacity:0;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){
+  .dp-ex-z,.dp-ex-gota,.dp-ex-sube,.dp-ex-chispa,.dp-ex-latido,.dp-ex-gira,.dp-ex-pop,.dp-ex-nota,.dp-ex-babeo,.dp-ex-vapor{animation:none}
+  .dp-ex-z,.dp-ex-sube{opacity:1}
+}
