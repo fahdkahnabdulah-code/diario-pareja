@@ -1036,7 +1036,7 @@
     var first = kind === 'start', chosen = null;
     var ov = document.createElement('div'); ov.className = 'pet-namer'; ov.id = 'pet-picker';
     var cards = Object.keys(D.SPECIES).map(function (k) {
-      return '<button type="button" class="pp-card" data-sp="' + k + '"><span class="pp-art">' + D.svg({ species: k, stage: 1, mood: 'happy', still: true }) + '</span><b>' + ico('especie-' + k, '', 26) + ' ' + D.SPECIES[k].name + '</b><small>' + D.SPECIES[k].tag + '</small></button>';
+      return '<button type="button" class="pp-card" data-sp="' + k + '"><span class="pp-art">' + D.svg({ species: k, stage: 1, mood: 'happy', still: true }) + '</span><b>' + ico('especie-' + k, '', 18) + ' ' + D.SPECIES[k].name + '</b><small>' + D.SPECIES[k].tag + '</small></button>';
     }).join('');
     ov.innerHTML = '<form class="pet-namer-card pp-card-wrap" autocomplete="off"><h3>' + (first ? 'Elegid vuestro huevo' : 'Un huevo nuevo') + '</h3>' +
       '<p>' + (first ? 'Solo se elige una vez, así que decidlo juntos. Más adelante podréis tener las otras.' : esc(curState().name || 'Dopi') + ' pasará al álbum y podréis recuperarla cuando queráis.') + '</p>' +

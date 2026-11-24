@@ -175,3 +175,7 @@
 
 .pet-namer-card h3,.pp-card b{color:var(--text,#3B2A33)}
 .pet-namer-card input::placeholder{color:var(--text-muted,#7A6A70);opacity:.8}
+.pp-card{align-items:center;text-align:center;min-width:0}
+.pp-card b{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;white-space:nowrap;font-size:13px;line-height:1.2}
+.pp-card b .dp-ic{flex:0 0 18px;width:18px;height:18px}
+.pp-card small{display:block;width:100%;text-align:center;padding:0 2px;box-sizing:border-box}
