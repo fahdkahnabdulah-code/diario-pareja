@@ -42,7 +42,7 @@
 
   var ACTIONS = {
     feed:     { label: 'Dar de comer', mood: 'eat',   ms: 2400, cd: 0,      delta: {},                                   pts: 2, xp: 4, dailyMax: 4 },
-    play:     { label: 'Jugar',        mood: 'play',  ms: 3000, cd: 10 * MIN, delta: {},                                pts: 2, xp: 4, dailyMax: 6 },
+    play:     { label: 'Jugar',        mood: 'play',  ms: 3000, cd: 0, delta: {},                                pts: 2, xp: 4, dailyMax: 6 },
     pet:      { label: 'Acariciar',    mood: 'pet',   ms: 2200, cd: 30 * MIN, delta: { love: 20, mood: 5 },              pts: 1, xp: 2, dailyMax: 6 },
     clean:    { label: 'Bañar',        mood: 'love',  ms: 2600, cd: 3 * H,  delta: { clean: 100, mood: 8 },              pts: 5, xp: 8 },
     sleep:    { label: 'Arropar',      mood: 'sleepy',ms: 0,    cd: 8 * H,  delta: { energy: 10 },                       pts: 3, xp: 5 },
@@ -66,7 +66,7 @@
   var STAGE_XP = [null, 0, 60, 400, 1000, 2000, 3500, 5500, 8000, 11000, 15000];
   var STAGE_TEAMDAYS = [null, 0, 1, 4, 10, 20, 34, 52, 75, 100, 130];
   var SPECIES = ['a', 'b', 'c'];
-  var RESET_VER = 2;                   // sube este número para reiniciar a Dopi una vez (la primera vez que alguien abra la app)
+  var RESET_VER = 3;                   // sube este número para reiniciar a Dopi una vez (la primera vez que alguien abra la app)
   var RECOVER_PRICE = 600;             // ✦ para recuperar un Dopi del álbum
   var ALBUM_MAX = 8;
   var DAILY_PTS_CAP = 60;              // ✦ máx. por persona y día (rachas y logros quedan fuera)

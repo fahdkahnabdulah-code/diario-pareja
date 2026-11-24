@@ -309,7 +309,7 @@
       var left = L.cooldownLeft(s, ctx.role, k, t), cd = L.ACTIONS[k].cd;
       var cls = 'act' + (left ? ' is-cooling' : '') + (k === 'surprise' && !left ? ' is-special' : '') + (mode === k ? ' is-active' : '');
       return '<button class="' + cls + '" data-act="' + k + '" aria-label="' + L.ACTIONS[k].label + (left ? ', disponible en ' + fmt(left) : '') + '">' +
-        '<span class="act-btn"><span class="act-ring" style="--cd:' + Math.round(left / cd * 100) + '"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico" d="' + ICON[k] + '"/></svg></span>' +
+        '<span class="act-btn"><span class="act-ring" style="--cd:' + Math.round(left / (cd || 1) * 100) + '"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ico" d="' + ICON[k] + '"/></svg></span>' +
         '<span class="act-label">' + SHORT[k] + '</span><span class="act-time">' + (left ? 'en ' + fmt(left) : 'listo') + '</span></button>';
     }).join('');
 

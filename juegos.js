@@ -181,7 +181,7 @@
   }
 
   /* ═════════════ COCHE ═════════════ */
-  var CAR = { L: 36, R: 16, G: 900, ACC: 300, VMAX: 430, FUEL_IDLE: 3.4, FUEL_GAS: 4.8 };
+  var CAR = { L: 36, R: 16, G: 780, ACC: 300, VMAX: 430, FUEL_IDLE: 3.4, FUEL_GAS: 4.8 };
 
   function terr(x, H) {
     var amp = 22 + Math.min(58, x / 90), k = clamp(x / 420, 0, 1); k = k * k * (3 - 2 * k);
@@ -221,9 +221,12 @@
         S.vx = clamp(S.vx + a * h, -90, CAR.VMAX);
         S.x += S.vx * h * Math.cos(slope);
         var nh = (terr(S.x - CAR.L * Math.cos(slope), H) + terr(S.x + CAR.L * Math.cos(slope), H)) / 2 - CAR.R;
-        if (nh - S.y > 3 && S.vx > 70) {                     // cresta: despega
-          S.air = true; S.vy = (S.y - nh) * 0 + S.vx * Math.tan(slope) * 0.9; S.av = 0;
-        } else { S.y = nh; S.ang += (slope - S.ang) * Math.min(1, h * 16); S.vy = 0; }
+        var ps = S.pSlope == null ? slope : S.pSlope; S.pSlope = slope;
+        if (nh - S.y > 1.2 && S.vx > 45) {                   // cresta: despega enseguida
+          S.air = true; S.vy = S.vx * Math.tan(slope) * 1.1; S.av = 0;
+        } else if (ps < -0.16 && slope > ps + 0.1 && S.vx > 110) {   // rampa: sale volando al acabar la subida
+          S.air = true; S.vy = S.vx * Math.tan(ps) * 0.85; S.av = -0.4;
+        } else { S.y = nh; S.ang += (slope - S.ang) * Math.min(1, h * 6); S.vy = 0; }
         S.wheel += S.vx * h / CAR.R;
       } else {
         S.x += S.vx * h; S.vy += CAR.G * h; S.y += S.vy * h;
@@ -233,7 +236,8 @@
         if (S.y >= t2 && S.vy >= 0) {
           var sl = Math.atan2(terr(S.x + CAR.L, H) - terr(S.x - CAR.L, H), CAR.L * 2), rel = Math.atan2(Math.sin(S.ang - sl), Math.cos(S.ang - sl));
           if (Math.abs(rel) > 0.95) { crash(S); return; }
-          S.air = false; S.y = t2; S.vy = 0; S.av = 0;
+          if (S.vy > 170) { S.vy = -S.vy * 0.3; S.y = t2 - 1; S.av *= 0.5; S.vx *= 0.97; burst(S, S.x, S.y + CAR.R, PAL.gold); continue; }   // bota
+          S.air = false; S.y = t2; S.vy = 0; S.av = 0; S.pSlope = null;
           S.vx *= Math.cos(rel) > 0.8 ? 1 : 0.8;
         }
       }
