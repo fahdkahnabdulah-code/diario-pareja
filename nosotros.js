@@ -275,7 +275,7 @@ function estrellas(p, quien) {
   const k = 'nota_' + quien, n = p[k] || 0, mio = quien === rol().role;
   let h = '';
   for (let i = 1; i <= 5; i++) {
-    const svg = `<svg class="dp-ic ${i <= n ? '' : 'nos-off'}" style="--ic:${mio ? 22 : 16}px" aria-hidden="true"><use href="#ic-estrella"/></svg>`;
+    const svg = `<svg class="dp-ic ${i <= n ? '' : 'nos-off'}" style="--ic:22px" aria-hidden="true"><use href="#ic-estrella"/></svg>`;
     h += mio ? `<button type="button" class="nos-star" data-act="nota" data-id="${esc(p.id)}" data-v="${i}" aria-label="${i} de 5">${svg}</button>` : `<span class="nos-star">${svg}</span>`;
   }
   return `<span class="nos-rate"><span class="nos-rate-n">${mio ? 'Tú' : esc(nombreDe(quien))}</span><span class="nos-stars">${h}</span></span>`;
