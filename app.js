@@ -716,7 +716,7 @@ async function loadFotos() {
       }).join('') : '';
       const foto = (f, quien) => `
         <figure class="foto-item">
-          <img src="${escapeAttr(f.fotoUrl)}" alt="Foto de ${escapeAttr(quien)}" loading="lazy" data-full="${escapeAttr(f.fotoUrl)}" />
+          <img src="${escapeAttr(f.fotoUrl)}" alt="Foto de ${escapeAttr(quien)}" loading="lazy" data-full="${escapeAttr(f.fotoUrl)}" data-front="${escapeAttr(f.fotoFrontalUrl || '')}" data-back="${escapeAttr(f.fotoTraseraUrl || '')}" />
           <figcaption>${escapeHtml(quien)}${f.tarde ? ' <svg class="dp-ic dp-lbl-ic" style="--ic:14px" aria-hidden="true"><use href="#ic-reloj-tarde"/></svg>' : ''}</figcaption>
           ${f.pie ? `<div class="foto-pie">“${escapeHtml(f.pie)}”</div>` : ''}
         </figure>`;
@@ -733,41 +733,47 @@ async function loadFotos() {
     });
     box.innerHTML = html;
     box.querySelectorAll('img[data-full]').forEach(img => {
-      img.addEventListener('click', () => abrirFotoGrande(img.dataset.full));
+      img.addEventListener('click', () => abrirFotoGrande(img.dataset.full, img.dataset.front, img.dataset.back));
     });
   } catch (err) {
     box.innerHTML = '<p class="empty-state">No se pudieron cargar las fotos. Comprueba tu conexión.</p>';
   }
 }
 
-function abrirFotoGrande(url) {
+function abrirFotoGrande(url, front, back) {
   let ov = $('foto-lightbox');
   if (!ov) {
     ov = document.createElement('div');
     ov.id = 'foto-lightbox';
     ov.className = 'foto-lightbox';
-    ov.innerHTML = '<img alt="Foto" /><div class="foto-lb-bar"><button type="button" class="foto-lb-btn" data-lb="peque">Solo la pequeña</button><button type="button" class="foto-lb-btn" data-lb="entera">Entera</button></div><p class="foto-lb-msg" hidden></p>';
+    ov.innerHTML = '<img alt="Foto" /><div class="foto-lb-bar"><button type="button" class="foto-lb-btn" data-lb="front">Delantera</button><button type="button" class="foto-lb-btn" data-lb="back">Trasera</button><button type="button" class="foto-lb-btn" data-lb="both">Las dos</button></div><p class="foto-lb-msg" hidden></p>';
     ov.addEventListener('click', (e) => {
       const b = e.target.closest('[data-lb]');
       if (!b) { ov.hidden = true; return; }
       e.stopPropagation();
-      if (b.dataset.lb === 'peque') recortarPequena(ov); else { ov.querySelector('img').src = ov.dataset.url; ov.querySelector('.foto-lb-msg').hidden = true; }
+      verFotoLado(ov, b.dataset.lb);
     });
     document.body.appendChild(ov);
   }
-  ov.dataset.url = url;
+  ov.dataset.url = url; ov.dataset.front = front || ''; ov.dataset.back = back || '';
   ov.querySelector('.foto-lb-msg').hidden = true;
   ov.querySelector('img').src = url;
   ov.hidden = false;
 }
 
-// La foto del check es una composición: la trasera de fondo y la frontal
-// pequeña arriba a la izquierda (32 % del ancho, margen 4 %). Aquí se recorta esa pequeña.
-async function recortarPequena(ov) {
+// Las fotos nuevas se guardan también por separado (delantera y trasera).
+// En las antiguas solo existe la composición: la trasera de fondo y la delantera
+// pequeña arriba a la izquierda (32 % del ancho, margen 4 %), que se recorta aquí.
+async function verFotoLado(ov, lado) {
   const msg = ov.querySelector('.foto-lb-msg'), img = ov.querySelector('img');
-  msg.hidden = false; msg.textContent = 'Recortando…';
+  const url = ov.dataset.url, sep = ov.dataset[lado];
+  const nota = t => { msg.hidden = !t; msg.textContent = t || ''; };
+  if (lado === 'both') { img.src = url; nota(''); return; }
+  if (sep) { img.src = sep; nota('Mantén pulsada la foto para guardarla.'); return; }
+  if (lado === 'back') { img.src = url; nota('Esta foto es antigua: la trasera sale con la delantera encima (no se guardó por separado). Mantén pulsada para guardarla.'); return; }
+  nota('Recortando…');
   try {
-    const blob = await (await fetch(ov.dataset.url)).blob();
+    const blob = await (await fetch(url)).blob();
     const bmp = await createImageBitmap(blob);
     const W = bmp.width, H = bmp.height;
     const pad = W * 0.04, w = W * 0.32, h = Math.min(H - pad, w * (H / W));
@@ -776,15 +782,9 @@ async function recortarPequena(ov) {
     c.getContext('2d').drawImage(bmp, pad, pad, w, h, 0, 0, c.width, c.height);
     const out = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
     img.src = URL.createObjectURL(out);
-    msg.textContent = 'Mantén pulsada la foto para guardarla.';
-    const file = new File([out], 'foto-pequena.jpg', { type: 'image/jpeg' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      msg.textContent = '';
-      await navigator.share({ files: [file] }).catch(() => {});
-      msg.textContent = 'Mantén pulsada la foto para guardarla.';
-    }
+    nota('Mantén pulsada la foto para guardarla.');
   } catch (e) {
-    msg.textContent = 'No se pudo recortar. Haz captura de pantalla o recórtala desde Fotos.';
+    nota('No se pudo recortar. Haz captura de pantalla o recórtala desde Fotos.');
   }
 }
 
@@ -1748,13 +1748,26 @@ async function subirCheckin() {
     await uploadBytes(sref, blob);
     const url = await getDownloadURL(sref);
 
+    // Delantera y trasera por separado (si falla, el check sigue valiendo con la composición)
+    const extra = {};
+    try {
+      const sube = async (cv, sufijo, campo) => {
+        const bl = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.85));
+        const r = storageRef(storage, `checkins/${currentRole.parejaId}/${dateKey}/${currentRole.role}_${sufijo}.jpg`);
+        await uploadBytes(r, bl);
+        extra[campo] = await getDownloadURL(r);
+      };
+      await sube(checkinFotoFrontal, 'frontal', 'fotoFrontalUrl');
+      await sube(checkinFotoTrasera, 'trasera', 'fotoTraseraUrl');
+    } catch (e) { /* sin extras */ }
+
     const ahora = new Date();
     const snap = await getDoc(checkinRef(dateKey));
     const data = snap.data();
     const tarde = !!(data && data.ventanaCierre && ahora > new Date(data.ventanaCierre));
 
     await setDoc(checkinRef(dateKey), {
-      [currentRole.role]: { publicado: true, fotoUrl: url, subidoEn: ahora.toISOString(), tarde, pie }
+      [currentRole.role]: { publicado: true, fotoUrl: url, ...extra, subidoEn: ahora.toISOString(), tarde, pie }
     }, { merge: true });
     checkinFotoFrontal = null;
     checkinFotoTrasera = null;
