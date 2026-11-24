@@ -880,15 +880,11 @@ async function loadRacha() {
       cursor.setDate(cursor.getDate() - 7);
     }
     if (racha > 0) {
-      const etapa = mascotaRacha(racha);
       if (semanas.has(isoWeekKey(new Date())) && window.MascotaUI) MascotaUI.weekly(isoWeekKey(new Date()), racha);
-      el.innerHTML = `<span class="mascota-icon">${mascotaSVG(etapa.idx)}</span><span class="mascota-texto">${racha} semana${racha === 1 ? '' : 's'} seguida${racha === 1 ? '' : 's'}</span>`;
-      el.title = `${etapa.nombre} — vuestra mascota crece con cada semana seguida`;
-    } else {
-      el.innerHTML = '';
-      el.title = '';
     }
-    el.style.display = racha > 0 ? 'inline-flex' : 'none';
+    el.innerHTML = '';
+    el.title = '';
+    el.style.display = 'none'; // el chip de "N semanas seguidas" ya no se muestra; la racha sigue dando puntos a Dopi
   } catch (e) {
     el.style.display = 'none';
   }

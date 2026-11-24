@@ -120,7 +120,7 @@
 
         <!-- Recomendación cruzada -->
         <div id="recommendation-card" class="recommendation-card" style="display:none">
-          <div class="rec-label">🔑 Llave de deseos</div>
+          <div class="rec-label"><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-llave"/></svg>Llave de deseos</div>
           <div class="rec-text" id="rec-text">—</div>
           <div class="rec-sub" id="rec-sub"></div>
           <button id="btn-rec-refresh" class="btn-text-small">Descubrir deseo</button>
@@ -130,7 +130,7 @@
         <div id="entry-status-banner" class="entry-status-banner" hidden></div>
 
         <div class="date-row">
-          <label for="entry-date">📅</label>
+          <label for="entry-date" aria-label="Fecha"><svg class="dp-ic dp-lbl-ic" style="--ic:20px" aria-hidden="true"><use href="#ic-calendario"/></svg></label>
           <input type="date" id="entry-date" />
         </div>
 
@@ -142,15 +142,15 @@
               <input class="name-input" id="name-self" type="text" placeholder="Tu nombre" maxlength="20" />
             </div>
             <div class="field">
-              <label>🌤️ ¿Cómo me siento?</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-corazon"/></svg><span class="dp-lbl-t">¿Cómo me siento?</span></label>
               <textarea id="self_sentimiento" placeholder="Esta semana me siento..."></textarea>
             </div>
             <div class="field">
-              <label>🙏 Te agradezco...</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-regalo"/></svg><span class="dp-lbl-t">Te agradezco...</span></label>
               <textarea id="self_gracias" placeholder="Gracias por..."></textarea>
             </div>
             <div class="field">
-              <label>💬 Algo que quiero decirte</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-carta"/></svg><span class="dp-lbl-t">Algo que quiero decirte</span></label>
               <textarea id="self_pendiente" placeholder="Hay algo que quiero hablar..."></textarea>
             </div>
           </div>
@@ -162,15 +162,15 @@
               <input class="name-input" id="name-partner" type="text" placeholder="Su nombre" maxlength="20" />
             </div>
             <div class="field">
-              <label>🌤️ ¿Cómo me siento?</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-corazon"/></svg><span class="dp-lbl-t">¿Cómo me siento?</span></label>
               <textarea id="partner_sentimiento" placeholder="Esta semana me siento..."></textarea>
             </div>
             <div class="field">
-              <label>🙏 Te agradezco...</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-regalo"/></svg><span class="dp-lbl-t">Te agradezco...</span></label>
               <textarea id="partner_gracias" placeholder="Gracias por..."></textarea>
             </div>
             <div class="field">
-              <label>💬 Algo que quiero decirte</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-carta"/></svg><span class="dp-lbl-t">Algo que quiero decirte</span></label>
               <textarea id="partner_pendiente" placeholder="Hay algo que quiero hablar..."></textarea>
             </div>
           </div>
@@ -178,7 +178,7 @@
 
         <!-- Pregunta del día: apartado propio dentro del registro diario -->
         <div class="pregunta-section" id="pregunta-section" hidden>
-          <div class="pregunta-kicker">💭 Pregunta del día</div>
+          <div class="pregunta-kicker"><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-deseos"/></svg>Pregunta del día</div>
           <p class="pregunta-texto" id="pd-question"></p>
           <div class="pregunta-answers">
             <div class="pregunta-ans self">
@@ -199,19 +199,19 @@
           <p class="juntos-aviso" id="juntos-aviso"></p>
           <div class="shared-grid">
             <div class="field">
-              <label>🗓️ Qué nos gustaría hacer</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-calendario"/></svg><span class="dp-lbl-t">Qué nos gustaría hacer</span></label>
               <textarea id="shared_hacer" placeholder="Un plan, una escapada..."></textarea>
             </div>
             <div class="field">
-              <label>✨ Recuerdo favorito reciente</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-foto"/></svg><span class="dp-lbl-t">Recuerdo favorito reciente</span></label>
               <textarea id="shared_recuerdo" placeholder="Ese momento que nos gustó..."></textarea>
             </div>
             <div class="field">
-              <label>🌱 Nuevo sueño / meta</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-estrella"/></svg><span class="dp-lbl-t">Nuevo sueño / meta</span></label>
               <textarea id="shared_sueno" placeholder="Algo que queremos construir..."></textarea>
             </div>
             <div class="field">
-              <label>🏆 Objetivo cumplido</label>
+              <label><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-trofeo"/></svg><span class="dp-lbl-t">Objetivo cumplido</span></label>
               <textarea id="shared_logro" placeholder="Lo que logramos..."></textarea>
             </div>
           </div>
@@ -231,8 +231,8 @@
     <div id="tab-historial" class="tab-content">
       <div class="container">
         <div class="hist-subtabs" role="tablist">
-          <button type="button" class="hist-subtab active" data-sub="entradas" role="tab">📝 Entradas</button>
-          <button type="button" class="hist-subtab" data-sub="fotos" role="tab">📸 Fotos</button>
+          <button type="button" class="hist-subtab active" data-sub="entradas" role="tab"><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-pluma"/></svg>Entradas</button>
+          <button type="button" class="hist-subtab" data-sub="fotos" role="tab"><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-camara"/></svg>Fotos</button>
         </div>
         <div id="history-list">
           <p class="empty-state">Aún no hay entradas guardadas.</p>
@@ -344,13 +344,13 @@
       <div class="dw-wrap">
         <div class="dw-top">
           <div class="dw-head">
-            <span class="dw-title">💭 Deseos</span>
+            <span class="dw-title"><svg class="dp-ic dp-lbl-ic" style="--ic:22px" aria-hidden="true"><use href="#ic-deseos"/></svg>Deseos</span>
             <button id="btn-close-deseos" class="btn-icon" aria-label="Cerrar">✕</button>
           </div>
           <nav class="dw-tabs" role="tablist">
             <button type="button" class="dw-tab on" data-act="tab" data-tab="deseos" role="tab">💝 De tu pareja</button>
-            <button type="button" class="dw-tab" data-act="tab" data-tab="mios" role="tab">📝 Míos</button>
-            <button type="button" class="dw-tab" data-act="tab" data-tab="anadir" role="tab">➕ Añadir</button>
+            <button type="button" class="dw-tab" data-act="tab" data-tab="mios" role="tab"><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-pluma"/></svg>Míos</button>
+            <button type="button" class="dw-tab" data-act="tab" data-tab="anadir" role="tab"><svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-lista"/></svg>Añadir</button>
           </nav>
         </div>
         <div id="partner-pending-pill" class="partner-pill" style="display:none"></div>
@@ -377,7 +377,7 @@
     <div id="modal-checkin" class="modal-overlay" hidden>
       <div class="modal-card">
         <div class="modal-header">
-          <span class="modal-title">📸 Check del día</span>
+          <span class="modal-title"><svg class="dp-ic dp-lbl-ic" style="--ic:20px" aria-hidden="true"><use href="#ic-camara"/></svg>Check del día</span>
           <button id="btn-close-checkin" class="btn-icon" aria-label="Cerrar">✕</button>
         </div>
         <div class="modal-body" id="checkin-body">
@@ -390,7 +390,7 @@
     <div id="modal-bloqueada" class="modal-overlay" hidden>
       <div class="modal-card">
         <div class="modal-header">
-          <span class="modal-title">🔒 Entrada bloqueada</span>
+          <span class="modal-title"><svg class="dp-ic dp-lbl-ic" style="--ic:20px" aria-hidden="true"><use href="#ic-candado"/></svg>Entrada bloqueada</span>
           <button id="btn-close-bloqueada" class="btn-icon" aria-label="Cerrar">✕</button>
         </div>
         <div class="modal-body">

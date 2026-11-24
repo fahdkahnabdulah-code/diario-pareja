@@ -224,7 +224,7 @@
       more.className = 'idea-more';
       more.title = 'Otras ideas';
       more.setAttribute('aria-label', 'Otras ideas');
-      more.textContent = '🔄';
+      more.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/></svg>';
       row.appendChild(more);
 
       var pintar = function (lista) {
@@ -313,11 +313,12 @@
     // misma pregunta para los dos, con la redacción del día
     ['sentimiento', 'gracias', 'pendiente'].forEach(function (k) {
       var b = BANK[k];
-      var texto = b.emoji + ' ' + b.labels[delDia(b.labels.length, dia, hash(k))];
+      var texto = b.labels[delDia(b.labels.length, dia, hash(k))];
       ['self_', 'partner_'].forEach(function (pre) {
         var ta = document.getElementById(pre + k);
         var lab = ta && ta.parentElement && ta.parentElement.querySelector('label');
-        if (lab && lab.textContent !== texto) lab.textContent = texto;
+        var t = lab && lab.querySelector('.dp-lbl-t');
+        if (t && t.textContent !== texto) t.textContent = texto;
       });
     });
 

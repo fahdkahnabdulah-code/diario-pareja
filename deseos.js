@@ -18,10 +18,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const TIPOS = [
-  { id: 'detalle', emoji: '💝', label: 'Detalle' },
-  { id: 'plan', emoji: '🗓️', label: 'Plan' },
-  { id: 'regalo', emoji: '🎁', label: 'Regalo' },
-  { id: 'otro', emoji: '✨', label: 'Otro' }
+  { id: 'detalle', ic: 'corazon', label: 'Detalle' },
+  { id: 'plan', ic: 'calendario', label: 'Plan' },
+  { id: 'regalo', ic: 'regalo', label: 'Regalo' },
+  { id: 'otro', ic: 'estrella', label: 'Otro' }
 ];
 const TAMANOS = [   // nivel de dificultad (se conservan los ids antiguos)
   { id: 'facil', emoji: '🟢', label: 'Fácil' },
@@ -50,6 +50,7 @@ const S = {
 };
 
 const $ = id => document.getElementById(id);
+const ICO = (n, sz) => `<svg class="dp-ic dp-lbl-ic" style="--ic:${sz || 16}px" aria-hidden="true"><use href="#ic-${n}"/></svg>`;
 const esc = s => C.escapeHtml(String(s == null ? '' : s));
 const escA = s => C.escapeAttr(String(s == null ? '' : s));
 const rol = () => C.role();
@@ -182,7 +183,7 @@ async function agradecer(id) {
 function chipsDeseo(w) {
   const t = tipoDe(w), z = tamanoDe(w);
   if (!t && !z) return '';
-  return `<div class="dw-chips">${t ? `<span class="dw-chip">${t.emoji} ${t.label}</span>` : ''}${z ? `<span class="dw-chip" title="Nivel de dificultad">${z.emoji} Dificultad ${z.label.toLowerCase()}</span>` : ''}</div>`;
+  return `<div class="dw-chips">${t ? `<span class="dw-chip">${ICO(t.ic, 14)}${t.label}</span>` : ''}${z ? `<span class="dw-chip" title="Nivel de dificultad">${z.emoji} Dificultad ${z.label.toLowerCase()}</span>` : ''}</div>`;
 }
 
 function htmlGracias(w) {
@@ -214,13 +215,13 @@ function textoBloqueado(w) {
 function botonesDesbloqueo(w) {
   if (S.confirmId === w.id) {
     return `<div class="dw-confirm"><span>¿Usar tu llave de la semana para verlo?</span>
-      <button class="dw-btn dw-btn-main" data-act="desbloquear" data-id="${escA(w.id)}">🔓 Sí, desbloquear</button>
+      <button class="dw-btn dw-btn-main" data-act="desbloquear" data-id="${escA(w.id)}">${ICO('llave')}Sí, desbloquear</button>
       <button class="dw-btn" data-act="confirmar-no">Cancelar</button></div>`;
   }
   // Sin llave el botón sigue ahí: al tocarlo sale un mensaje explicando por qué no se puede
   const sinLlave = S.sinLlaveId === w.id
-    ? '<p class="dw-sinllave">🔑 Ya has usado tu llave de esta semana. Tendrás una nueva el lunes.</p>' : '';
-  return `${sinLlave}<button class="dw-btn ${llavesLibres() > 0 ? 'dw-btn-main' : 'dw-btn-off'}" data-act="candado" data-id="${escA(w.id)}">🔑 Desbloquear</button>`;
+    ? `<p class="dw-sinllave">${ICO('llave')}Ya has usado tu llave de esta semana. Tendrás una nueva el lunes.</p>` : '';
+  return `${sinLlave}<button class="dw-btn ${llavesLibres() > 0 ? 'dw-btn-main' : 'dw-btn-off'}" data-act="candado" data-id="${escA(w.id)}">${ICO('llave')}Desbloquear</button>`;
 }
 
 function botonesSoltar(w) {
@@ -305,7 +306,7 @@ function htmlDeseos() {
   const cumplidos = lista.filter(w => estadoDe(w) === 'hecho' && w.hechoPor === rol().role).sort(porFecha('cumplidoFecha'));
 
   const llaves = `<div class="dw-llaves${libres > 0 ? '' : ' dw-llaves-0'}">
-      <div class="dw-llaves-n"><span class="dw-llave${libres > 0 ? ' on' : ''}">🔑</span></div>
+      <div class="dw-llaves-n"><span class="dw-llave${libres > 0 ? ' on' : ''}">${ICO('llave', 34)}</span></div>
       <div class="dw-llaves-t">${libres > 0
         ? `Tienes <strong>1 llave</strong> esta semana: elige qué deseo de ${esc(partnerNombre)} desbloquear.`
         : 'Ya has usado tu llave de esta semana. Tendrás una nueva el lunes.'}</div>
@@ -317,7 +318,7 @@ function htmlDeseos() {
   if (bloqueados.length) {
     html += sec('bloq', '🔒 Por desbloquear', bloqueados);
   } else if (!enMarcha.length) {
-    html += `<div class="dw-hero"><div class="dw-hero-emoji">🌙</div><h3>Nada por desbloquear</h3><p>Cuando ${esc(partnerNombre)} guarde deseos aparecerán aquí, bloqueados.</p></div>`;
+    html += `<div class="dw-hero"><div class="dw-hero-emoji">${ICO('candado', 48)}</div><h3>Nada por desbloquear</h3><p>Cuando ${esc(partnerNombre)} guarde deseos aparecerán aquí, bloqueados.</p></div>`;
   }
   if (cumplidos.length) html += sec('cumpl', '✅ Cumplidos por ti', cumplidos);
   return html;
@@ -337,7 +338,7 @@ function htmlMios() {
     : '';
   const cuerpo = lista.length
     ? lista.map(tarjeta).join('')
-    : `<div class="dw-hero"><div class="dw-hero-emoji">✍️</div><h3>Aún no has escrito deseos</h3><p>Añade uno y ${esc(nombreDe(rol().partner))} lo verá bloqueado hasta que use una llave.</p><button class="dw-btn dw-btn-main" data-act="tab" data-tab="anadir">➕ Añadir deseo</button></div>`;
+    : `<div class="dw-hero"><div class="dw-hero-emoji">${ICO('pluma', 48)}</div><h3>Aún no has escrito deseos</h3><p>Añade uno y ${esc(nombreDe(rol().partner))} lo verá bloqueado hasta que use una llave.</p><button class="dw-btn dw-btn-main" data-act="tab" data-tab="anadir">➕ Añadir deseo</button></div>`;
   return `${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}${resumen}${cuerpo}`;
 }
 
@@ -349,14 +350,14 @@ function ideasActuales() {
 }
 
 function htmlAnadir() {
-  const tipos = TIPOS.map(t => `<button type="button" class="dw-pick${S.tipo === t.id ? ' on' : ''}" data-act="tipo" data-v="${t.id}">${t.emoji} ${t.label}</button>`).join('');
+  const tipos = TIPOS.map(t => `<button type="button" class="dw-pick${S.tipo === t.id ? ' on' : ''}" data-act="tipo" data-v="${t.id}">${ICO(t.ic, 16)}${t.label}</button>`).join('');
   const tam = TAMANOS.map(t => `<button type="button" class="dw-pick${S.tamano === t.id ? ' on' : ''}" data-act="tamano" data-v="${t.id}">${t.emoji} ${t.label}</button>`).join('');
   const ideas = ideasActuales().map(t => `<button type="button" class="dw-idea" data-act="idea" data-txt="${escA(t)}">${esc(t)}</button>`).join('');
   return `${S.msg ? `<p class="dw-msg">${esc(S.msg)}</p>` : ''}
     <div class="dw-form">
       <label class="dw-label" for="dw-texto">¿Qué te haría ilusión?</label>
       <textarea id="dw-texto" maxlength="280" placeholder="Un plan, un detalle, lo que sea…"></textarea>
-      <div class="dw-ideas-row"><span class="dw-sub">Ideas para empezar</span><button type="button" class="dw-more" data-act="idea-more" aria-label="Otras ideas">🔄</button></div>
+      <div class="dw-ideas-row"><span class="dw-sub">Ideas para empezar</span><button type="button" class="dw-more" data-act="idea-more" aria-label="Otras ideas"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/></svg></button></div>
       <div class="dw-ideas">${ideas}</div>
       <div class="dw-sub">Tipo</div><div class="dw-picks">${tipos}</div>
       <div class="dw-sub">Nivel de dificultad</div><div class="dw-picks">${tam}</div>
@@ -372,7 +373,7 @@ function render() {
   // el texto que se está escribiendo no se pierde al repintar
   const previo = $('dw-texto')?.value || '';
   const tabDeseos = document.querySelector('#deseos-screen .dw-tab[data-tab="deseos"]');
-  if (tabDeseos) tabDeseos.textContent = `💝 De ${nombreDe(rol().partner)}`;
+  if (tabDeseos) tabDeseos.innerHTML = '<svg class="dp-ic dp-lbl-ic" style="--ic:15px" aria-hidden="true"><use href="#ic-corazon"/></svg>De ' + esc(nombreDe(rol().partner));
   body.innerHTML = S.tab === 'deseos' ? htmlDeseos() : S.tab === 'mios' ? htmlMios() : htmlAnadir();
   if (S.tab === 'anadir' && previo) { const t = $('dw-texto'); if (t) t.value = previo; }
   S.msg = '';
@@ -389,9 +390,9 @@ function pintarInsignias() {
   } else if (badge) badge.style.display = 'none';
   if (pill) {
     if (n > 0) {
-      pill.textContent = libres > 0
-        ? `🔑 ${libres} llave${libres === 1 ? '' : 's'} para desbloquear un deseo`
-        : `🔒 ${nombreDe(rol().partner)} tiene ${n} deseo${n === 1 ? '' : 's'} por desbloquear`;
+      pill.innerHTML = libres > 0
+        ? `${ICO('llave', 14)}${libres} llave${libres === 1 ? '' : 's'} para desbloquear un deseo`
+        : `${ICO('candado', 14)}${esc(nombreDe(rol().partner))} tiene ${n} deseo${n === 1 ? '' : 's'} por desbloquear`;
       pill.style.display = 'inline-flex';
     } else pill.style.display = 'none';
   }
@@ -404,14 +405,14 @@ function pintarTarjeta() {
   const label = card.querySelector('.rec-label');
   const libres = llavesLibres(), n = suyosPendientes().length, marcha = misEnMarcha().length;
   if (libres > 0 && n > 0) {
-    if (label) label.textContent = '🔑 Llave de deseos';
+    if (label) label.innerHTML = ICO('llave') + 'Llave de deseos';
     $('rec-text').textContent = `Tienes ${libres} llave${libres === 1 ? '' : 's'} para desbloquear un deseo.`;
     $('rec-sub').textContent = `${nombreDe(rol().partner)} tiene ${n} esperándote, bloqueado${n === 1 ? '' : 's'}.`;
     btn.textContent = 'Elegir deseo';
     btn.disabled = false;
     card.style.display = 'flex';
   } else if (marcha > 0) {
-    if (label) label.textContent = '🔓 Deseo en marcha';
+    if (label) label.innerHTML = ICO('llave') + 'Deseo en marcha';
     $('rec-text').textContent = marcha === 1 ? 'Tienes un deseo por cumplir.' : `Tienes ${marcha} deseos por cumplir.`;
     $('rec-sub').textContent = 'Cuando lo hagas, márcalo como hecho.';
     btn.textContent = 'Abrir deseos';

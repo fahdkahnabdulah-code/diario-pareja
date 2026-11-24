@@ -648,3 +648,19 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .logout-text { font-size: 14px; line-height: 1.45; color: var(--text-muted); }
 .logout-actions { display: flex; gap: 10px; width: 100%; margin-top: 8px; }
 .logout-actions button { flex: 1; }
+
+/* iconos junto a etiquetas y títulos (sustituyen a los emojis) */
+.dp-lbl-ic { vertical-align: -3px; margin-right: 6px; flex: none; }
+.field label, .pregunta-kicker, .rec-label { display: flex; align-items: center; }
+.hist-subtab, .dw-tab, .dw-title, .modal-title { display: inline-flex; align-items: center; justify-content: center; }
+.hist-subtab .dp-lbl-ic, .dw-tab .dp-lbl-ic { margin-right: 5px; }
+.dw-title, .modal-title { gap: 8px; }
+.dw-title .dp-lbl-ic, .modal-title .dp-lbl-ic { margin-right: 0; }
+.date-row label { display: flex; align-items: center; }
+.dw-hero-emoji { display: flex; justify-content: center; }
+.dw-llave .dp-lbl-ic, .dw-hero-emoji .dp-lbl-ic { margin: 0; }
+.dw-sinllave, .dw-btn { display: inline-flex; align-items: center; justify-content: center; }
+.dw-sinllave { display: flex; }
+.dw-btn .dp-lbl-ic { margin-right: 6px; }
+.dw-pick, .dw-chip { display: inline-flex; align-items: center; justify-content: center; }
+.dw-pick .dp-lbl-ic, .dw-chip .dp-lbl-ic { margin-right: 5px; }
