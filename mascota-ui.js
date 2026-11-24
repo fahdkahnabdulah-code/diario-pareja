@@ -104,6 +104,7 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function fmt(ms) { var m = Math.ceil(ms / 60000); return m >= 60 ? Math.round(m / 60) + ' h' : m + ' min'; }
+  var CH = '<svg class="dp-ic dp-mn-s16 dp-mn-nb dp-ch" aria-hidden="true"><use href="#ic-chispa"/></svg>';
   function toast(msg) { if (ctx && ctx.toast) ctx.toast(msg); }
   function visible() { var t = $('tab-mascota'); return !!(t && t.classList.contains('active')); }
   function curState() { return state || L.newState(Date.now()); }
@@ -248,7 +249,7 @@
     room.setAttribute('data-time', timeOfDay(t));
     room.setAttribute('data-room', s.equipped.room || 'cozy');
     $('pet-stage').textContent = D.STAGES[s.stage];
-    $('pet-points').textContent = '✦ ' + s.points;
+    $('pet-points').innerHTML = CH + ' ' + s.points;
     var team = $('pet-team');
     team.className = 'chip ' + (day && day.team ? 'chip-gold' : 'chip-plain');
     team.textContent = day && day.team ? 'Hoy los dos · XP ×1,5' : 'Falta uno hoy';
@@ -307,7 +308,7 @@
       var fitems = L.FOODS.map(function (f) {
         return '<button class="pet-item pet-fooditem' + (shopSel === f.id ? ' is-sel' : '') + '" data-food-item="' + f.id + '">' +
           '<span class="pet-item-prev pet-foodemoji">' + f.emoji + '</span><span class="pet-item-name">' + esc(f.name) + '</span>' +
-          '<span class="pet-item-tag">✦ ' + f.price + '</span><span class="pet-item-eff">+' + f.hunger + ' 🍖' + (f.mood >= 10 ? ' +' + f.mood + ' 😊' : '') + '</span><b class="pet-count">×' + (fd[f.id] || 0) + '</b></button>';
+          '<span class="pet-item-tag">' + CH + ' ' + f.price + '</span><span class="pet-item-eff">+' + f.hunger + ' 🍖' + (f.mood >= 10 ? ' +' + f.mood + ' 😊' : '') + '</span><b class="pet-count">×' + (fd[f.id] || 0) + '</b></button>';
       }).join('');
       var sf = shopSel && L.foodById(shopSel), fbuy = '';
       if (sf) {
@@ -315,7 +316,7 @@
         fbuy = '<div class="pet-buy pet-buy-food"><span>«' + esc(sf.name) + '» · ' + eff + '</span><span class="pet-buy-btns">' +
           [1, 5].map(function (q) {
             var cost = sf.price * q, ok = s.points >= cost;
-            return '<button class="pet-buy-btn' + (ok ? '' : ' is-miss') + '" data-buy-food="' + sf.id + ':' + q + '"' + (ok ? '' : ' aria-disabled="true"') + '>×' + q + ' · ✦ ' + cost + '</button>';
+            return '<button class="pet-buy-btn' + (ok ? '' : ' is-miss') + '" data-buy-food="' + sf.id + ':' + q + '"' + (ok ? '' : ' aria-disabled="true"') + '>×' + q + ' · ' + CH + ' ' + cost + '</button>';
           }).join('') + '</span></div>';
       }
       $('pet-shop').innerHTML = '<div class="eyebrow">Armario y tienda</div><div class="pet-slots">' + tabs + '</div><div class="pet-items">' + fitems + '</div>' + fbuy;
@@ -326,14 +327,14 @@
         var own = L.toyOwned(s, t.id);
         return '<button class="pet-item pet-fooditem' + (own ? ' is-owned' : '') + (shopSel === t.id ? ' is-sel' : '') + '" data-toy-item="' + t.id + '">' +
           '<span class="pet-item-prev pet-foodemoji">' + t.emoji + '</span><span class="pet-item-name">' + esc(t.name) + '</span>' +
-          '<span class="pet-item-tag">' + (own ? 'Tuyo' : '✦ ' + t.price) + '</span><span class="pet-item-eff">' + esc(t.label) + ' · +' + t.mood + ' 😊</span></button>';
+          '<span class="pet-item-tag">' + (own ? 'Tuyo' : CH + ' ' + t.price) + '</span><span class="pet-item-eff">' + esc(t.label) + ' · +' + t.mood + ' 😊</span></button>';
       }).join('');
       var st2 = shopSel && L.toyById(shopSel), tbuy = '';
       if (st2) {
         var own2 = L.toyOwned(s, st2.id);
         var miss = st2.price - s.points;
         tbuy = '<div class="pet-buy pet-buy-food"><span>«' + esc(st2.name) + '» · ' + esc(st2.label) + ' · +' + st2.mood + ' ánimo · −' + st2.energy + ' energía</span>' +
-          (own2 ? '<span class="pet-buy-miss">Ya lo tenéis · ¡a jugar!</span>' : miss > 0 ? '<span class="pet-buy-miss">Te faltan ' + miss + ' ✦</span>' : '<span class="pet-buy-btns"><button class="pet-buy-btn" data-buy-toy="' + st2.id + '">Comprar por ✦ ' + st2.price + '</button></span>') + '</div>';
+          (own2 ? '<span class="pet-buy-miss">Ya lo tenéis · ¡a jugar!</span>' : miss > 0 ? '<span class="pet-buy-miss">Te faltan ' + miss + ' ' + CH + '</span>' : '<span class="pet-buy-btns"><button class="pet-buy-btn" data-buy-toy="' + st2.id + '">Comprar por ' + CH + ' ' + st2.price + '</button></span>') + '</div>';
       }
       $('pet-shop').innerHTML = '<div class="eyebrow">Armario y tienda</div><div class="pet-slots">' + tabs + '</div><div class="pet-items">' + titems + '</div>' + tbuy;
       return;
@@ -349,7 +350,7 @@
         var o = { stage: 4, mood: 'happy', still: true }; o[i.slot] = i.id;
         prev = D.svg(o);
       }
-      var label = eq ? 'Puesto' : owned ? 'Tuyo' : locked ? '🔒 Etapa ' + i.stage : '✦ ' + i.price;
+      var label = eq ? 'Puesto' : owned ? 'Tuyo' : locked ? '🔒 Etapa ' + i.stage : CH + ' ' + i.price;
       return '<button class="pet-item' + (eq ? ' is-eq' : '') + (owned ? ' is-owned' : '') + (locked ? ' is-locked' : '') + (shopSel === i.id ? ' is-sel' : '') +
         '" data-item="' + i.id + '"><span class="pet-item-prev">' + prev + '</span><span class="pet-item-name">' + esc(i.name) + '</span><span class="pet-item-tag">' + label + '</span></button>';
     }).join('');
@@ -358,7 +359,7 @@
     if (sel && s.owned.indexOf(sel.id) < 0) {
       var short = sel.price - s.points;
       buy = '<div class="pet-buy"><span>«' + esc(sel.name) + '»</span>' +
-        (short > 0 ? '<span class="pet-buy-miss">Te faltan ' + short + ' ✦</span>' : '<button class="pet-buy-btn" data-buy="' + sel.id + '">Comprar por ✦ ' + sel.price + '</button>') + '</div>';
+        (short > 0 ? '<span class="pet-buy-miss">Te faltan ' + short + ' ' + CH + '</span>' : '<button class="pet-buy-btn" data-buy="' + sel.id + '">Comprar por ' + CH + ' ' + sel.price + '</button>') + '</div>';
     }
     $('pet-shop').innerHTML = '<div class="eyebrow">Armario y tienda</div><div class="pet-slots">' + tabs + '</div><div class="pet-items">' + items + '</div>' + buy;
   }
@@ -367,7 +368,7 @@
   function floatPts(n) {
     var room = $('pet-room'); if (!room || !n) return;
     var el = document.createElement('span');
-    el.className = 'float-pts'; el.textContent = '+' + n + ' ✦';
+    el.className = 'float-pts'; el.innerHTML = '+' + n + ' ' + CH;
     el.style.left = '50%'; el.style.bottom = '170px';
     room.appendChild(el); setTimeout(function () { el.remove(); }, 1500);
   }

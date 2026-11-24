@@ -1,0 +1,90 @@
+/* Nosotros: lista, planes, cartas y logros (usa los tokens de style.css y dopamina-art.css) */
+#tab-nosotros { padding: 12px 14px 28px; }
+.nos-sub { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 20px; margin-bottom: 14px; position: sticky; top: 0; z-index: 3; }
+.nos-subtab { flex: 1; position: relative; border: none; background: transparent; padding: 8px 0; font-size: 12.5px; font-weight: 600; color: var(--text-muted); border-radius: 16px; cursor: pointer; font-family: inherit; }
+.nos-subtab.on { background: var(--surface); color: var(--pink-dark); box-shadow: var(--shadow-card); }
+.nos-dot { position: absolute; top: 4px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: #E0508A; }
+.nos-dot[hidden], .tab-dot[hidden] { display: none; }
+
+.nos-h { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin: 18px 4px 8px; }
+.nos-form { background: var(--surface); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.nos-row { display: flex; gap: 8px; }
+.nos-row input { flex: 1; min-width: 0; }
+.nos-add { padding: 0 16px; }
+.nos-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.nos-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); border-radius: 999px; padding: 6px 11px 6px 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.nos-chip-txt { padding: 6px 12px; }
+.nos-chip.on { background: var(--pink-light); border-color: var(--pink-dark); color: var(--pink-dark); }
+.nos-msg { font-size: 13px; color: #a32d2d; text-align: center; margin: 0; }
+.nos-msg.ok { color: var(--teal-dark); background: var(--teal-light); padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 12px; }
+
+.nos-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.nos-item, .nos-carta { display: flex; align-items: center; gap: 10px; background: var(--surface); border-radius: var(--radius); padding: 10px 10px 10px 12px; box-shadow: var(--shadow-card); border-left: 3px solid var(--pink-mid); }
+.nos-item.es-suyo, .nos-carta.sin-abrir { border-left-color: var(--teal-dark); }
+.nos-item.is-hecho { opacity: .72; }
+.nos-item.is-hecho .nos-item-t { text-decoration: line-through; text-decoration-color: var(--text-muted); }
+.nos-check { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--pink-dark); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.nos-item.is-hecho .nos-check { background: var(--pink-light); }
+.nos-item-ic, .nos-carta-ic { flex: none; display: flex; }
+.nos-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.nos-item-t { font-size: 14.5px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.nos-item-m { font-size: 11.5px; color: var(--text-muted); }
+.nos-link { background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; color: inherit; }
+.nos-del { flex: none; background: none; border: none; padding: 6px; cursor: pointer; opacity: .55; display: flex; }
+.nos-conf { flex: none; display: flex; gap: 6px; }
+.nos-mini { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 999px; padding: 6px 11px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.nos-mini-si { background: var(--pink-dark); border-color: var(--pink-dark); color: var(--surface); }
+.nos-vacio { text-align: center; color: var(--text-muted); font-size: 13.5px; line-height: 1.5; padding: 26px 24px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.nos-vacio p { margin: 0; }
+
+.nos-det { margin-top: 16px; }
+.nos-det > summary { list-style: none; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); padding: 8px 4px; display: flex; align-items: center; gap: 8px; }
+.nos-det > summary::-webkit-details-marker { display: none; }
+.nos-det > summary::after { content: '›'; margin-left: auto; font-size: 18px; transform: rotate(90deg); transition: transform .2s; }
+.nos-det[open] > summary::after { transform: rotate(-90deg); }
+.nos-cnt { background: var(--gold-light); color: var(--gold-dark); border-radius: 999px; padding: 1px 8px; font-size: 11px; }
+.nos-det .nos-list { margin-top: 4px; }
+
+/* Cartas */
+.nos-escribir { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; font-size: 15px; margin-bottom: 4px; }
+.nos-abrir { flex: none; padding: 8px 16px; }
+.nos-redactar { display: flex; flex-direction: column; gap: 10px; }
+.nos-redactar input, .nos-redactar textarea { width: 100%; box-sizing: border-box; }
+.nos-redactar textarea { resize: vertical; min-height: 180px; line-height: 1.5; }
+.nos-aviso { font-size: 12.5px; color: var(--text-muted); line-height: 1.45; margin: 0; text-align: center; }
+.nos-actions { display: flex; gap: 10px; }
+.nos-actions button { flex: 1; }
+.carta-card { max-width: 380px; padding: 20px 18px 18px; gap: 14px; align-items: stretch; }
+.carta-sobre-caja { width: min(100%, 300px); margin: 0 auto; }
+#carta-actions { display: flex; flex-direction: column; gap: 8px; }
+.carta-papel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 16px; max-height: 52vh; overflow-y: auto; animation: nos-in .5s ease both; }
+.carta-titulo { font-size: 17px; margin: 0 0 10px; color: var(--pink-dark); }
+.carta-texto { margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.carta-firma { margin: 14px 0 0; font-size: 12.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+@keyframes nos-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* Logros */
+.nos-resumen { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, var(--pink-light), var(--gold-light)); border-radius: var(--radius); padding: 12px 14px; }
+.nos-resumen-t { flex: 1; font-size: 14px; }
+.nos-resumen-p { font-size: 13px; font-weight: 700; color: var(--gold-dark); }
+.nos-pts { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--gold-dark); }
+.nos-logros-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.nos-logro { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; font-family: inherit; color: inherit; }
+.nos-logro-art { width: 78px; height: 78px; }
+.nos-logro-n { font-size: 11.5px; font-weight: 600; text-align: center; line-height: 1.2; min-height: 28px; display: flex; align-items: center; color: var(--text-muted); }
+.nos-logro.ok .nos-logro-n { color: var(--text); }
+.logro-card { max-width: 340px; padding: 22px 20px 20px; align-items: stretch; text-align: center; }
+#logro-stage { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.logro-kicker { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-dark); }
+.logro-art { width: 132px; height: 132px; }
+.logro-art-big { width: 168px; height: 168px; animation: nos-pop .7s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes nos-pop { from { transform: scale(.4) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.logro-nombre { margin: 4px 0 0; font-size: 19px; }
+.logro-pista { margin: 0; font-size: 14px; color: var(--text-muted); line-height: 1.4; }
+.logro-cond { margin: 0; font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+.logro-fecha, .logro-falta { margin: 0; font-size: 12.5px; color: var(--teal-dark); font-weight: 600; }
+.logro-falta { color: var(--text-muted); }
+.logro-puntos { font-size: 15px; display: flex; gap: 4px; align-items: center; justify-content: center; margin: 4px 0 8px; }
+.logro-win { position: relative; width: 0; height: 0; }
+#logro-stage .btn-primary { width: 100%; }
+@media (prefers-reduced-motion: reduce) { .logro-art-big, .carta-papel { animation: none; } }

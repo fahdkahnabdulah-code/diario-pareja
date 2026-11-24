@@ -51,18 +51,19 @@
 
   // Puntos (chispas ✦) por usar la app de pareja
   var REWARDS = {
-    diary:        { pts: 20, xp: 10, dailyMax: 1, label: 'Escribir tu parte del diario' },
-    photoCheck:   { pts: 15, xp: 8,  dailyMax: 1, label: 'Completar el check de fotos' },
-    poke:         { pts: 2,  xp: 1,  dailyMax: 5, label: 'Enviar un poke' },
-    wishDone:     { pts: 25, xp: 12, dailyMax: 1, label: 'Cumplir un deseo de tu pareja' },
+    diary:        { pts: 12, xp: 10, dailyMax: 1, label: 'Escribir tu parte del diario' },
+    photoCheck:   { pts: 10, xp: 8,  dailyMax: 1, label: 'Completar el check de fotos' },
+    poke:         { pts: 1,  xp: 1,  dailyMax: 3, label: 'Enviar un poke' },
+    wishDone:     { pts: 15, xp: 12, dailyMax: 1, label: 'Cumplir un deseo de tu pareja' },
     teamDay:      { pts: 10, xp: 0,  dailyMax: 1, label: 'Día en equipo (los dos la cuidáis)' },
-    weeklyStreak: { pts: 100, xp: 40, label: 'Racha semanal completa' },
-    reunion:      { pts: 10, xp: 0,  label: 'Reencuentro tras 3+ días' }
+    weeklyStreak: { pts: 100, xp: 40, uncapped: true, label: 'Racha semanal completa' },
+    reunion:      { pts: 10, xp: 0,  uncapped: true, label: 'Reencuentro tras 3+ días' }
   };
 
   // Evolución: XP acumulada (nunca baja) + requisito de días en equipo
-  var STAGE_XP = [null, 0, 60, 350, 1000, 2200];
-  var STAGE_TEAMDAYS = [null, 0, 1, 5, 15, 30];
+  var STAGE_XP = [null, 0, 60, 600, 1800, 4000];
+  var STAGE_TEAMDAYS = [null, 0, 1, 8, 25, 50];
+  var DAILY_PTS_CAP = 60;              // ✦ máx. por persona y día (rachas y logros quedan fuera)
   var DAILY_XP_CAP = { solo: 40, team: 80 };
   var TEAM_MULT = 1.5;
 
@@ -118,6 +119,18 @@
     return c ? Math.max(0, c - now) : 0;
   }
 
+
+  /* ✦ ganadas hoy por persona con tope diario. 'uncapped' (racha, logros) no cuenta. */
+  function earn(s, d, uid, pts, uncapped) {
+    if (uncapped) { s.points += pts; return pts; }
+    d[uid] = d[uid] || { actions: 0, pets: 0 };
+    var left = Math.max(0, DAILY_PTS_CAP - (d[uid].earned || 0));
+    var g = Math.min(pts, left);
+    d[uid].earned = (d[uid].earned || 0) + g;
+    s.points += g;
+    return g;
+  }
+
   /* Aplica una acción de cuidado. Puro: devuelve { state, events } o { error } */
   function applyAction(state, uid, type, now, people, opts) {
     var A = ACTIONS[type];
@@ -169,8 +182,9 @@
     d[uid].actions++;
     var counter = type === 'pet' ? 'pets' : type === 'feed' ? 'feeds' : type === 'play' ? 'plays' : null;
     var counts = !counter || (d[uid][counter] = (d[uid][counter] || 0) + 1) <= A.dailyMax;
-    if (counts) { s.points += A.pts + bonus; events.push(addXp(s, d, A.xp + bonus, now)); }
-    events.push({ kind: 'action', type: type, uid: uid, pts: counts ? A.pts + bonus : 0, food: food ? food.id : null, toy: toy ? toy.id : null, stars: stars });
+    var gained = counts ? earn(s, d, uid, A.pts + bonus) : 0;
+    if (counts) events.push(addXp(s, d, A.xp + bonus, now));
+    events.push({ kind: 'action', type: type, uid: uid, pts: gained, food: food ? food.id : null, toy: toy ? toy.id : null, stars: stars });
 
     // ¿hoy ya habéis cuidado los dos? -> bonus visible una vez
     var both = (people || []).every(function (p) { return d[p.uid] && d[p.uid].actions > 0; });
@@ -189,9 +203,9 @@
     d.rewards = d.rewards || {}; var key = uid + ':' + kind;
     if (R.dailyMax && (d.rewards[key] || 0) >= R.dailyMax) return null;
     d.rewards[key] = (d.rewards[key] || 0) + 1;
-    s.points += R.pts;
+    var g = earn(s, d, uid, R.pts, R.uncapped);
     if (R.xp) addXp(s, d, R.xp, now);
-    return { kind: 'reward', reward: kind, uid: uid, pts: R.pts };
+    return { kind: 'reward', reward: kind, uid: uid, pts: g };
   }
 
   function dayFor(s, now) {
@@ -368,24 +382,24 @@
 
   /* Catálogo de la tienda (estático en código; en Firestore solo "owned") */
   var SHOP = [
-    { id: 'beanie',  slot: 'hat',  name: 'Gorro de lana',     price: 90 },
-    { id: 'beret',   slot: 'hat',  name: 'Boina',             price: 120 },
-    { id: 'cap',     slot: 'hat',  name: 'Gorra',             price: 90 },
-    { id: 'flowers', slot: 'hat',  name: 'Diadema de flores', price: 140 },
-    { id: 'horns',   slot: 'hat',  name: 'Cuernitos',         price: 160 },
-    { id: 'party',   slot: 'hat',  name: 'Gorro de fiesta',   price: 100 },
-    { id: 'crown',   slot: 'hat',  name: 'Corona',            price: 450, stage: 4 },
-    { id: 'round',   slot: 'face', name: 'Gafas redondas',    price: 110 },
-    { id: 'hearts',  slot: 'face', name: 'Gafas corazón',     price: 160 },
-    { id: 'stache',  slot: 'face', name: 'Bigote postizo',    price: 80 },
-    { id: 'scarf',   slot: 'neck', name: 'Bufanda a rayas',   price: 120 },
-    { id: 'bowtie',  slot: 'neck', name: 'Pajarita',          price: 90 },
-    { id: 'collar',  slot: 'neck', name: 'Collar con corazón',price: 220, stage: 3 },
-    { id: 'bandana', slot: 'neck', name: 'Pañuelo',           price: 90 },
+    { id: 'beanie',  slot: 'hat',  name: 'Gorro de lana',     price: 270 },
+    { id: 'beret',   slot: 'hat',  name: 'Boina',             price: 360 },
+    { id: 'cap',     slot: 'hat',  name: 'Gorra',             price: 270 },
+    { id: 'flowers', slot: 'hat',  name: 'Diadema de flores', price: 420 },
+    { id: 'horns',   slot: 'hat',  name: 'Cuernitos',         price: 480 },
+    { id: 'party',   slot: 'hat',  name: 'Gorro de fiesta',   price: 300 },
+    { id: 'crown',   slot: 'hat',  name: 'Corona',            price: 1350, stage: 4 },
+    { id: 'round',   slot: 'face', name: 'Gafas redondas',    price: 330 },
+    { id: 'hearts',  slot: 'face', name: 'Gafas corazón',     price: 480 },
+    { id: 'stache',  slot: 'face', name: 'Bigote postizo',    price: 240 },
+    { id: 'scarf',   slot: 'neck', name: 'Bufanda a rayas',   price: 360 },
+    { id: 'bowtie',  slot: 'neck', name: 'Pajarita',          price: 270 },
+    { id: 'collar',  slot: 'neck', name: 'Collar con corazón',price: 660, stage: 3 },
+    { id: 'bandana', slot: 'neck', name: 'Pañuelo',           price: 270 },
     { id: 'cozy',    slot: 'room', name: 'Cuarto acogedor',   price: 0 },
-    { id: 'beach',   slot: 'room', name: 'Playa',             price: 320 },
-    { id: 'garden',  slot: 'room', name: 'Jardín',            price: 280 },
-    { id: 'attic',   slot: 'room', name: 'Buhardilla de estrellas', price: 400, stage: 3 }
+    { id: 'beach',   slot: 'room', name: 'Playa',             price: 960 },
+    { id: 'garden',  slot: 'room', name: 'Jardín',            price: 840 },
+    { id: 'attic',   slot: 'room', name: 'Buhardilla de estrellas', price: 1200, stage: 3 }
   ];
 
   root.PetLogic = {

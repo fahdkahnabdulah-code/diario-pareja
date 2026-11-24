@@ -11,6 +11,7 @@ import {
   getDocs, getDoc, query, orderBy, onSnapshot, arrayUnion, runTransaction, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { Deseos } from "./deseos.js";
+import { Nosotros } from "./nosotros.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
@@ -63,6 +64,7 @@ function showTab(name) {
   $(`tab-${name}`).classList.add('active');
   if (name === 'historial') cargarHistorialActivo();
   if (name === 'mascota' && window.MascotaUI) MascotaUI.show();
+  if (name === 'nosotros') Nosotros.mostrar();
   if (name === 'fechas') {
     calMonthOffset = 0;
     renderDiasJuntos();
@@ -187,6 +189,10 @@ async function initApp() {
   Deseos.init({
     db, role: () => currentRole, nombre: nombrePorRol, enviarPush, premio: mascotaPremio,
     escapeHtml, escapeAttr, isoWeekKey
+  });
+  Nosotros.init({
+    db, role: () => currentRole, nombre: nombrePorRol, enviarPush,
+    escapeHtml, isoWeekKey, inicio: '2024-02-10'
   });
   setupCheckinModal();
   iniciarMascota();
@@ -390,6 +396,7 @@ async function saveEntry() {
     if (!window.Juntos || window.Juntos.esDia(data.date) || haySharedEscrito) cuerpo.shared = data.shared;
     await setDoc(ref, cuerpo, { merge: true });
     setMsg('save-msg', '✓ Entrada guardada y sincronizada', '#0f6e56');
+    Nosotros.registrar('entrada').then(() => Nosotros.evaluar());
     setTimeout(() => setMsg('save-msg', ''), 3000);
     if (!yaCompletadaAntes) {
       enviarPush(currentRole.partner, '+Dopamina', `✓ ${currentRole.displayName} ya escribió su parte de hoy`, 'entrada-completada');
@@ -922,7 +929,11 @@ function showPokeToast(texto) {
     toast.className = 'poke-toast';
     document.body.appendChild(toast);
   }
-  toast.textContent = texto;
+  toast.textContent = '';
+  String(texto).split('✦').forEach((trozo, i) => {
+    if (i > 0) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('class', 'dp-ic dp-mn-s16 dp-mn-nb'); s.setAttribute('aria-hidden', 'true'); const u = document.createElementNS('http://www.w3.org/2000/svg', 'use'); u.setAttribute('href', '#ic-chispa'); s.appendChild(u); toast.appendChild(s); }
+    toast.appendChild(document.createTextNode(trozo));
+  });
   toast.classList.add('show');
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => toast.classList.remove('show'), 4000);
@@ -938,6 +949,7 @@ function setupPoke() {
         showPokeToast('💌 Le has dicho que piensas en ella/él');
         enviarPush(currentRole.partner, '+Dopamina', `💕 ${currentRole.displayName} está pensando en ti`, 'poke');
         mascotaPremio('poke');
+        Nosotros.registrar('poke').then(() => Nosotros.evaluar());
       } catch (e) {
         // silencioso
       }
@@ -1718,6 +1730,7 @@ async function subirCheckin() {
     checkinFotoTrasera = null;
     checkinCanvasFinal = null;
     mascotaPremio('photoCheck');
+    Nosotros.registrar('check').then(() => Nosotros.evaluar());
     await renderCheckinEstado();
     loadCheckinBadge();
   } catch (e) {

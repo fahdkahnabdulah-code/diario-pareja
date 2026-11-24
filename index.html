@@ -17,8 +17,50 @@
   <link rel="stylesheet" href="pet-ui.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="deseos.css" />
+  <link rel="stylesheet" href="dopamina-art.css" />
+  <link rel="stylesheet" href="sobre.css" />
+  <link rel="stylesheet" href="nosotros.css" />
 </head>
 <body>
+<!--ICONOS-->
+<svg xmlns="http://www.w3.org/2000/svg" class="dp-sprite" width="0" height="0" focusable="false" aria-hidden="true">
+<!-- +Dopamina · iconos.svg · sprite de iconos propios (rejilla 48 x 48).
+     Pégalo inline al principio del <body>; los colores salen de dopamina-art.css (aquí dentro no hay etiquetas de estilo).
+     Uso: <svg class="dp-ic" aria-hidden="true"><use href="#ic-corazon"/></svg> -->
+<symbol id="ic-corazon" viewBox="0 0 48 48"><title>Corazón</title><path class="dp-pk2" d="M24 36.4C8.8 26.9 3.1 19.3 5 12.65C6.9 6 18.3 6 24 15.5C29.7 6 41.1 6 43 12.65C44.9 19.3 39.2 26.9 24 36.4Z"/><ellipse class="dp-bril" cx="15" cy="15" rx="3" ry="1.8" transform="rotate(-35 15 15)"/></symbol>
+<symbol id="ic-corazon-doble" viewBox="0 0 48 48"><title>Corazón doble</title><path class="dp-pk2" d="M18 28.8C7.6 22.3 3.7 17.1 5 12.55C6.3 8 14.1 8 18 14.5C21.9 8 29.7 8 31 12.55C32.3 17.1 28.4 22.3 18 28.8Z"/><path class="dp-tl2" d="M30 35.8C19.6 29.3 15.7 24.1 17 19.55C18.3 15 26.1 15 30 21.5C33.9 15 41.7 15 43 19.55C44.3 24.1 40.4 29.3 30 35.8Z"/></symbol>
+<symbol id="ic-poke" viewBox="0 0 48 48"><title>Poke</title><path class="dp-pk2" d="M20 37.6C7.2 29.6 2.4 23.2 4 17.6C5.6 12 15.2 12 20 20C24.8 12 34.4 12 36 17.6C37.6 23.2 32.8 29.6 20 37.6Z"/><path class="dp-nf dp-Lgd" d="M36 6V12M42 13L38 16M30 11L33 15"/></symbol>
+<symbol id="ic-sobre" viewBox="0 0 48 48"><title>Sobre</title><rect class="dp-pk2" x="6" y="12" width="36" height="24" rx="5"/><path class="dp-nf dp-Lpk" d="M8 15L24 27L40 15"/></symbol>
+<symbol id="ic-sobre-abierto" viewBox="0 0 48 48"><title>Sobre abierto</title><path class="dp-pk1" d="M7 19L24 7L41 19Z"/><rect class="dp-pp" x="13" y="12" width="22" height="16" rx="2"/><path class="dp-pk2" d="M7 19L24 31L41 19V35a4 4 0 0 1 -4 4H11a4 4 0 0 1 -4 -4Z"/></symbol>
+<symbol id="ic-carta" viewBox="0 0 48 48"><title>Carta</title><rect class="dp-pp" x="11" y="6" width="26" height="36" rx="4"/><path class="dp-nf dp-Ltx" d="M16 15H32M16 21H32M16 27H26"/><path class="dp-Fpk" d="M31 39.5C25 35.75 22.75 32.75 23.5 30.12C24.25 27.5 28.75 27.5 31 31.25C33.25 27.5 37.75 27.5 38.5 30.12C39.25 32.75 37 35.75 31 39.5Z"/></symbol>
+<symbol id="ic-sello" viewBox="0 0 48 48"><title>Sello de lacre</title><path class="dp-pk2" d="M16 31L12 44L19 40L22 45L25 33Z"/><path class="dp-pk2" d="M32 31L36 44L29 40L26 45L23 33Z"/><circle class="dp-gd2" cx="24" cy="21" r="13"/><path class="dp-Fpk" d="M24 27C16 22 13 18 14 14.5C15 11 21 11 24 16C27 11 33 11 34 14.5C35 18 32 22 24 27Z"/></symbol>
+<symbol id="ic-pluma" viewBox="0 0 48 48"><title>Pluma</title><path class="dp-tl2" d="M38 8C24 8 14 18 12 32L10 40L16 36C30 34 38 24 38 8Z"/><path class="dp-nf dp-Ltl" d="M37 9L13 36"/></symbol>
+<symbol id="ic-lista" viewBox="0 0 48 48"><title>Lista</title><rect class="dp-pp" x="10" y="9" width="28" height="33" rx="4"/><rect class="dp-gd2" x="18" y="5" width="12" height="8" rx="3"/><path class="dp-nf dp-Ltx" d="M16 21H32M16 28H32M16 35H26"/></symbol>
+<symbol id="ic-check" viewBox="0 0 48 48"><title>Check</title><circle class="dp-tl2" cx="24" cy="24" r="16"/><path class="dp-nf dp-Lwh" d="M16 25L22 31L33 18"/></symbol>
+<symbol id="ic-viaje" viewBox="0 0 48 48"><title>Viaje</title><path class="dp-nf dp-Lpk" d="M17 16V12a3 3 0 0 1 3 -3H28a3 3 0 0 1 3 3V16"/><rect class="dp-pk2" x="8" y="16" width="32" height="24" rx="5"/><path class="dp-nf dp-Lpk" d="M17 16V40M31 16V40"/></symbol>
+<symbol id="ic-cita" viewBox="0 0 48 48"><title>Cita</title><path class="dp-pp" d="M14 8H34C34 20 30 26 24 26C18 26 14 20 14 8Z"/><path class="dp-pk2" d="M16 14H32C31 21 28 24 24 24C20 24 17 21 16 14Z"/><path class="dp-nf dp-Ltx" d="M24 26V38M16 40H32"/></symbol>
+<symbol id="ic-hogar" viewBox="0 0 48 48"><title>Hogar</title><rect class="dp-pp" x="11" y="23" width="26" height="18" rx="2"/><path class="dp-pk2" d="M6 25L24 8L42 25Z"/><path class="dp-tl2" d="M20 41V33a4 4 0 0 1 8 0V41Z"/></symbol>
+<symbol id="ic-regalo" viewBox="0 0 48 48"><title>Regalo</title><rect class="dp-pk2" x="9" y="21" width="30" height="19" rx="3"/><rect class="dp-pk1" x="7" y="14" width="34" height="9" rx="3"/><rect class="dp-gd2" x="21" y="14" width="6" height="26"/><path class="dp-gd2" d="M24 14C19 5 11 8 14 12C16 14 22 14 24 14C26 14 32 14 34 12C37 8 29 5 24 14Z"/></symbol>
+<symbol id="ic-estrella" viewBox="0 0 48 48"><title>Gran sueño</title><polygon class="dp-gd2" points="24,8 28.41,18.93 40.17,19.75 31.13,27.32 33.99,38.75 24,32.5 14.01,38.75 16.87,27.32 7.83,19.75 19.59,18.93"/></symbol>
+<symbol id="ic-llave" viewBox="0 0 48 48"><title>Llave</title><rect class="dp-gd2" x="21" y="21" width="21" height="6" rx="3"/><rect class="dp-gd2" x="33" y="27" width="4" height="7" rx="1.5"/><circle class="dp-gd2" cx="14" cy="24" r="9"/><circle class="dp-pp" cx="14" cy="24" r="3.2"/></symbol>
+<symbol id="ic-candado" viewBox="0 0 48 48"><title>Candado</title><path class="dp-nf dp-Lgd" d="M15 22V16a9 9 0 0 1 18 0V22"/><rect class="dp-gd2" x="10" y="21" width="28" height="20" rx="5"/><circle class="dp-Fgd3" cx="24" cy="29" r="3"/><rect class="dp-Fgd3" x="23" y="30" width="2" height="6"/></symbol>
+<symbol id="ic-trofeo" viewBox="0 0 48 48"><title>Trofeo</title><path class="dp-nf dp-Lgd" d="M13 12H8C8 20 11 22 14 23M35 12H40C40 20 37 22 34 23"/><path class="dp-gd2" d="M13 8H35V21C35 29 30 34 24 34C18 34 13 29 13 21Z"/><rect class="dp-gd2" x="21" y="34" width="6" height="5"/><rect class="dp-pk2" x="15" y="39" width="18" height="5" rx="2"/></symbol>
+<symbol id="ic-calendario" viewBox="0 0 48 48"><title>Calendario</title><rect class="dp-pp" x="8" y="10" width="32" height="30" rx="5"/><path class="dp-pk2" d="M8 20V15a5 5 0 0 1 5 -5H35a5 5 0 0 1 5 5V20Z"/><rect class="dp-gd2" x="15" y="6" width="4" height="8" rx="2"/><rect class="dp-gd2" x="29" y="6" width="4" height="8" rx="2"/><path class="dp-Fpk" d="M24 37C16 32 13 28 14 24.5C15 21 21 21 24 26C27 21 33 21 34 24.5C35 28 32 32 24 37Z"/></symbol>
+<symbol id="ic-camara" viewBox="0 0 48 48"><title>Cámara (check)</title><rect class="dp-pk2" x="17" y="9" width="14" height="8" rx="3"/><rect class="dp-pk2" x="6" y="14" width="36" height="26" rx="6"/><circle class="dp-tl2" cx="24" cy="27" r="8"/><circle class="dp-tl1" cx="24" cy="27" r="3.5"/></symbol>
+<symbol id="ic-campana" viewBox="0 0 48 48"><title>Campana</title><path class="dp-gd2" d="M24 7C16 7 13 14 13 21C13 28 10 31 8 34H40C38 31 35 28 35 21C35 14 32 7 24 7Z"/><circle class="dp-pk2" cx="24" cy="39" r="3.5"/></symbol>
+<symbol id="ic-pin" viewBox="0 0 48 48"><title>Lugar</title><path class="dp-pk2" d="M24 43C14 31 10 25 10 19A14 14 0 0 1 38 19C38 25 34 31 24 43Z"/><circle class="dp-pp" cx="24" cy="19" r="5"/></symbol>
+<symbol id="ic-dopi" viewBox="0 0 48 48"><title>Dopi</title><path class="dp-pk2" d="M 24 10.73C 37.34 10.73 41.98 21.75 41.98 32.19C 41.98 42.05 34.44 47.27 24 47.27C 13.56 47.27 6.02 42.05 6.02 32.19C 6.02 21.75 10.66 10.73 24 10.73Z"/><path class="dp-nf dp-Lpk" d="M 24 11.31C 24 9.57 24 8.7 24.29 7.54"/><path class="dp-pk3" d="M 24 7.83C 21.68 8.12 19.36 6.67 18.49 4.06C 21.39 3.77 23.42 5.22 24 7.83Z"/><path class="dp-tl3" d="M 24.29 7.83C 26.61 8.12 28.93 6.67 29.8 4.06C 26.9 3.77 24.87 5.22 24.29 7.83Z"/><ellipse class="dp-Fink" cx="17.62" cy="24.07" rx="1.74" ry="2.32"/><ellipse class="dp-Fink" cx="30.38" cy="24.07" rx="1.74" ry="2.32"/><circle class="dp-Fwh" cx="18.34" cy="22.91" r="0.64"/><circle class="dp-Fwh" cx="31.11" cy="22.91" r="0.64"/><ellipse class="dp-Fpk dp-op5" cx="13.56" cy="29.29" rx="2.61" ry="1.59"/><ellipse class="dp-Fpk dp-op5" cx="34.44" cy="29.29" rx="2.61" ry="1.59"/><path class="dp-nf dp-Ltx" d="M 21.1 29.87Q 24 32.77 26.9 29.87"/><ellipse class="dp-bril" cx="14.72" cy="18.27" rx="3.19" ry="1.74" transform="rotate(-32 14.72 18.27)"/></symbol>
+<symbol id="ic-foto" viewBox="0 0 48 48"><title>Foto</title><rect class="dp-pp" x="6" y="10" width="36" height="28" rx="5"/><path class="dp-tl2" d="M9 36L20 22L27 30L32 25L39 36Z"/><circle class="dp-Fgd" cx="32" cy="18" r="3.5"/></symbol>
+<symbol id="ic-deseos" viewBox="0 0 48 48"><title>Deseos</title><circle class="dp-pp" cx="15" cy="25" r="7"/><circle class="dp-pp" cx="23" cy="18" r="8"/><circle class="dp-pp" cx="33" cy="21" r="7"/><circle class="dp-pp" cx="37" cy="28" r="5"/><rect class="dp-pp" x="12" y="25" width="27" height="10" rx="5"/><circle class="dp-pp dp-fo" cx="15" cy="25" r="7"/><circle class="dp-pp dp-fo" cx="23" cy="18" r="8"/><circle class="dp-pp dp-fo" cx="33" cy="21" r="7"/><circle class="dp-pp dp-fo" cx="37" cy="28" r="5"/><rect class="dp-pp dp-fo" x="12" y="25" width="27" height="10" rx="5"/><circle class="dp-pp" cx="11" cy="40" r="3"/><circle class="dp-pp" cx="6" cy="45" r="1.8"/><path class="dp-Fgd" d="M25 17.2Q26.65 24.35 33.8 26Q26.65 27.65 25 34.8Q23.35 27.65 16.2 26Q23.35 24.35 25 17.2Z"/></symbol>
+<symbol id="ic-historial" viewBox="0 0 48 48"><title>Historial</title><circle class="dp-gd2" cx="12" cy="10" r="3.5"/><circle class="dp-gd2" cx="36" cy="10" r="3.5"/><circle class="dp-pp" cx="24" cy="26" r="16"/><path class="dp-nf dp-Ltx" d="M24 16V26L31 30"/><circle class="dp-Fpk" cx="24" cy="26" r="2"/></symbol>
+<symbol id="ic-cerrar" viewBox="0 0 48 48"><title>Cerrar</title><path class="dp-nf dp-Ltx" d="M14 14L34 34M34 14L14 34"/></symbol>
+<symbol id="ic-chispa" viewBox="0 0 48 48"><title>Chispa (puntos)</title><path class="dp-m-star" d="M24 4Q29.4 18.6 44 24Q29.4 29.4 24 44Q18.6 29.4 4 24Q18.6 18.6 24 4Z"/><path class="dp-m-hi" d="M24 13.5Q26.84 21.16 34.5 24Q26.84 26.84 24 34.5Q21.16 26.84 13.5 24Q21.16 21.16 24 13.5Z"/><ellipse class="dp-m-br" cx="19.5" cy="13.5" rx="1.7" ry="3.6" transform="rotate(18 19.5 13.5)"/><g class="dp-m-x"><path class="dp-Fgd" d="M39 4.4Q40.24 7.76 43.6 9Q40.24 10.24 39 13.6Q37.76 10.24 34.4 9Q37.76 7.76 39 4.4Z"/><path class="dp-Fgd" d="M9 35.8Q9.86 38.14 12.2 39Q9.86 39.86 9 42.2Q8.14 39.86 5.8 39Q8.14 38.14 9 35.8Z"/></g></symbol>
+<symbol id="ic-chispa-lock" viewBox="0 0 48 48"><title>Chispa bloqueada</title><path class="dp-m-star dp-m-lk" d="M24 4Q29.4 18.6 44 24Q29.4 29.4 24 44Q18.6 29.4 4 24Q18.6 18.6 24 4Z"/><g class="dp-m-x"><circle class="dp-m-lockc" cx="37" cy="37" r="8.5"/><rect class="dp-m-lockr" x="33" y="36" width="8" height="6.5" rx="1.6"/><path class="dp-m-lockp" d="M34.8 36V34.3a2.2 2.2 0 0 1 4.4 0V36"/></g></symbol>
+<symbol id="ic-chispa-luz" viewBox="0 0 48 48"><title>Destello de la chispa (para la animación)</title><path class="dp-m-hi" d="M24 4Q29.4 18.6 44 24Q29.4 29.4 24 44Q18.6 29.4 4 24Q18.6 18.6 24 4Z"/></symbol>
+<symbol id="ic-monton" viewBox="0 0 48 48"><title>Montón de chispas</title><path class="dp-m-star" d="M34 4.5Q36.84 12.16 44.5 15Q36.84 17.84 34 25.5Q31.16 17.84 23.5 15Q31.16 12.16 34 4.5Z"/><path class="dp-m-star dp-m-lt" d="M13 8.5Q15.57 15.43 22.5 18Q15.57 20.57 13 27.5Q10.43 20.57 3.5 18Q10.43 15.43 13 8.5Z"/><g class="dp-m-x"><path class="dp-m-star" d="M40 29Q41.89 34.11 47 36Q41.89 37.89 40 43Q38.11 37.89 33 36Q38.11 34.11 40 29Z"/><path class="dp-m-star dp-m-lt" d="M8 31Q9.62 35.38 14 37Q9.62 38.62 8 43Q6.38 38.62 2 37Q6.38 35.38 8 31Z"/><path class="dp-Fgd" d="M24 2.1Q24.92 4.58 27.4 5.5Q24.92 6.42 24 8.9Q23.08 6.42 20.6 5.5Q23.08 4.58 24 2.1Z"/></g><path class="dp-m-star" d="M24 16.5Q27.91 27.09 38.5 31Q27.91 34.91 24 45.5Q20.09 34.91 9.5 31Q20.09 27.09 24 16.5Z"/><path class="dp-m-hi" d="M24 23.6Q26 29 31.4 31Q26 33 24 38.4Q22 33 16.6 31Q22 29 24 23.6Z"/><ellipse class="dp-m-br" cx="20.4" cy="23" rx="1.3" ry="2.7" transform="rotate(18 20.4 23)"/></symbol>
+<symbol id="ic-monton-lock" viewBox="0 0 48 48"><title>Montón de chispas bloqueado</title><path class="dp-m-star dp-m-lk" d="M34 4.5Q36.84 12.16 44.5 15Q36.84 17.84 34 25.5Q31.16 17.84 23.5 15Q31.16 12.16 34 4.5Z"/><path class="dp-m-star dp-m-lk" d="M13 8.5Q15.57 15.43 22.5 18Q15.57 20.57 13 27.5Q10.43 20.57 3.5 18Q10.43 15.43 13 8.5Z"/><g class="dp-m-x"><path class="dp-m-star dp-m-lk" d="M40 29Q41.89 34.11 47 36Q41.89 37.89 40 43Q38.11 37.89 33 36Q38.11 34.11 40 29Z"/><path class="dp-m-star dp-m-lk" d="M8 31Q9.62 35.38 14 37Q9.62 38.62 8 43Q6.38 38.62 2 37Q6.38 35.38 8 31Z"/></g><path class="dp-m-star dp-m-lk" d="M24 16.5Q27.91 27.09 38.5 31Q27.91 34.91 24 45.5Q20.09 34.91 9.5 31Q20.09 27.09 24 16.5Z"/><g class="dp-m-x"><circle class="dp-m-lockc" cx="37" cy="37" r="8.5"/><rect class="dp-m-lockr" x="33" y="36" width="8" height="6.5" rx="1.6"/><path class="dp-m-lockp" d="M34.8 36V34.3a2.2 2.2 0 0 1 4.4 0V36"/></g></symbol>
+</svg>
+<!--/ICONOS-->
 
   <!-- CARGANDO (mientras Firebase comprueba la sesión guardada) -->
   <div id="screen-cargando" class="screen active" role="status" aria-live="polite">
@@ -51,24 +93,25 @@
     <header>
       <div class="header-inner">
         <div class="header-title-group">
-          <span class="header-title">♡ +Dopamina</span>
+          <span class="header-title"><svg class="dp-ic" style="--ic:20px;margin-right:6px" aria-hidden="true"><use href="#ic-corazon"/></svg>+Dopamina</span>
           <span class="header-subtitle">Diario de Alba y Abdu</span>
         </div>
         <span id="racha-indicador" class="racha-badge" style="display:none"></span>
         <div class="header-actions">
-          <button id="btn-wishes" class="btn-icon" title="Buzón de deseos">💭<span id="wishes-badge" class="icon-badge" style="display:none">0</span></button>
-          <button id="btn-checkin" class="btn-icon" title="Check del día">📸<span id="checkin-badge" class="icon-badge" style="display:none">!</span></button>
-          <button id="btn-poke" class="btn-icon" title="Pensando en ti">💌</button>
-          <button id="btn-logout" class="btn-icon" title="Cerrar sesión">✕</button>
+          <button id="btn-wishes" class="btn-icon" title="Buzón de deseos"><svg class="dp-ic" style="--ic:22px" aria-hidden="true"><use href="#ic-deseos"/></svg><span id="wishes-badge" class="icon-badge" style="display:none">0</span></button>
+          <button id="btn-checkin" class="btn-icon" title="Check del día"><svg class="dp-ic" style="--ic:22px" aria-hidden="true"><use href="#ic-camara"/></svg><span id="checkin-badge" class="icon-badge" style="display:none">!</span></button>
+          <button id="btn-poke" class="btn-icon" title="Pensando en ti"><svg class="dp-ic" style="--ic:22px" aria-hidden="true"><use href="#ic-poke"/></svg></button>
+          <button id="btn-logout" class="btn-icon" title="Cerrar sesión" aria-label="Cerrar sesión"><svg class="dp-ic" style="--ic:18px" aria-hidden="true"><use href="#ic-cerrar"/></svg></button>
         </div>
       </div>
     </header>
 
     <nav class="tab-bar">
-      <button class="tab active" data-tab="nueva"><span class="tab-icon">📝</span>Entrada</button>
-      <button class="tab" data-tab="historial"><span class="tab-icon">🕰️</span>Historial</button>
-      <button class="tab" data-tab="fechas"><span class="tab-icon">📅</span>Fechas</button>
-      <button class="tab" data-tab="mascota"><span class="tab-icon">🐣</span>Dopi<span class="tab-dot" id="pet-tab-dot" hidden></span></button>
+      <button class="tab active" data-tab="nueva"><span class="tab-icon"><svg class="dp-ic" style="--ic:24px" aria-hidden="true"><use href="#ic-pluma"/></svg></span>Entrada</button>
+      <button class="tab" data-tab="historial"><span class="tab-icon"><svg class="dp-ic" style="--ic:24px" aria-hidden="true"><use href="#ic-historial"/></svg></span>Historial</button>
+      <button class="tab" data-tab="fechas"><span class="tab-icon"><svg class="dp-ic" style="--ic:24px" aria-hidden="true"><use href="#ic-calendario"/></svg></span>Fechas</button>
+      <button class="tab" data-tab="nosotros"><span class="tab-icon"><svg class="dp-ic" style="--ic:24px" aria-hidden="true"><use href="#ic-corazon-doble"/></svg></span>Nosotros<span class="tab-dot" id="nos-tab-dot" hidden></span></button>
+      <button class="tab" data-tab="mascota"><span class="tab-icon"><svg class="dp-ic" style="--ic:24px" aria-hidden="true"><use href="#ic-dopi"/></svg></span>Dopi<span class="tab-dot" id="pet-tab-dot" hidden></span></button>
     </nav>
 
     <!-- TAB: NUEVA ENTRADA -->
@@ -199,11 +242,22 @@
     </div>
 
     <!-- TAB: DOPI (mascota compartida) -->
+    <!-- TAB: NOSOTROS (lista, planes, cartas, logros) -->
+    <div id="tab-nosotros" class="tab-content">
+      <div class="nos-sub" role="tablist">
+        <button type="button" class="nos-subtab on" data-nos="lista" role="tab">Lista</button>
+        <button type="button" class="nos-subtab" data-nos="planes" role="tab">Planes</button>
+        <button type="button" class="nos-subtab" data-nos="cartas" role="tab">Cartas<span class="nos-dot" id="nos-cartas-dot" hidden></span></button>
+        <button type="button" class="nos-subtab" data-nos="logros" role="tab">Logros</button>
+      </div>
+      <div id="nos-body"></div>
+    </div>
+
     <div id="tab-mascota" class="tab-content">
       <div class="container pet-ui">
         <div class="pet-head">
           <h2 class="pet-title">Dopi <span class="chip chip-rose" id="pet-stage"></span></h2>
-          <span class="chip chip-gold" id="pet-points">✦ 0</span>
+          <span class="chip chip-gold" id="pet-points"><svg class="dp-ic dp-mn-s16 dp-mn-nb dp-ch" aria-hidden="true"><use href="#ic-chispa"/></svg> 0</span>
         </div>
         <div class="room" id="pet-room" data-time="day" data-room="cozy">
           <div class="room-wall"></div>
@@ -221,7 +275,7 @@
         <div class="acts" id="pet-acts"></div>
         <div class="card log" id="pet-log"></div>
         <div class="card pet-shop" id="pet-shop"></div>
-        <div class="pet-reset"><button type="button" id="pet-reset-btn">Reiniciar a Dopi</button><p id="pet-reset-note" hidden>Volverá a ser un huevo y se perderán sus ✦, accesorios y evolución. Es para los dos.</p></div>
+        <div class="pet-reset"><button type="button" id="pet-reset-btn">Reiniciar a Dopi</button><p id="pet-reset-note" hidden>Volverá a ser un huevo y se perderán sus chispas, accesorios y evolución. Es para los dos.</p></div>
       </div>
     </div>
 
@@ -345,12 +399,28 @@
       </div>
     </div>
 
+
+  <!-- POP-UP / LECTURA DE CARTAS Y CELEBRACIÓN DE LOGROS -->
+  <div id="modal-carta" class="modal-overlay" hidden>
+    <div class="modal-card carta-card" role="dialog" aria-modal="true" aria-label="Carta">
+      <div id="carta-stage"></div>
+      <div id="carta-actions"></div>
+    </div>
+  </div>
+  <div id="modal-logro" class="modal-overlay" hidden>
+    <div class="modal-card logro-card" role="dialog" aria-modal="true" aria-label="Logro desbloqueado">
+      <div id="logro-stage"></div>
+    </div>
+  </div>
   </div><!-- /screen-app -->
 
   <!-- Firebase SDKs -->
   <script src="dopi.js"></script>
   <script src="pet-logic.js"></script>
   <script src="mascota-ui.js"></script>
+  <script src="logros.js"></script>
+  <script src="sobre.js"></script>
+  <script src="chispa.js"></script>
   <script type="module" src="app.js"></script>
 <script src="ideas.js" defer></script></body>
 </html>

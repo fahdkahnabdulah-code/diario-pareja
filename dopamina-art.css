@@ -1,0 +1,143 @@
+/* +Dopamina · dopamina-art.css  v1
+   Estilo «pegatina blanda»: insignias de logros, iconos, chispa y sobre.
+   Sin fuentes externas. Todas las clases empiezan por dp- (o dpsb-). Los colores salen de los tokens de style.css. */
+
+/* ==== 1. Tokens: --d-* apuntan a los tokens de style.css (no hay hex propios, salvo los blancos de --d-brillo) ==== */
+:root{
+  --d-rosa-1:var(--pink-light);--d-rosa-2:var(--pink-mid);--d-rosa-3:var(--pink-dark);
+  --d-teal-1:var(--teal-light);--d-teal-3:var(--teal-dark);
+  --d-teal-2:color-mix(in srgb,var(--teal-light) 50%,var(--teal-dark));   /* style.css no tiene teal-mid */
+  --d-oro-1:var(--gold-light);--d-oro-2:var(--gold-mid);--d-oro-3:var(--gold-dark);
+  --d-tinta:var(--text);--d-papel:var(--surface);--d-linea:var(--text-muted);
+  --d-lock:color-mix(in srgb,var(--text-muted) 40%,var(--surface));
+  --d-lock-line:color-mix(in srgb,var(--text-muted) 62%,var(--surface));
+  --d-lock-bg:color-mix(in srgb,var(--text-muted) 14%,var(--surface));
+  /* los dos únicos que cambian con el tema: */
+  --d-brillo:rgba(255,255,255,.7);
+  --d-oro-hi:var(--gold-light);        /* luz de la chispa */
+}
+/* modo oscuro: AJUSTA el selector al mecanismo de tu style.css (aquí van los tres habituales) */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]):not(.light){--d-brillo:rgba(255,255,255,.3);--d-oro-hi:var(--gold-dark)}}
+:root[data-theme="dark"],:root.dark,body.dark{--d-brillo:rgba(255,255,255,.3);--d-oro-hi:var(--gold-dark)}
+
+/* ==== 2. Insignias, utilidades de relleno/trazo y estado bloqueado (.is-locked) ==== */
+.dp-art{display:block;overflow:visible;width:100%;height:100%;--sw:3}
+.dp-ico{--sw:2.5}
+.dp-art *{stroke-linejoin:round;stroke-linecap:round}
+.dp-pk1{fill:var(--d-rosa-1);stroke:var(--d-rosa-3);stroke-width:var(--sw)}
+.dp-pk2{fill:var(--d-rosa-2);stroke:var(--d-rosa-3);stroke-width:var(--sw)}
+.dp-pk3{fill:var(--d-rosa-3);stroke:var(--d-rosa-3);stroke-width:var(--sw)}
+.dp-tl1{fill:var(--d-teal-1);stroke:var(--d-teal-3);stroke-width:var(--sw)}
+.dp-tl2{fill:var(--d-teal-2);stroke:var(--d-teal-3);stroke-width:var(--sw)}
+.dp-tl3{fill:var(--d-teal-3);stroke:var(--d-teal-3);stroke-width:var(--sw)}
+.dp-gd1{fill:var(--d-oro-1);stroke:var(--d-oro-3);stroke-width:var(--sw)}
+.dp-gd2{fill:var(--d-oro-2);stroke:var(--d-oro-3);stroke-width:var(--sw)}
+.dp-gd3{fill:var(--d-oro-3);stroke:var(--d-oro-3);stroke-width:var(--sw)}
+.dp-hl{fill:var(--d-rosa-3);stroke:var(--d-oro-2);stroke-width:var(--sw)}
+.dp-hr{fill:var(--d-teal-3);stroke:var(--d-oro-2);stroke-width:var(--sw)}
+.dp-pp{fill:var(--d-papel);stroke:var(--d-linea);stroke-width:var(--sw)}
+.dp-fo{stroke:none}
+.dp-nf{fill:none}
+.dp-Lpk{fill:none;stroke:var(--d-rosa-3);stroke-width:var(--sw)}
+.dp-Ltl{fill:none;stroke:var(--d-teal-3);stroke-width:var(--sw)}
+.dp-Lgd{fill:none;stroke:var(--d-oro-3);stroke-width:var(--sw)}
+.dp-Ltx{fill:none;stroke:var(--d-tinta);stroke-width:var(--sw)}
+.dp-Lwh{fill:none;stroke:var(--d-papel);stroke-width:calc(var(--sw) * 1.4)}
+.dp-Fpk{fill:var(--d-rosa-3);stroke:none}
+.dp-Ftl{fill:var(--d-teal-3);stroke:none}
+.dp-Fgd{fill:var(--d-oro-2);stroke:none}
+.dp-Fgd3{fill:var(--d-oro-3);stroke:none}
+.dp-Fwh{fill:var(--d-papel);stroke:none}
+.dp-Fink{fill:var(--d-tinta);stroke:none}
+.dp-bril{fill:var(--d-brillo);stroke:none}
+.dp-op5{opacity:.5}
+.dp-op6{opacity:.6}
+.dp-Tgd{fill:var(--d-oro-3);stroke:none;font:800 11px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;text-anchor:middle}
+.dp-ring{fill:var(--d-papel);stroke:var(--border);stroke-width:1.5}
+.dp-disc{fill:var(--d-rosa-1)}
+.dp-h-pk .dp-disc{fill:var(--d-rosa-1)}
+.dp-h-tl .dp-disc{fill:var(--d-teal-1)}
+.dp-h-gd .dp-disc{fill:var(--d-oro-1)}
+.dp-oro .dp-ring{stroke:var(--d-oro-2);stroke-width:3}
+.dp-holo .dp-ring{stroke:var(--d-oro-2);stroke-width:3.5}
+.dp-cand{display:none}
+.dp-cand circle{fill:var(--d-papel);stroke:var(--d-lock-line);stroke-width:2.5}
+.dp-cand rect{fill:var(--d-lock-line);stroke:none}
+.dp-cand path{fill:none;stroke:var(--d-lock-line);stroke-width:2.5}
+.dp-art.is-locked .dp-base :is(path,rect,circle,ellipse,polygon){fill:var(--d-lock);stroke:var(--d-lock-line);stroke-width:var(--sw)}
+.dp-art.is-locked .dp-base .dp-nf{fill:none}
+.dp-art.is-locked .dp-base .dp-fo{stroke:none}
+.dp-art.is-locked .dp-det{display:none}
+.dp-art.is-locked .dp-disc{fill:var(--d-lock-bg)}
+.dp-art.is-locked .dp-ring{stroke:var(--d-lock-line) !important;stroke-width:2}
+.dp-art.is-locked .dp-cand{display:inline}
+
+/* aro holográfico (degradado por insignia) y sus paradas; bloqueada: se oculta y queda el aro gris */
+.dp-art.is-locked .dp-ring-holo{display:none}
+.dp-hs0{stop-color:var(--d-rosa-2)}.dp-hs1{stop-color:var(--d-oro-2)}.dp-hs2{stop-color:var(--d-teal-2)}
+
+/* ==== 3. Sprite e iconos de 48 x 48 (<svg class="dp-ic"><use href="#ic-nombre"/></svg>) ==== */
+.dp-sprite{position:absolute;width:0;height:0;overflow:hidden}
+.dp-ic{display:inline-block;flex:none;width:var(--ic,22px);height:var(--ic,22px);overflow:visible;--sw:2.5;stroke-linejoin:round;stroke-linecap:round;vertical-align:middle}
+
+/* ==== 4. La chispa (moneda). Los ajustes van en variables que se heredan, así que funcionan inline y con <use> ==== */
+.dp-mn-s16{--ic:16px;--sw:4.2;--mn-x:none}            /* 1,4 px reales a 16 px: sin brillo, sin destellos, sin candado */
+.dp-mn-s24{--ic:24px;--sw:3.2}                        /* 1,6 px reales */
+.dp-mn-s64{--ic:64px;--sw:2.4}                        /* 3,2 px reales */
+.dp-mn-nb{--mn-stroke:var(--d-oro-2);--mn-sw:2.2;--mn-stroke-lt:var(--d-oro-hi);--mn-stroke-lk:var(--d-lock)}   /* sin borde */
+.dp-m-star{fill:var(--d-oro-2);stroke:var(--mn-stroke,var(--d-oro-3));stroke-width:var(--mn-sw,var(--sw))}
+.dp-m-star.dp-m-lt{fill:var(--d-oro-hi);stroke:var(--mn-stroke-lt,var(--d-oro-3))}
+.dp-m-star.dp-m-lk{fill:var(--d-lock);stroke:var(--mn-stroke-lk,var(--d-lock-line))}
+.dp-m-hi{fill:var(--d-oro-hi);stroke:none}
+.dp-m-br{fill:var(--d-brillo);stroke:none;display:var(--mn-x,inline)}
+.dp-m-x{display:var(--mn-x,inline)}
+.dp-m-lockc{fill:var(--d-papel);stroke:var(--d-lock-line);stroke-width:2.2}
+.dp-m-lockr{fill:var(--d-lock-line);stroke:none}
+.dp-m-lockp{fill:none;stroke:var(--d-lock-line);stroke-width:2.2}
+
+/* ==== 5. Animación «ganar puntos» (1,2 s). Lanza la clase .dp-go sobre .dp-mn-win; solo transform y opacity ==== */
+.dp-mn-win{position:relative;width:128px;height:160px;flex:none}
+.dp-mn-win svg{display:block;width:128px;height:160px;overflow:visible}
+.dp-mn-st,.dp-mn-ring,.dp-mn-p{transform-box:view-box;transform-origin:48px 76px}
+.dp-mn-ring{fill:none;stroke:var(--d-oro-2);stroke-width:2;opacity:0}
+.dp-mn-p,.dp-mn-fl{opacity:0}
+.dp-mn-p1{--px:-30px;--py:-24px}.dp-mn-p2{--px:31px;--py:-26px}.dp-mn-p3{--px:-27px;--py:22px}.dp-mn-p4{--px:32px;--py:19px}
+.dp-mn-num{position:absolute;left:0;right:0;top:4px;text-align:center;font:800 22px/1 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:var(--d-oro-3);opacity:0}
+@keyframes dp-mn-st{0%{transform:translateY(0) scale(.85)}20%{transform:translateY(-12px) scale(1.22)}38%{transform:translateY(-14px) scale(1)}70%{transform:translateY(-14px) scale(1)}100%{transform:translateY(0) scale(1)}}
+@keyframes dp-mn-fl{0%{opacity:0}16%{opacity:.95}40%,100%{opacity:0}}
+@keyframes dp-mn-ring{0%{opacity:.9;transform:scale(.6)}45%,100%{opacity:0;transform:scale(1.7)}}
+@keyframes dp-mn-p{0%{opacity:0;transform:translate(0,0) scale(.2)}15%{opacity:1}55%,100%{opacity:0;transform:translate(var(--px),var(--py)) scale(1)}}
+@keyframes dp-mn-num{0%{opacity:0;transform:translateY(10px)}25%{opacity:1;transform:none}70%{opacity:1;transform:translateY(-6px)}100%{opacity:0;transform:translateY(-10px)}}
+.dp-go .dp-mn-st{animation:dp-mn-st 1.2s cubic-bezier(.2,.8,.2,1) both}
+.dp-go .dp-mn-fl{animation:dp-mn-fl 1.2s linear both}
+.dp-go .dp-mn-ring{animation:dp-mn-ring 1.2s ease-out both}
+.dp-go .dp-mn-p{animation:dp-mn-p 1.2s ease-out both}
+.dp-go .dp-mn-num{animation:dp-mn-num 1.2s ease-out both}
+@media (prefers-reduced-motion: reduce){.dp-go *{animation:none !important}.dp-go .dp-mn-num{opacity:1}}
+
+/* ==== 6. Sobre: capas y animación (idéntico a sobre.css; si cargas los dos no pasa nada).
+   Se mueve con tres variables: --t rasgado 0-1, --r carta subiendo 0-1, --o abierta 0-1 ==== */
+.dpsb{--c1:var(--d-rosa-2);--c2:var(--d-rosa-1);--c3:var(--d-rosa-3);width:100%;position:relative}
+.dpsb.dpsb-tl{--c1:var(--d-teal-2);--c2:var(--d-teal-1);--c3:var(--d-teal-3)}
+.dpsb.dpsb-oro{--c1:var(--d-oro-2);--c2:var(--d-oro-1);--c3:var(--d-oro-3)}
+.dpsb svg{display:block;width:100%;height:auto;overflow:visible}
+.dpsb svg *{transform-box:view-box}
+.dpsb-rays path{fill:var(--d-oro-2)}
+.dpsb-rays{opacity:calc(var(--t) * .3 + var(--r) * .5);transform-origin:120px 150px;transform:rotate(calc(var(--r) * 24deg)) scale(calc(.7 + var(--r) * .5))}
+.dpsb-card{transform:translateY(calc(var(--r) * -88px));opacity:calc(1 - var(--o))}
+.dpsb-body{transform:translateY(calc(var(--r) * 18px));opacity:calc(1 - var(--o))}
+.dpsb-bodyr{fill:var(--c1);stroke:var(--c3);stroke-width:3}
+.dpsb-flap{fill:var(--c2);stroke:var(--c3);stroke-width:3}
+.dpsb-fold{fill:none;stroke:var(--c3);stroke-width:2.5}
+.dpsb-seal{transform-origin:120px 216px;transform:translateY(calc(var(--t) * 18px)) scale(calc(1 - var(--t) * .5));opacity:calc(1 - var(--t) * 1.4)}
+.dpsb-crack{fill:none;stroke:var(--d-tinta);stroke-width:2.5;opacity:calc(var(--t) * 12)}
+.dpsb-strip{transform-origin:220px 140px;transform:translate(calc(var(--t) * 40px),calc(var(--t) * -36px)) rotate(calc(var(--t) * -34deg));opacity:calc(1 - (var(--t) - .7) * 3.4)}
+.dpsb-flash{opacity:calc(var(--t) * (1 - var(--r)) * 1.6)}
+.dpsb-letter{opacity:var(--o);transform-origin:120px 150px;transform:translateY(calc((1 - var(--o)) * 24px)) scale(calc(.92 + var(--o) * .08))}
+.dpsb-ln{fill:var(--d-linea);opacity:.28;stroke:none}
+.dpsb-rays,.dpsb-card,.dpsb-body,.dpsb-seal,.dpsb-strip,.dpsb-flash,.dpsb-letter{transition:transform .55s cubic-bezier(.2,.8,.2,1),opacity .45s}
+.dpsb[data-drag="1"] .dpsb-strip,.dpsb[data-drag="1"] .dpsb-seal{transition:none}
+.dpsb[data-drag="1"] .dpsb-shake{animation:dpsb-shake .12s linear infinite}
+@keyframes dpsb-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-1.5px)}75%{transform:translateX(1.5px)}}
+@media (prefers-reduced-motion: reduce){.dpsb *{transition:none !important;animation:none !important}}
+

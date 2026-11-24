@@ -2,7 +2,7 @@
 
 > Fuente de verdad para todos los chats del proyecto (diseño, flujo, bugs…).
 > Léelo entero antes de proponer o cambiar nada. Se actualiza en cada cambio desplegado.
-> **Última actualización:** 2026-11-21 · **Estado:** en producción.
+> **Última actualización:** 2026-11-24 · **Estado:** en producción.
 
 ## 0. Cómo trabajar con este archivo
 
@@ -58,6 +58,12 @@ style.css             Estilos globales (tokens de color, claro/oscuro, app-shell
 app.js                Núcleo: auth, entrada diaria, historial, fotos, racha, poke, push, fechas/eventos, check
 ideas.js              Preguntas del día, frases para empezar, sección "Juntos" (1–2 días/semana)
 deseos.js / .css      Buzón de deseos 2.0 (pantalla completa, llaves, bloqueo)
+nosotros.js / .css    Pestaña Nosotros: Lista, Planes, Cartas (sobre + pop-up) y Logros
+dopamina-art.css      Arte «pegatina blanda» de Design: tokens --d-*, iconos, insignias, chispa (el sprite iconos.svg va INLINE en index.html entre <!--ICONOS-->)
+logros.js             Los 24 logros (id, nombre, pista, condición, puntos, svg) + DpLogros (exporta a window)
+sobre.js / .css       DpSobre.montar(): sobre que se rasga arrastrando
+chispa.js             DpChispa: svg de la moneda y animación de ganar puntos
+iconos.svg            Fuente del sprite de iconos (no se sirve; está inlinado en index.html)
 dopi.js / dopi.css    Componente SVG de la mascota Dopi
 pet-logic.js          Lógica pura de Dopi (necesidades, puntos, tienda) + helper de Firestore
 mascota-ui.js         UI interactiva de la pestaña "Dopi" (arrastrar, limpiar, tienda…)
@@ -89,6 +95,10 @@ Todo cuelga de `parejas/{parejaId}/...`. **Las reglas de seguridad de Firestore 
 | `avisos/{clave}` | Marcas de "aviso ya enviado" de las funciones (evitan repetir). |
 | `juntos/{YYYY-MM-DD}` | `notificado` (aviso de Juntos ya enviado). |
 | `mascota/estado`, `mascotaLog/*` | Estado compartido de Dopi y su registro de eventos. |
+| `planes/{id}` | Lista y Planes: `texto`, `autor`, `tipo` (`hacer`=lista / `futuro`=plan a futuro), `categoria` (viaje/cita/hogar/regalo/otro), `horizonte` (`ano`/`proximos`/`algun`, solo futuro), `estado` (`pendiente`/`hecho`), `hechoPor`, `hechoFecha`, `creado`. |
+| `cartas/{id}` | `de`, `para`, `titulo`, `texto`, `creado`, `abiertaEn` (vacío = sin abrir). El texto solo se enseña al abrir el sobre. |
+| `logros/{logroId}` | Se crea una sola vez al cumplirse: `fecha`, `por`, `puntos`, `visto_fahd`, `visto_cilia` (false = aún por celebrar a esa persona). Suma los puntos a `mascota/estado` en la misma transacción. |
+| `nosotros/stats` | Contadores: `pokes_{rol}`, `dia10_{rol}`. |
 | `deseo_semanal/{rol}` | **Obsoleto** (sorteo semanal eliminado). Puede quedar basura. |
 
 ## 6. Funcionalidades (por pantalla)
@@ -105,7 +115,12 @@ Todo cuelga de `parejas/{parejaId}/...`. **Las reglas de seguridad de Firestore 
 
 **Pestaña Fechas.** Días juntos (años/meses/días), calendario mensual navegable con emoji + nombre del evento (tooltip), "Próximas fechas" con cuenta atrás, cumpleaños fijos, aniversario anual fijo (10 feb, "Aniversario (N años)"), aniversario mensual (día 10), eventos personalizados (alta/baja). Las notificaciones de eventos avisan a 7 días, 3 días, el día anterior y el mismo día.
 
-**Pestaña Dopi.** Mascota compartida (huevo → cría → joven → adulta → alma gemela). Necesidades: comida, ánimo, energía, cariño, limpieza (con suelo, nunca llegan a 0; el desgaste se calcula "en perezoso" al leer). Interacción tipo Pou: arrastrar comida/pelota/manta/regalo; esponja para limpiar; caricias; cosquillas al tocar. Puntos ✦ por: escribir diario (20), check (15), poke (2, máx. 5/día), cumplir un deseo (25), día en equipo (10), racha semanal (100), reencuentro tras 3+ días (10). Tienda de accesorios y habitaciones. Estado en `mascota/estado`.
+**Pestaña Nosotros (5.ª pestaña).** Subpestañas **Lista** (cosas por hacer juntos: texto + categoría, check reversible, "Hechas juntos" plegable, borrar con confirmación en línea), **Planes** (igual + horizonte Este año / Próximos años / Algún día), **Cartas** y **Logros**.
+- **Cartas:** se escribe título opcional + texto (máx. 2500), se envía **cerrada** (no editable). Al recibir (push sin spoiler) y **al entrar o volver a la app** sale un pop-up con el **sobre** (`DpSobre`): se rasga arrastrando o con "Abrir sin deslizar"; al abrirse se lee la carta, se marca `abiertaEn`, push al autor y botón "Guardar en nuestro archivo". "Más tarde" pospone hasta que se reabra la app (sin contadores rojos, solo un punto en la pestaña). Las leídas quedan en "Nuestro archivo"; las enviadas muestran si se abrieron.
+- **Logros (24, en `logros.js`):** compartidos por la pareja; se evalúan al abrir la app, al abrir la subpestaña Logros y tras acciones relevantes (plan hecho, carta, poke, entrada, check). Al desbloquear: transacción crea `logros/{id}` y **suma los puntos a Dopi**; cada persona ve una celebración la primera vez (`visto_{rol}`) y push "Habéis desbloqueado un logro". Bloqueados = gris con candado; **4 secretos** salen como `???`. Los de días juntos cuentan desde 10-feb-2024 (`inicio` pasado por `app.js`). Condiciones: ver `cumple()` en `nosotros.js` (Dopi nace = etapa ≥2, crece ≥3, alma gemela = 5; "pensando en ti" = 10 pokes entre los dos desde que existen los contadores; "buzón lleno" = 10 cartas; "día señalado" = poke/carta/entrada el día 10).
+- Al estrenarse hay **4 logros de días ya cumplidos** (100/365/500/1000 = +530 ✦ a Dopi) que se celebran en cola la primera vez.
+
+**Pestaña Dopi.** Mascota compartida (huevo → cría → joven → adulta → alma gemela). Necesidades: comida, ánimo, energía, cariño, limpieza (con suelo, nunca llegan a 0; el desgaste se calcula "en perezoso" al leer). Interacción tipo Pou: arrastrar comida/pelota/manta/regalo; esponja para limpiar; caricias; cosquillas al tocar. Puntos ✦ por: escribir diario (12), check (10), poke (1, máx. 3/día), cumplir un deseo (15), día en equipo (10), racha semanal (100), reencuentro tras 3+ días (10) y logros; tope de 60 ✦/persona/día (ver §8). Tienda de accesorios y habitaciones. Estado en `mascota/estado`.
 
 **Racha.** Semanas ISO consecutivas con al menos una entrada; con margen de gracia (si esta semana aún no hay entrada cuenta desde la anterior). Alimenta la mascota de la racha y el premio semanal de Dopi.
 
@@ -143,14 +158,18 @@ Todas las funciones son **no-op seguras** si faltan las variables de entorno. Lo
 - Desbloquear (con confirmación) pasa el deseo a **en marcha** y apuntado por ti; el autor recibe push sin texto.
 - Si tocas un candado sin llave sale un mensaje en esa tarjeta.
 - **Volver a bloquear** (con confirmación) devuelve la llave si el desbloqueo era de esta semana, pero **solo una vez por semana** (`soltadoSemana`). Si el desbloqueo es de otra semana, se puede volver a bloquear sin devolver llave y sin gastar el cupo semanal.
-- **Cumplir** ("Hecho") pasa a cumplido, push al autor y +25 ✦ a Dopi (máx. 1/día). El autor puede dar las gracias (emoji + nota) → push a quien lo hizo. **Cumplido se puede deshacer** (autor o quien lo cumplió): vuelve a en marcha (o pendiente) y se borran las gracias.
+- **Cumplir** ("Hecho") pasa a cumplido, push al autor y +15 ✦ a Dopi (máx. 1/día). El autor puede dar las gracias (emoji + nota) → push a quien lo hizo. **Cumplido se puede deshacer** (autor o quien lo cumplió): vuelve a en marcha (o pendiente) y se borran las gracias.
 - El autor ve sus deseos con el **estado** en que los tiene su pareja: 🔒 Sin revelar · 🔓 {pareja} lo está preparando · ✅ Cumplido por {pareja}. Ve el texto en todos (sabe cuál cogió), la sorpresa es cómo y cuándo.
 - Orden de "Por desbloquear": por antigüedad (el más antiguo primero). Secciones En marcha / Por desbloquear / Cumplidos por ti **plegables** (se recuerda el estado mientras la app está abierta).
 - Dificultad: 🟢 Fácil, 🟡 Media, 🔴 Difícil (ids antiguos `facil`/`semana`/`especial` se conservan).
 
 **Dopi.** Principio "romántica, no punitiva": suelo de necesidades, puntos y XP que nunca bajan, sin cron (desgaste perezoso).
+- **Economía endurecida (2026-11-24):** recompensas diario 12, check 10, deseo cumplido 15, poke 1 (máx. 3/día); **tope de 60 ✦ por persona y día** (`DAILY_PTS_CAP`, campo `days.{fecha}.{uid}.earned`); fuera del tope: racha semanal (100), reencuentro (10) y logros. Cosméticos ×3 (sombreros 270–480, corona 1350, cuartos 840–1200); comida y juguetes sin cambios. Evolución: XP por etapa 0/60/600/1800/4000 y días en equipo 0/1/8/25/50.
+- **Moneda:** la chispa propia (`#ic-chispa`, `DpChispa`) sustituye al símbolo ✦ en la interfaz (pestaña Dopi, tienda, toasts, logros).
 
 ## 9. Diseño y UX
+
+- **Arte propio (2026-11-24):** estilo «pegatina blanda» diseñado en Claude Design (proyecto "Diseño visual de +Dopamina"). Los emojis de Apple del header y de las pestañas se sustituyeron por iconos propios (`<svg class="dp-ic"><use href="#ic-…"/></svg>`); los emojis quedan solo en reacciones y algunos textos. Los colores de `dopamina-art.css` (`--d-*`) apuntan a los tokens de `style.css`. Para cambiar un icono o logro: pedirlo a Design, que exporta ficheros limpios, y volver a inlinar el sprite en `index.html`.
 
 - Paleta: rosa (`--pink-*`), verde azulado (`--teal-*`), dorado (`--gold-*`); modo claro y oscuro por `prefers-color-scheme`; tokens separados para superficie de tarjeta y fondo de inputs.
 - Móvil primero; en escritorio (≥700 px) la app se centra como tarjeta flotante de ancho fluido (`clamp(560px, 70vw, 640px)`).
@@ -183,6 +202,9 @@ Todas las funciones son **no-op seguras** si faltan las variables de entorno. Lo
 
 Formato de cada entrada: `AAAA-MM-DD · área · qué cambió · archivos · por qué/decisión del usuario`.
 
+- 2026-11-24 · Nosotros · Nueva 5.ª pestaña: **Lista**, **Planes**, **Cartas** (sobre que se rasga + pop-up al entrar, push, "Más tarde") y **24 Logros** que suman ✦ a Dopi · `nosotros.js/.css`, `logros.js`, `sobre.js/.css`, `chispa.js`, `dopamina-art.css`, `index.html`, `app.js`.
+- 2026-11-24 · Diseño · Iconos propios (header, pestañas) y **chispa** como moneda en vez de ✦ · `index.html`, `mascota-ui.js`, `pet-ui.css`, `app.js`.
+- 2026-11-24 · Dopi · **Economía más difícil**: recompensas más bajas, tope 60 ✦/persona/día, cosméticos ×3, evolución más lenta · `pet-logic.js`.
 - 2026-11-21 · Proyecto · Se crea `CONTEXTO.md` como memoria compartida del proyecto de Claude (decisión: vive en el repo y un solo chat lo escribe).
 - 2026-11-20 · Login · La ✕ del header pide confirmación (Cancelar/Aceptar) antes de cerrar sesión · `index.html`, `app.js`, `style.css`.
 - 2026-11-20 · Deseos · Cabecera fija (título + ✕ + pestañas) con fondo sólido; corrige capa que tapaba el título y la ✕ · `index.html`, `deseos.css`.
