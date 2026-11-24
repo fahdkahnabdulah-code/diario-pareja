@@ -104,3 +104,32 @@ button.nos-star { cursor: pointer; padding: 2px; }
 .nos-item.is-vista { opacity: 1; }
 .nos-item.is-vista .nos-item-t { text-decoration: none; }
 .nos-off { filter: grayscale(1); opacity: .35; }
+
+/* Buscador de pelis y series */
+.nos-row input[type="search"] { -webkit-appearance: none; appearance: none; }
+.nos-res { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); padding: 4px; max-height: 340px; overflow: auto; }
+.nos-res-i { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 10px; padding: 6px; font: inherit; color: var(--text); cursor: pointer; }
+.nos-res-i:active, .nos-res-i:hover { background: color-mix(in srgb, var(--pink-mid, #e0508a) 14%, transparent); }
+.nos-res-img { flex: none; width: 38px; height: 56px; border-radius: 6px; object-fit: cover; background: var(--surface); border: 1px solid var(--border); }
+.nos-res-ph { display: flex; align-items: center; justify-content: center; }
+.nos-res-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nos-res-t b { font-size: 14px; font-weight: 600; line-height: 1.2; }
+.nos-res-t small { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nos-res-m { margin: 4px 8px; font-size: 12px; color: var(--text-muted); text-align: center; }
+.nos-nota { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: var(--gold-dark, #9a6b00); font-variant-numeric: tabular-nums; }
+.nos-sel { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); padding: 10px; position: relative; }
+.nos-sel-img { flex: none; width: 78px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.nos-sel-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; padding-right: 18px; }
+.nos-sel-t { font-size: 16px; line-height: 1.2; }
+.nos-sel-m, .nos-sel-g { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nos-sel-s { margin: 2px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--text); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.nos-sel > .nos-del { position: absolute; top: 6px; right: 6px; }
+.nos-sel-pl { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 4px; }
+.nos-sel-pl > span { font-size: 11.5px; color: var(--text-muted); margin-right: 2px; }
+.nos-sel-pl i { font-style: normal; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--teal-mid, #5aa59a) 22%, transparent); color: var(--text); }
+.nos-poster { flex: none; width: 44px; height: 64px; border-radius: 6px; object-fit: cover; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+.nos-peli .nos-item-main[data-act="det"] { cursor: pointer; }
+.nos-peli .nos-item-t { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nos-det-in { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.nos-det-m { font-size: 12px; color: var(--text-muted); }
+.nos-det-s { font-size: 12.5px; line-height: 1.4; color: var(--text); }

@@ -39,6 +39,7 @@ let C = null;
 let enlazado = false;
 const S = {
   sub: 'lista', lista: 'cosas', formato: 'peli', plat: '',
+  q: '', res: [], sel: null, sinClave: false, buscando: false, detId: null,
   planes: [], cartas: [], logros: {},
   cat: 'otro', horizonte: 'proximos',
   borrarId: null, redactando: false, msg: '',
@@ -173,13 +174,93 @@ function selectorLista() {
 const pelisPend = () => planesDe('pelis').filter(p => !estaHecho(p)).sort(ordenarPorCreado);
 const pelisVistas = () => planesDe('pelis').filter(estaHecho).sort((a, b) => String(b.hechoFecha || '').localeCompare(String(a.hechoFecha || '')));
 const formatoDe = id => FORMATOS.find(f => f.id === id) || FORMATOS[0];
+
+// ── Buscador de pelis y series (función de Netlify «peli-search»; la clave de TMDB vive allí) ──
+const PLAT_ALIAS = [[/netflix/i, 'Netflix'], [/\bmax\b|hbo/i, 'HBO Max'], [/disney/i, 'Disney+'], [/prime/i, 'Prime Video'], [/apple/i, 'Apple TV+']];
+const platDe = lista => { for (const n of lista || []) for (const [re, v] of PLAT_ALIAS) if (re.test(n)) return v; return ''; };
+const coma = n => Number(n).toFixed(1).replace('.', ',');
+const duracionTxt = (m, tv) => !m ? '' : tv ? `${m} min/ep` : (m >= 60 ? `${Math.floor(m / 60)} h ${m % 60 ? (m % 60) + ' min' : ''}`.trim() : `${m} min`);
+const estrellaNota = n => n ? `<span class="nos-nota"><svg class="dp-ic" style="--ic:14px" aria-hidden="true"><use href="#ic-estrella"/></svg>${coma(n)}</span>` : '';
+const imgPoster = (u, cls) => u ? `<img class="${cls}" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
+const metaFicha = f => [f.tipo === 'tv' ? 'Serie' : 'Película', f.anio, duracionTxt(f.duracion, f.tipo === 'tv'), f.temporadas ? f.temporadas + (f.temporadas === 1 ? ' temporada' : ' temporadas') : ''].filter(Boolean).join(' · ');
+let seqBusca = 0, tBusca = null;
+function htmlRes() {
+  if (S.sel) return '';
+  if (S.buscando && !S.res.length) return '<div class="nos-res"><p class="nos-res-m">Buscando…</p></div>';
+  if (!S.res.length) return S.q.length >= 2 && S.msgBusca ? `<div class="nos-res"><p class="nos-res-m">${esc(S.msgBusca)}</p></div>` : '';
+  return `<div class="nos-res" role="listbox">${S.res.map((f, i) => `<button type="button" class="nos-res-i" data-act="elegir" data-i="${i}" role="option">
+    ${imgPoster(f.poster, 'nos-res-img') || `<span class="nos-res-img nos-res-ph">${icOr(f.tipo === 'tv' ? ['tv', 'lista'] : ['clapper', 'foto'], 22)}</span>`}
+    <span class="nos-res-t"><b>${esc(f.titulo)}</b><small>${esc([f.tipo === 'tv' ? 'Serie' : 'Película', f.anio].filter(Boolean).join(' · '))} ${estrellaNota(f.nota)}</small></span></button>`).join('')}
+    ${S.sinClave ? '<p class="nos-res-m">Búsqueda básica: solo series. Para pelis hay que activar TMDB en Netlify.</p>' : ''}</div>`;
+}
+function htmlSel() {
+  const f = S.sel; if (!f) return '';
+  const plat = (f.plataformas || []).length ? `<div class="nos-sel-pl"><span>Dónde verla</span>${f.plataformas.map(p => `<i>${esc(p)}</i>`).join('')}</div>` : '';
+  return `<div class="nos-sel">${imgPoster(f.poster, 'nos-sel-img')}
+    <div class="nos-sel-main"><b class="nos-sel-t">${esc(f.titulo)}</b>
+      <span class="nos-sel-m">${esc(metaFicha(f))} ${estrellaNota(f.nota)}</span>
+      ${(f.generos || []).length ? `<span class="nos-sel-g">${esc(f.generos.join(' · '))}</span>` : ''}
+      ${f.sinopsis ? `<p class="nos-sel-s">${esc(f.sinopsis)}</p>` : ''}${plat}</div>
+    <button type="button" class="nos-del" data-act="quitar-sel" aria-label="Quitar selección">${ic('cerrar', 14)}</button></div>`;
+}
+function pintarBusca() {
+  const a = $('nos-sel'), b = $('nos-res');
+  if (a) a.innerHTML = htmlSel();
+  if (b) b.innerHTML = htmlRes();
+}
+async function buscar(q) {
+  const mi = ++seqBusca;
+  S.buscando = true; S.msgBusca = ''; pintarBusca();
+  try {
+    const r = await fetch('/.netlify/functions/peli-search?q=' + encodeURIComponent(q));
+    const d = await r.json(); if (mi !== seqBusca) return;
+    if (!r.ok) throw new Error(d.error || r.status);
+    S.res = d.resultados || []; S.sinClave = !!d.sinClave;
+    S.msgBusca = S.res.length ? '' : 'Sin resultados: podéis añadirlo a mano.';
+  } catch (e) {
+    if (mi !== seqBusca) return;
+    S.res = []; S.msgBusca = 'No se pudo buscar ahora. Podéis escribir el título y añadirlo igualmente.';
+  }
+  S.buscando = false; pintarBusca();
+}
+function alEscribirPeli(ev) {
+  if (ev.target.id !== 'nos-texto' || S.sub !== 'lista' || S.lista !== 'pelis') return;
+  const q = ev.target.value.trim(); S.q = q;
+  if (S.sel && q !== S.sel.titulo) { S.sel = null; }
+  clearTimeout(tBusca);
+  if (q.length < 2) { seqBusca++; S.res = []; S.buscando = false; S.msgBusca = ''; return pintarBusca(); }
+  if (S.sel) return pintarBusca();
+  tBusca = setTimeout(() => buscar(q), 350);
+}
+async function elegirResultado(i) {
+  const f = S.res[i]; if (!f) return;
+  S.sel = { ...f }; S.res = []; S.q = f.titulo; S.formato = f.tipo === 'tv' ? 'serie' : 'peli';
+  const inp = $('nos-texto'); if (inp) inp.value = f.titulo;
+  render();
+  if (f.fuente !== 'tmdb') { const p = platDe(f.plataformas); if (p && !S.plat) { S.plat = p; render(); } return; }
+  try {
+    const r = await fetch(`/.netlify/functions/peli-search?tipo=${f.tipo}&id=${encodeURIComponent(f.id)}`);
+    const d = await r.json();
+    if (d.ficha && S.sel && S.sel.id === f.id) {
+      S.sel = { ...S.sel, ...d.ficha };
+      const p = platDe(S.sel.plataformas); if (p && !S.plat) S.plat = p;
+      render();
+    }
+  } catch (e) { /* se queda con lo básico */ }
+}
+const metaGuardar = f => f ? {
+  fuente: f.fuente || '', id: f.id == null ? '' : f.id, tipo: f.tipo || '', anio: f.anio || '', poster: f.poster || '',
+  sinopsis: (f.sinopsis || '').slice(0, 700), nota: f.nota || 0, duracion: f.duracion || 0, temporadas: f.temporadas || 0,
+  generos: f.generos || [], plataformas: f.plataformas || []
+} : null;
 async function crearPeli() {
   const inp = $('nos-texto'), texto = (inp?.value || '').trim();
   if (!texto) { S.msg = 'Escribe el título.'; return render(); }
   const p = { texto: texto.slice(0, 100), autor: rol().role, tipo: 'pelis', formato: S.formato, plataforma: S.plat, estado: 'pendiente', creado: ahora() };
+  if (S.sel && S.sel.titulo === texto) p.meta = metaGuardar(S.sel);
   try {
     const r = await addDoc(col('planes'), p); S.planes.push({ id: r.id, ...p });
-    S.msg = ''; if (inp) inp.value = '';
+    S.msg = ''; if (inp) inp.value = ''; S.sel = null; S.res = []; S.q = ''; S.msgBusca = ''; S.plat = '';
     C.enviarPush(rol().partner, '+Dopamina', `${rol().displayName} ha añadido ${S.formato === 'serie' ? 'una serie' : 'una peli'} para ver juntos`, 'peli-nueva');
   } catch (e) { S.msg = 'No se pudo guardar. Inténtalo de nuevo.'; }
   render();
@@ -201,12 +282,14 @@ function estrellas(p, quien) {
 }
 function filaPeli(p) {
   const hecho = estaHecho(p), f = formatoDe(p.formato), confirmar = S.borrarId === p.id;
-  const meta = [f.label, p.plataforma, nombreDe(p.autor), hecho ? 'vista ' + fechaCorta(p.hechoFecha) : ''].filter(Boolean).join(' · ');
-  const otro = rol().partner;
+  const m = p.meta || null;
+  const meta = [f.label, m && m.anio, p.plataforma, nombreDe(p.autor), hecho ? 'vista ' + fechaCorta(p.hechoFecha) : ''].filter(Boolean).join(' · ');
+  const otro = rol().partner, abierto = S.detId === p.id && m;
+  const det = abierto ? `<span class="nos-det-in">${[duracionTxt(m.duracion, m.tipo === 'tv'), m.temporadas ? m.temporadas + (m.temporadas === 1 ? ' temporada' : ' temporadas') : '', (m.generos || []).join(' · ')].filter(Boolean).length ? `<span class="nos-det-m">${esc([duracionTxt(m.duracion, m.tipo === 'tv'), m.temporadas ? m.temporadas + (m.temporadas === 1 ? ' temporada' : ' temporadas') : '', (m.generos || []).join(' · ')].filter(Boolean).join(' · '))}</span>` : ''}${m.sinopsis ? `<span class="nos-det-s">${esc(m.sinopsis)}</span>` : ''}${(m.plataformas || []).length ? `<span class="nos-sel-pl"><span>Dónde verla</span>${m.plataformas.map(x => `<i>${esc(x)}</i>`).join('')}</span>` : ''}</span>` : '';
   return `<li class="nos-item nos-peli ${hecho ? 'is-hecho is-vista' : ''} ${p.autor === rol().role ? 'es-mio' : 'es-suyo'}">
     <button type="button" class="nos-check" data-act="toggle" data-id="${esc(p.id)}" aria-pressed="${hecho}" aria-label="${hecho ? 'Marcar como pendiente' : 'Marcar como vista'}">${hecho ? ic('check', 18) : ''}</button>
-    <span class="nos-item-ic">${icOr(f.icono, 22)}</span>
-    <span class="nos-item-main"><span class="nos-item-t">${esc(p.texto)}</span><span class="nos-item-m">${esc(meta)}</span>${hecho ? `<span class="nos-rates">${estrellas(p, rol().role)}${estrellas(p, otro)}</span>` : ''}</span>
+    ${m && m.poster ? imgPoster(m.poster, 'nos-poster') : `<span class="nos-item-ic">${icOr(f.icono, 22)}</span>`}
+    <span class="nos-item-main"${m ? ` data-act="det" data-id="${esc(p.id)}"` : ''}><span class="nos-item-t">${esc(p.texto)}${m && m.nota ? ' ' + estrellaNota(m.nota) : ''}</span><span class="nos-item-m">${esc(meta)}</span>${det}${hecho ? `<span class="nos-rates">${estrellas(p, rol().role)}${estrellas(p, otro)}</span>` : ''}</span>
     ${confirmar
       ? `<span class="nos-conf"><button type="button" class="nos-mini nos-mini-no" data-act="borrar-no">No</button><button type="button" class="nos-mini nos-mini-si" data-act="borrar-si" data-id="${esc(p.id)}">Borrar</button></span>`
       : `<button type="button" class="nos-del" data-act="borrar-pedir" data-id="${esc(p.id)}" aria-label="Borrar">${ic('cerrar', 14)}</button>`}
@@ -218,7 +301,8 @@ function htmlPelis() {
   const pend = pelisPend(), vistas = pelisVistas();
   const vacio = !pend.length && !vistas.length ? `<div class="nos-vacio">${icOr(['clapper', 'foto'], 40)}<p>Apuntad aquí las pelis y series que queréis ver juntos. Al verlas, cada uno les pone nota.</p></div>` : '';
   return selectorLista() + `<div class="nos-form">
-    <div class="nos-row"><input id="nos-texto" type="text" maxlength="100" placeholder="Título: Stranger Things, Up…" autocomplete="off" /><button type="button" class="btn-primary nos-add" data-act="crear-peli">Añadir</button></div>
+    <div class="nos-row"><input id="nos-texto" type="text" enterkeyhint="search" maxlength="100" placeholder="Busca una peli o serie…" autocomplete="off" autocapitalize="sentences" /><button type="button" class="btn-primary nos-add" data-act="crear-peli">Añadir</button></div>
+    <div id="nos-sel">${htmlSel()}</div><div id="nos-res">${htmlRes()}</div>
     <div class="nos-chips">${fmt}</div><div class="nos-chips nos-chips-h">${plat}</div>
     ${S.msg ? `<p class="nos-msg">${esc(S.msg)}</p>` : ''}</div>` +
     (pend.length ? `<h3 class="nos-h">Por ver</h3><ul class="nos-list">${pend.map(filaPeli).join('')}</ul>` : '') + vacio +
@@ -557,6 +641,9 @@ function onClick(ev) {
   if (a === 'lista') { S.lista = el.dataset.v; S.msg = ''; S.borrarId = null; return render(); }
   if (a === 'formato') { S.formato = el.dataset.v; return render(); }
   if (a === 'plat') { S.plat = S.plat === el.dataset.v ? '' : el.dataset.v; return render(); }
+  if (a === 'elegir') return elegirResultado(+el.dataset.i);
+  if (a === 'quitar-sel') { S.sel = null; S.res = []; const i = $('nos-texto'); if (i) i.value = ''; S.q = ''; return render(); }
+  if (a === 'det') { S.detId = S.detId === id ? null : id; return render(); }
   if (a === 'crear-peli') return crearPeli();
   if (a === 'nota') return ponerNota(id, +el.dataset.v);
   if (a === 'crear-hacer') return crearPlan('hacer');
@@ -585,6 +672,7 @@ function init(ctx) {
   enlazado = true;
   document.querySelectorAll('.nos-subtab').forEach(b => b.addEventListener('click', () => irA(b.dataset.nos)));
   $('tab-nosotros')?.addEventListener('click', onClick);
+  $('tab-nosotros')?.addEventListener('input', alEscribirPeli);
   $('modal-carta')?.addEventListener('click', onClick);
   $('modal-logro')?.addEventListener('click', ev => { if (ev.target === $('modal-logro')) cerrarLogro(false); else onClick(ev); });
   document.addEventListener('keydown', ev => {
