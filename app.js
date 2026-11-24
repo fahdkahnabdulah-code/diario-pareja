@@ -494,8 +494,8 @@ async function loadHistory() {
         // contenido del otro (ni siquiera un avance en la vista previa).
         card.classList.add('blocked');
         const texto = yo
-          ? `🔒 Esperando a que ${n2 || 'tu pareja'} complete su parte`
-          : `📝 Te toca completar tu parte`;
+          ? `<svg class="dp-ic dp-lbl-ic" style="--ic:16px" aria-hidden="true"><use href="#ic-candado"/></svg>Esperando a que ${n2 || 'tu pareja'} complete su parte`
+          : `<svg class="dp-ic dp-lbl-ic" style="--ic:16px" aria-hidden="true"><use href="#ic-pluma"/></svg>Te toca completar tu parte`;
         card.innerHTML = `
           <div class="entry-date">${e.date}</div>
           <div class="entry-lock actionable">${texto}</div>
@@ -693,7 +693,7 @@ async function loadFotos() {
       });
     });
     if (!dias.length) {
-      box.innerHTML = '<p class="empty-state">Aún no hay fotos. Aparecerán aquí las del check del día 📸</p>';
+      box.innerHTML = '<p class="empty-state">Aún no hay fotos. Aparecerán aquí las del check del día.</p>';
       return;
     }
     dias.sort((a, b) => b.id.localeCompare(a.id));
@@ -717,7 +717,7 @@ async function loadFotos() {
       const foto = (f, quien) => `
         <figure class="foto-item">
           <img src="${escapeAttr(f.fotoUrl)}" alt="Foto de ${escapeAttr(quien)}" loading="lazy" data-full="${escapeAttr(f.fotoUrl)}" />
-          <figcaption>${escapeHtml(quien)}${f.tarde ? ' 🕐' : ''}</figcaption>
+          <figcaption>${escapeHtml(quien)}${f.tarde ? ' <svg class="dp-ic dp-lbl-ic" style="--ic:14px" aria-hidden="true"><use href="#ic-reloj-tarde"/></svg>' : ''}</figcaption>
           ${f.pie ? `<div class="foto-pie">“${escapeHtml(f.pie)}”</div>` : ''}
         </figure>`;
       html += `
@@ -942,7 +942,7 @@ function setupPoke() {
       pedirPermisoYSuscribirPush(); // gesto del usuario — buen momento para pedir permiso si aún no lo dio
       try {
         await setDoc(pokeDocRef(), { de: currentRole.role, ts: Date.now() });
-        showPokeToast('💌 Le has dicho que piensas en ella/él');
+        showPokeToast('Le has dicho que piensas en ella/él');
         enviarPush(currentRole.partner, '+Dopamina', `💕 ${currentRole.displayName} está pensando en ti`, 'poke');
         mascotaPremio('poke');
         Nosotros.registrar('poke').then(() => Nosotros.evaluar());
@@ -959,7 +959,7 @@ function setupPoke() {
     if (!data || data.de === currentRole.role) return;
     if (Date.now() - data.ts > 15000) return; // ignora pokes viejos al cargar la app
     const nombre = EMAIL_ROLES[Object.keys(EMAIL_ROLES).find(k => EMAIL_ROLES[k].role === data.de)]?.displayName || 'Tu pareja';
-    showPokeToast(`💕 ${nombre} está pensando en ti`);
+    showPokeToast(`${nombre} está pensando en ti`);
     if (window.MascotaUI) MascotaUI.react('poke');
     // La notificación del sistema mientras la pestaña está en segundo plano ya
     // llega por el push real (ver más abajo) — aquí solo queda el toast en
@@ -1547,7 +1547,7 @@ function pintarCheckin(data) {
   const body = $('checkin-body');
   if (!body) return;
   if (!data) {
-    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check. Os avisaremos con una notificación 📸</p>';
+    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check. Os avisaremos con una notificación.</p>';
     return;
   }
   const ahora = new Date();
@@ -1557,13 +1557,13 @@ function pintarCheckin(data) {
   const nombreOtro = nombrePorRol(currentRole.partner);
 
   if (ahora < momento) {
-    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check. Os avisaremos con una notificación 📸</p>';
+    body.innerHTML = '<p class="hint-text">Hoy todavía no ha llegado el momento del check. Os avisaremos con una notificación.</p>';
     return;
   }
   if (!yo || !yo.publicado) {
     body.innerHTML = `
       <p class="hint-text">¡Es la hora! Haz tu foto del día antes de ver la de ${escapeHtml(nombreOtro)}.</p>
-      <button id="btn-checkin-empezar" class="btn-primary">📸 Hacer mi foto</button>
+      <button id="btn-checkin-empezar" class="btn-primary"><svg class="dp-ic dp-lbl-ic" style="--ic:18px" aria-hidden="true"><use href="#ic-camara"/></svg>Hacer mi foto</button>
     `;
     $('btn-checkin-empezar')?.addEventListener('click', iniciarCapturaCheckin);
     return;
@@ -1572,7 +1572,7 @@ function pintarCheckin(data) {
     body.innerHTML = `
       <img src="${yo.fotoUrl}" class="checkin-photo-mine" alt="Tu foto" />
       ${yo.pie ? `<div class="checkin-pie">“${escapeHtml(yo.pie)}”</div>` : ''}
-      <p class="hint-text">Ya subiste la tuya${yo.tarde ? ' (un poco tarde 🕐)' : ''}. Esperando a que ${escapeHtml(nombreOtro)} suba la suya...</p>
+      <p class="hint-text">Ya subiste la tuya${yo.tarde ? ' (un poco tarde)' : ''}. Esperando a que ${escapeHtml(nombreOtro)} suba la suya...</p>
     `;
     return;
   }
@@ -1580,12 +1580,12 @@ function pintarCheckin(data) {
     <div class="checkin-reveal">
       <div class="checkin-reveal-item">
         <img src="${yo.fotoUrl}" alt="Tu foto" />
-        <span>Tú${yo.tarde ? ' 🕐' : ''}</span>
+        <span>Tú${yo.tarde ? ' <svg class="dp-ic dp-lbl-ic" style="--ic:14px" aria-hidden="true"><use href="#ic-reloj-tarde"/></svg>' : ''}</span>
         ${yo.pie ? `<div class="checkin-pie">“${escapeHtml(yo.pie)}”</div>` : ''}
       </div>
       <div class="checkin-reveal-item">
         <img src="${suya.fotoUrl}" alt="Foto de ${escapeHtml(nombreOtro)}" />
-        <span>${escapeHtml(nombreOtro)}${suya.tarde ? ' 🕐' : ''}</span>
+        <span>${escapeHtml(nombreOtro)}${suya.tarde ? ' <svg class="dp-ic dp-lbl-ic" style="--ic:14px" aria-hidden="true"><use href="#ic-reloj-tarde"/></svg>' : ''}</span>
         ${suya.pie ? `<div class="checkin-pie">“${escapeHtml(suya.pie)}”</div>` : ''}
       </div>
     </div>
@@ -1612,7 +1612,7 @@ async function iniciarCapturaCheckin() {
     <div class="checkin-camera-wrap">
       <video id="checkin-video" autoplay playsinline muted></video>
       <p class="hint-text" id="checkin-step-label">Paso 1 de 2 — foto frontal (tu cara)</p>
-      <button id="btn-checkin-capturar" class="btn-primary">📸 Capturar</button>
+      <button id="btn-checkin-capturar" class="btn-primary"><svg class="dp-ic dp-lbl-ic" style="--ic:18px" aria-hidden="true"><use href="#ic-camara"/></svg>Capturar</button>
     </div>
   `;
   $('btn-checkin-capturar')?.addEventListener('click', capturarFotoCheckin);

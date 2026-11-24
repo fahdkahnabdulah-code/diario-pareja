@@ -224,7 +224,7 @@
       more.className = 'idea-more';
       more.title = 'Otras ideas';
       more.setAttribute('aria-label', 'Otras ideas');
-      more.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/></svg>';
+      more.innerHTML = '<svg class="dp-ic" style="--ic:20px" aria-hidden="true"><use href="#ic-refrescar"/></svg>';
       row.appendChild(more);
 
       var pintar = function (lista) {
@@ -297,8 +297,8 @@
     var toca = esDiaJuntos(dia);
     var estado = (toca || conTexto) ? 'abierto' : 'cerrado';
     var texto = toca
-      ? '✨ Hoy toca «Juntos»: planes, recuerdos y sueños para los dos.'
-      : (conTexto ? '' : '🔒 «Juntos» se abre 1–2 días por semana. La próxima vez: ' + nombreDia(proximoJuntos(dia)) + '.');
+      ? 'Hoy toca «Juntos»: planes, recuerdos y sueños para los dos.'
+      : (conTexto ? '' : '«Juntos» se abre 1–2 días por semana. La próxima vez: ' + nombreDia(proximoJuntos(dia)) + '.');
     // al ver una entrada ya cerrada, "Juntos" solo se enseña si tenía algo escrito
     var tab = document.getElementById('tab-nueva');
     sec.hidden = !!(tab && tab.classList.contains('viewing-full')) && !conTexto;

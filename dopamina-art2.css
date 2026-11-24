@@ -1,0 +1,44 @@
+/* +Dopamina · dopamina-art2.css  v1  (segunda tanda de iconos)
+   Se carga DESPUÉS de dopamina-art.css (usa sus tokens --d-* y las clases dp-base / dp-det / dp-cand).
+   Solo añade lo que faltaba: ruedas girables, muelle, fondos de juego que se repiten y alguna línea gruesa.
+   Sin fuentes externas ni colores nuevos: todo sale de los tokens --d-*. */
+
+/* ==== 1. Trazos y rellenos nuevos (se usan dentro de los iconos .dp-ic) ==== */
+.dp-tk{fill:var(--d-tinta);stroke:var(--d-tinta);stroke-width:var(--sw)}                         /* neumático */
+.dp-Lsp{fill:none;stroke:var(--d-papel);stroke-width:calc(var(--sw) * .7)}                      /* radios de la rueda */
+.dp-Lt2{fill:none;stroke:var(--d-teal-3);stroke-width:calc(var(--sw) * 1.7)}                    /* trazo grueso teal (flechas de refrescar) */
+.dp-Lgt{fill:none;stroke:var(--d-oro-3);stroke-width:calc(var(--sw) * 2.4)}                     /* tubo del muelle: contorno */
+.dp-Lgh{fill:none;stroke:var(--d-oro-2);stroke-width:calc(var(--sw) * 1.1)}                     /* tubo del muelle: relleno */
+
+/* estado bloqueado (.is-locked, solo con SVG inline): los trazos gruesos conservan su grosor */
+.dp-art.is-locked .dp-base .dp-Lgt{stroke:var(--d-lock-line);stroke-width:calc(var(--sw) * 2.4)}
+.dp-art.is-locked .dp-base .dp-Lgh{stroke:var(--d-lock);stroke-width:calc(var(--sw) * 1.1)}
+.dp-art.is-locked .dp-base .dp-Lt2{stroke:var(--d-lock-line);stroke-width:calc(var(--sw) * 1.7)}
+.dp-art.is-locked .dp-base .dp-Lsp{stroke:var(--d-lock-bg);stroke-width:calc(var(--sw) * .7)}
+
+/* ==== 2. Ruedas: girar ====
+   Opción A (ruedas dentro de ic-coche, SVG inline): <g id="coche-rueda-del" class="dp-rueda dp-gira">
+   Opción B (recomendada con <use>): ic-coche-cuerpo + dos <svg class="dp-gira"> con <use href="#ic-coche-rueda"/> encima */
+.dp-rueda{transform-box:fill-box;transform-origin:center}
+.dp-gira{animation:dp-gira var(--gira,.8s) linear infinite}
+.dp-gira.dp-inv{animation-direction:reverse}
+@keyframes dp-gira{to{transform:rotate(360deg)}}
+
+/* ==== 3. Fondos de juego (viewBox 240 x 120, empalman por los lados) ==== */
+.dp-bg-cielo{fill:var(--d-teal-1);stroke:none}
+.dp-bg-nube{fill:var(--d-papel);stroke:none}
+.dp-bg-col1{fill:var(--d-teal-2);stroke:none}
+.dp-bg-col2{fill:color-mix(in srgb,var(--d-teal-3) 62%,var(--d-teal-2));stroke:none}
+.dp-bg-cresta{fill:none;stroke:var(--d-teal-1);stroke-width:3;stroke-linecap:butt;stroke-linejoin:round}
+
+/* Bucle horizontal: dentro de .dp-fondo pon una .dp-fondo-pista con 2 (o 4, siempre pares) copias iguales del mismo <svg>.
+   La pista se desplaza justo la mitad de su ancho, así que el salto del bucle no se ve.
+   --t = segundos por vuelta (por defecto 20 s); para capas con parallax usa un --t distinto en cada capa. */
+.dp-fondo{position:relative;overflow:hidden}
+.dp-fondo > .dp-fondo-pista,.dp-fondo > .dp-fondo-capa{position:absolute;left:0;top:0;height:100%}
+.dp-fondo-pista{display:flex;width:max-content;animation:dp-fondo-loop var(--t,20s) linear infinite}
+.dp-fondo-pista.dp-inv{animation-direction:reverse}
+.dp-fondo-pista > svg{flex:none;display:block;height:100%;width:auto;aspect-ratio:2 / 1}
+@keyframes dp-fondo-loop{to{transform:translateX(-50%)}}
+
+@media (prefers-reduced-motion:reduce){.dp-gira,.dp-fondo-pista{animation:none}}

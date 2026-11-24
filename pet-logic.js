@@ -17,11 +17,11 @@
 
   // Alimentos: precio en ✦ y lo que suben a las barras (más caro = más sacia / anima)
   var FOODS = [
-    { id: 'apple',      emoji: '🍎', name: 'Manzana', price: 4,  hunger: 12, mood: 2 },
-    { id: 'strawberry', emoji: '🍓', name: 'Fresa',   price: 7,  hunger: 15, mood: 6 },
-    { id: 'cookie',     emoji: '🍪', name: 'Galleta', price: 10, hunger: 9,  mood: 16 },
-    { id: 'pizza',      emoji: '🍕', name: 'Pizza',   price: 24, hunger: 38, mood: 8 },
-    { id: 'cake',       emoji: '🍰', name: 'Tarta',   price: 40, hunger: 28, mood: 28, love: 8 }
+    { id: 'apple',      emoji: '🍎', ic: 'manzana', name: 'Manzana', price: 4,  hunger: 12, mood: 2 },
+    { id: 'strawberry', emoji: '🍓', ic: 'fresa', name: 'Fresa',   price: 7,  hunger: 15, mood: 6 },
+    { id: 'cookie',     emoji: '🍪', ic: 'galleta', name: 'Galleta', price: 10, hunger: 9,  mood: 16 },
+    { id: 'pizza',      emoji: '🍕', ic: 'pizza', name: 'Pizza',   price: 24, hunger: 38, mood: 8 },
+    { id: 'cake',       emoji: '🍰', ic: 'tarta', name: 'Tarta',   price: 40, hunger: 28, mood: 28, love: 8 }
   ];
   // Juguetes: cada uno lanza un minijuego distinto. 'ball' viene de serie.
   var TOYS = [

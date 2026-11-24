@@ -664,3 +664,14 @@ header { padding-top: env(safe-area-inset-top, 0px); }
 .dw-btn .dp-lbl-ic { margin-right: 6px; }
 .dw-pick, .dw-chip { display: inline-flex; align-items: center; justify-content: center; }
 .dw-pick .dp-lbl-ic, .dw-chip .dp-lbl-ic { margin-right: 5px; }
+.dw-estado-pill, .dw-pie, .dw-resumen, .dw-hint-form, .dw-gracias { display: flex; align-items: center; gap: 6px; }
+.dw-estado-pill { display: inline-flex; }
+.dw-estado-pill .dp-lbl-ic, .dw-pie .dp-lbl-ic, .dw-resumen .dp-lbl-ic, .dw-hint-form .dp-lbl-ic { margin-right: 0; vertical-align: 0; }
+.dw-det > summary { display: flex; align-items: center; gap: 6px; }
+.dw-det > summary .dp-lbl-ic { margin-right: 0; }
+.dw-emoji { display: inline-flex; align-items: center; justify-content: center; }
+.dw-emoji .dp-lbl-ic { margin: 0; }
+.dw-lockicon .dp-lbl-ic { margin: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,.35)); }
+.dw-btn-danger .dp-lbl-ic, .dw-btn-soft .dp-lbl-ic { margin-right: 0; }
+.dw-btn-soft .dp-lbl-ic { margin-right: 6px; }
+.dw-more { display: inline-flex; align-items: center; justify-content: center; }
