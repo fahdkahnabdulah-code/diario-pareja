@@ -1,4 +1,4 @@
-const CACHE = 'diario-pareja-v8';
+const CACHE = 'diario-pareja-v9';
 const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json', '/dopi.css', '/dopi.js', '/pet-ui.css', '/pet-logic.js', '/mascota-ui.js', '/ojos.js', '/dopi-especies.js', '/dopamina-art3.css', '/expresiones.css'];
 
 self.addEventListener('install', e => {

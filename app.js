@@ -1748,27 +1748,30 @@ async function subirCheckin() {
     await uploadBytes(sref, blob);
     const url = await getDownloadURL(sref);
 
-    // Delantera y trasera por separado (si falla, el check sigue valiendo con la composición)
-    const extra = {};
-    try {
-      const sube = async (cv, sufijo, campo) => {
-        const bl = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.85));
-        const r = storageRef(storage, `checkins/${currentRole.parejaId}/${dateKey}/${currentRole.role}_${sufijo}.jpg`);
-        await uploadBytes(r, bl);
-        extra[campo] = await getDownloadURL(r);
-      };
-      await sube(checkinFotoFrontal, 'frontal', 'fotoFrontalUrl');
-      await sube(checkinFotoTrasera, 'trasera', 'fotoTraseraUrl');
-    } catch (e) { /* sin extras */ }
-
     const ahora = new Date();
     const snap = await getDoc(checkinRef(dateKey));
     const data = snap.data();
     const tarde = !!(data && data.ventanaCierre && ahora > new Date(data.ventanaCierre));
 
     await setDoc(checkinRef(dateKey), {
-      [currentRole.role]: { publicado: true, fotoUrl: url, ...extra, subidoEn: ahora.toISOString(), tarde, pie }
+      [currentRole.role]: { publicado: true, fotoUrl: url, subidoEn: ahora.toISOString(), tarde, pie }
     }, { merge: true });
+    // Delantera y trasera por separado: DESPUÉS de registrar el check y en segundo plano,
+    // para que nunca retrasen ni rompan que tu pareja vea la foto.
+    const fr = checkinFotoFrontal, tr = checkinFotoTrasera, rol = currentRole.role, pid = currentRole.parejaId;
+    (async () => {
+      try {
+        const extra = {};
+        for (const [cv, suf, campo] of [[fr, 'frontal', 'fotoFrontalUrl'], [tr, 'trasera', 'fotoTraseraUrl']]) {
+          if (!cv) continue;
+          const bl = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.8));
+          const r = storageRef(storage, `checkins/${pid}/${dateKey}/${rol}_${suf}.jpg`);
+          await uploadBytes(r, bl);
+          extra[campo] = await getDownloadURL(r);
+        }
+        if (Object.keys(extra).length) await setDoc(checkinRef(dateKey), { [rol]: extra }, { merge: true });
+      } catch (e) { /* sin extras: el check ya está publicado */ }
+    })();
     checkinFotoFrontal = null;
     checkinFotoTrasera = null;
     checkinCanvasFinal = null;
@@ -1777,7 +1780,8 @@ async function subirCheckin() {
     await renderCheckinEstado();
     loadCheckinBadge();
   } catch (e) {
-    $('checkin-body').innerHTML = '<p class="hint-text">No se pudo subir la foto. Inténtalo de nuevo.</p>';
+    $('checkin-body').innerHTML = `<p class="hint-text">No se pudo subir la foto (${escapeHtml(String((e && (e.code || e.message)) || 'error'))}). Inténtalo de nuevo.</p><button id="btn-checkin-reintentar" class="btn-secondary">Hacer otra foto</button>`;
+    $('btn-checkin-reintentar')?.addEventListener('click', iniciarCapturaCheckin);
   }
 }
 
