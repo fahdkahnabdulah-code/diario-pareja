@@ -297,6 +297,7 @@
     }
     $('pet-progress').innerHTML = prog;
 
+    renderLives(s, t);
     $('pet-needs').innerHTML = L.NEEDS.map(function (k) {
       var v = n[k], cls = 'dp-nb dp-nb-' + NEED_IC_ID2[k] + (v < 12 ? ' is-critico' : v < 30 ? ' is-bajo' : '');
       return '<div class="need"><div class="need-top"><span>' + L.NEED_LABEL[k] + '</span><b>' + v + '</b></div>' +
@@ -471,6 +472,7 @@
         if (svg) D.flash(svg, 'amazed', 3200);
         if (ctx.push) ctx.push(ctx.partner, '+Dopamina', '✨ ¡Dopi ha evolucionado! Ahora es ' + D.STAGES[e.stage], 'dopi-evolucion');
       }
+      if (e.kind === 'life') toast('¡Día en equipo! Dopi recupera una vida (' + e.lives + ' de ' + L.LIVES_MAX + ')');
       if (e.kind === 'evolveWaiting') toast('Dopi quiere evolucionar, pero primero necesita cuidados 💗');
       if (e.kind === 'record') toast('Nuevo récord: ' + e.score + (e.pts ? ' · +' + e.pts + ' ✦' : '') + (e.beatPartner ? ' · ¡superas a ' + nameOf(ctx.people.filter(function (p) { return p.uid !== ctx.role; })[0].uid) + '!' : ''));
       if (e.reward === 'reunion') toast('¡Reencuentro con Dopi! +10 ✦');
@@ -484,6 +486,7 @@
     var before = type === 'feed' ? hungerNow() : type === 'play' ? moodNow() : 0;
     L.PetStore.act(ctx.fb, ctx.parejaId, ctx.people, ctx.role, type, opts).then(function (r) {
       busy = false;
+      if (r.error === 'muerta') { maybeDeath(curState()); return toast('Dopi se ha ido…'); }
       if (r.error === 'cooldown') return toast('Aún descansa de eso · vuelve en ' + fmt(r.left));
       if (r.error === 'cansada') return toast('Está muy cansada para jugar 😴 Déjala dormir un poco');
       if (r.error === 'sin-juguete') return toast('Ese juguete no lo tenéis aún');
@@ -1068,6 +1071,35 @@
   }
 
   /* ---------- álbum ---------- */
+  /* ---------- Vidas ---------- */
+  var HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.3C1.2 8.6 3 5 6.4 5c2 0 3.4 1.1 4.1 2.4h3C14.2 6.1 15.6 5 17.6 5 21 5 22.8 8.6 21.5 11.7 19.5 16.4 12 21 12 21z"/></svg>';
+  function renderLives(s, t) {
+    var host = $('pet-needs'); if (!host) return;
+    var el = $('pet-lives');
+    if (!el) { el = document.createElement('div'); el.id = 'pet-lives'; el.className = 'card pet-lives'; host.parentNode.insertBefore(el, host); }
+    var ls = L.lifeStatus(s, t), hearts = '';
+    for (var i = 1; i <= ls.max; i++) hearts += '<span class="pl-h' + (i <= ls.lives ? ' on' : '') + '">' + HEART + '</span>';
+    var msg;
+    if (!ls.anchor) msg = 'Cuidadla entre los dos para que no se sienta sola';
+    else if (ls.lives <= 1) msg = '¡Última vida! Si nadie la cuida en ' + fmt(Math.max(0, ls.diesAt - t)) + ', se irá';
+    else msg = 'Si nadie la cuida, perderá una vida en ' + fmt(Math.max(0, ls.nextLossAt - t));
+    el.className = 'card pet-lives' + (ls.lives <= 1 && ls.anchor ? ' is-peligro' : '');
+    el.setAttribute('aria-label', ls.lives + ' de ' + ls.max + ' vidas');
+    el.innerHTML = '<div class="pl-top"><span class="pl-t">Vidas</span><span class="pl-hs">' + hearts + '</span></div><div class="pl-m">' + esc(msg) + '</div>';
+  }
+  var checkingDeath = false;
+  function maybeDeath(s) {
+    if (!s || checkingDeath || !L.lifeStatus(s, Date.now()).dead) return;
+    checkingDeath = true;
+    L.PetStore.checkDeath(ctx.fb, ctx.parejaId).then(function (r) { checkingDeath = false; if (r && r.state) { state = r.state; albumKey = ''; shopKey = ''; render(); } }).catch(function () { checkingDeath = false; });
+  }
+  function avisoMuerte(s) {          // una sola vez por móvil
+    var d = s && s.lastDeath; if (!d) return;
+    var k = 'dopi-muerte-vista';
+    try { if (localStorage.getItem(k) === String(d.at)) return; localStorage.setItem(k, String(d.at)); } catch (e) {}
+    toast('💔 ' + (d.name || 'Dopi') + ' se ha ido porque nadie la cuidó. Está en el álbum: recuperarla cuesta ' + L.RECOVER_PRICE + ' chispas');
+  }
+
   function renderAlbum(s) {
     var el = $('pet-album'); if (!el) return;
     var album = s.album || [], done = s.stage >= L.STAGE_MAX;
@@ -1078,7 +1110,7 @@
     var rows = album.map(function (a) {
       var miss = L.RECOVER_PRICE - (s.points || 0);
       return '<div class="alb-item"><span class="alb-art">' + D.svg({ species: a.species || 'a', stage: a.stage || 1, mood: 'happy', still: true }) + '</span>' +
-        '<span class="alb-txt"><b>' + esc(a.name || 'Dopi') + '</b><small>' + D.SPECIES[a.species || 'a'].name + ' · ' + D.STAGES[a.stage || 1] + '</small></span>' +
+        '<span class="alb-txt"><b>' + esc(a.name || 'Dopi') + '</b><small>' + D.SPECIES[a.species || 'a'].name + ' · ' + D.STAGES[a.stage || 1] + (a.died ? ' · se fue' : '') + '</small></span>' +
         '<button type="button" class="alb-rec" data-recover="' + a.id + '"' + (miss > 0 ? ' disabled' : '') + '>' + (miss > 0 ? 'Te faltan ' + miss + ' ' + CH : ico('recuperar', '', 18) + ' Recuperar · ' + L.RECOVER_PRICE + ' ' + CH) + '</button></div>';
     }).join('');
     el.innerHTML = '<div class="eyebrow alb-eb">' + ico('album', '', 20) + ' Álbum</div>' +
@@ -1117,9 +1149,10 @@
         resetting = true;
         L.PetStore.resetIfOld(ctx.fb, ctx.parejaId).then(function (r) { resetting = false; if (r && r.state) { state = r.state; albumKey = ''; shopKey = ''; render(); } }).catch(function () { resetting = false; });
       }
+      maybeDeath(state); avisoMuerte(state);
       render();
     }, function () { /* sin permisos o sin red: se queda con lo último */ });
-    timer = setInterval(render, 30000);
+    timer = setInterval(function () { maybeDeath(state); render(); }, 30000);
   }
   function stop() {
     if (unsub) { unsub(); unsub = null; }

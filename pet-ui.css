@@ -179,3 +179,16 @@
 .pp-card b{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;white-space:nowrap;font-size:13px;line-height:1.2}
 .pp-card b .dp-ic{flex:0 0 18px;width:18px;height:18px}
 .pp-card small{display:block;width:100%;text-align:center;padding:0 2px;box-sizing:border-box}
+
+/* Vidas de Dopi */
+.pet-ui .pet-lives { padding: 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); }
+.pet-lives .pl-top { display: flex; align-items: center; justify-content: space-between; }
+.pet-lives .pl-t { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.pet-lives .pl-hs { display: inline-flex; gap: 4px; }
+.pet-lives .pl-h svg { width: 22px; height: 22px; display: block; fill: none; stroke: var(--text-muted); stroke-opacity: .5; stroke-width: 1.6; }
+.pet-lives .pl-h.on svg { fill: var(--pink, #f4b8cc); stroke: var(--pink, #f4b8cc); }
+.pet-lives .pl-m { margin-top: 4px; font-size: 12.5px; color: var(--text-muted); }
+.pet-ui .pet-lives.is-peligro { border-color: rgba(255,120,120,.55); }
+.pet-lives.is-peligro .pl-h.on svg { fill: #ff7a7a; stroke: #ff7a7a; animation: plLate 1.2s ease-in-out infinite; }
+.pet-lives.is-peligro .pl-m { color: #ffb0b0; }
+@keyframes plLate { 50% { transform: scale(1.18); } }

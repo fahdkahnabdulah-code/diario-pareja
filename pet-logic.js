@@ -1,7 +1,8 @@
 /* =========================================================
    DOPI — lógica de juego (pura, sin DOM) + helper de Firestore
-   Principio: romántica, no punitiva. Nada muere, nada se pierde:
-   las necesidades tienen suelo (FLOOR), los puntos y la XP nunca bajan.
+   Principio: romántica. Las necesidades tienen suelo (FLOOR) y los puntos nunca bajan.
+   Vidas: 3. Si NADIE cuida de Dopi, pierde 1 vida cada 48 h; sin vidas se va al álbum
+   (se recupera con chispas). Un día en equipo (los dos la cuidáis) devuelve 1 vida.
    El tiempo se calcula "en perezoso": se guarda el valor y la hora
    (lastTick) y al leer se aplica el desgaste hasta ahora. Sin cron.
    ========================================================= */
@@ -72,6 +73,9 @@
   var DAILY_PTS_CAP = 60;              // ✦ máx. por persona y día (rachas y logros quedan fuera)
   var DAILY_XP_CAP = { solo: 40, team: 80 };
   var TEAM_MULT = 1.5;
+  var LIVES_MAX = 3;
+  var LIFE_MS = 48 * H;                // 1 vida por cada 48 h sin que nadie la cuide
+  var LIFE_START = Date.UTC(2026, 10, 29, 12, 0, 0);   // las vidas empiezan a contar desde aquí (no castiga el pasado)
 
   function clamp(v) { return Math.max(FLOOR, Math.min(100, Math.round(v))); }
   function dayId(t) {          // día en Europe/Madrid: 'YYYY-MM-DD'
@@ -120,6 +124,21 @@
     return { mood: 'happy', reason: 'Está contenta' };
   }
 
+  /* Vidas: se calculan "en perezoso" desde el último cuidado de cualquiera de los dos. */
+  function lifeAnchor(s) {
+    var a = Math.max(s.lifeAt || 0, LIFE_START), la = s.lastAction || {};
+    Object.keys(la).forEach(function (k) { if (la[k] && la[k].at > a) a = la[k].at; });
+    return a;
+  }
+  function lifeStatus(s, now) {
+    var base = s.lives == null ? LIVES_MAX : s.lives;
+    if (!s.species || s.nameSet === false) return { lives: base, max: LIVES_MAX, anchor: 0, idle: 0, lost: 0, dead: false, nextLossAt: null, diesAt: null };
+    var anchor = lifeAnchor(s), idle = Math.max(0, now - anchor), lost = Math.floor(idle / LIFE_MS);
+    var lives = Math.max(0, base - lost);
+    return { lives: lives, max: LIVES_MAX, anchor: anchor, idle: idle, lost: lost, dead: lives <= 0,
+             nextLossAt: lives > 0 ? anchor + (lost + 1) * LIFE_MS : null, diesAt: anchor + base * LIFE_MS };
+  }
+
   function cooldownLeft(state, uid, type, now) {
     var c = state.cooldowns && state.cooldowns[uid] && state.cooldowns[uid][type];
     return c ? Math.max(0, c - now) : 0;
@@ -141,6 +160,8 @@
   function applyAction(state, uid, type, now, people, opts) {
     var A = ACTIONS[type];
     if (!A) return { error: 'acción desconocida' };
+    var life = lifeStatus(state, now);
+    if (life.dead) return { error: 'muerta' };
     var left = cooldownLeft(state, uid, type, now);
     if (left > 0) return { error: 'cooldown', left: left };
     if (type === 'sleep') {
@@ -181,6 +202,7 @@
     var prev = s.lastAction && s.lastAction[uid];
     if (prev && now - prev.at > 72 * H) events.push(award(s, uid, 'reunion', now));
     s.lastAction = s.lastAction || {}; s.lastAction[uid] = { type: type, at: now };
+    s.lives = life.lives; s.lifeAt = now;                // cuidar reinicia la cuenta atrás de las vidas
 
     // registro del día
     var d = dayFor(s, now);
@@ -206,7 +228,10 @@
 
     // ¿hoy ya habéis cuidado los dos? -> bonus visible una vez
     var both = (people || []).every(function (p) { return d[p.uid] && d[p.uid].actions > 0; });
-    if (both && !d.team) { d.team = true; s.teamDaysTotal = (s.teamDaysTotal || 0) + 1; events.push(award(s, uid, 'teamDay', now)); events.push({ kind: 'teamDay' }); }
+    if (both && !d.team) {
+      d.team = true; s.teamDaysTotal = (s.teamDaysTotal || 0) + 1; events.push(award(s, uid, 'teamDay', now)); events.push({ kind: 'teamDay' });
+      if (s.lives < LIVES_MAX) { s.lives++; events.push({ kind: 'life', lives: s.lives }); }   // día en equipo: +1 vida
+    }
 
     updateHarmony(s, now, people);
     var evo = checkEvolution(s, now);
@@ -297,7 +322,7 @@
   function newState(now) {
     return {
       ver: RESET_VER, species: null, name: 'Dopi', nameSet: false, stage: 1, xp: 0, points: 0, album: [], cycles: 0, recovered: 0, speciesDone: [],
-      needs: { hunger: 80, mood: 80, energy: 80, love: 80, clean: 80 }, lastTick: now, sleepingUntil: 0,
+      needs: { hunger: 80, mood: 80, energy: 80, love: 80, clean: 80 }, lastTick: now, sleepingUntil: 0, lives: LIVES_MAX, lifeAt: now,
       harmony: { mix: 0.5, share: 0.5, teamDays14: 0 }, teamDaysTotal: 0,
       equipped: { hat: 'none', face: 'none', neck: 'none', room: 'cozy' }, owned: ['cozy'],
       cooldowns: {}, lastAction: {}, days: {}, streak: { weeks: 0, lastWeekId: null }, food: Object.assign({}, START_FOOD)
@@ -335,6 +360,23 @@
     var n = newState(Date.now());
     PER_DOPI.forEach(function (k) { if (n[k] !== undefined) s[k] = n[k]; else delete s[k]; });
     s.species = species; s.name = name; s.nameSet = true;
+  }
+
+  /* Sin vidas: la Dopi pasa al álbum (con marca de que se fue) y llega un huevo nuevo sin elegir. */
+  function applyDeath(state, now) {
+    var s = JSON.parse(JSON.stringify(state));
+    var album = (s.album || []).slice();
+    var snap = snapOf(s); snap.died = true; snap.diedAt = now;
+    album.push(snap);
+    while (album.length > ALBUM_MAX) album.shift();
+    var n = newState(now);
+    PER_DOPI.forEach(function (k) { if (n[k] !== undefined) s[k] = n[k]; else delete s[k]; });
+    s.nameSet = false; s.species = null; s.name = 'Dopi';
+    s.needs = n.needs; s.lastTick = now; s.sleepingUntil = 0; s.harmony = n.harmony;
+    s.lives = LIVES_MAX; s.lifeAt = now; delete s.avisosVida;
+    s.album = album; s.deaths = (s.deaths || 0) + 1;
+    s.lastDeath = { name: state.name || 'Dopi', species: state.species || 'a', stage: state.stage || 1, at: now, notified: false };
+    return s;
   }
 
   var PetStore = {
@@ -451,6 +493,19 @@
     keep: function (fb, coupleId) {
       return fb.updateDoc(PetStore.ref(fb, coupleId), { cycleAsked: true });
     },
+    /* si se quedó sin vidas (nadie la cuidó), pasa al álbum; lo comprueba quien abra la app */
+    checkDeath: function (fb, coupleId) {
+      var ref = PetStore.ref(fb, coupleId);
+      return fb.runTransaction(fb.db, function (tx) {
+        return tx.get(ref).then(function (snap) {
+          if (!snap.exists()) return { skipped: true };
+          var s = snap.data(), now = Date.now();
+          if (!lifeStatus(s, now).dead) return { skipped: true, state: s };
+          var ns = applyDeath(s, now);
+          tx.set(ref, ns); return { died: true, state: ns };
+        });
+      });
+    },
     /* terminar el ciclo: la Dopi actual pasa al álbum y llega un huevo nuevo */
     newCycle: function (fb, coupleId, species, name) {
       var ref = PetStore.ref(fb, coupleId);
@@ -479,9 +534,10 @@
           if (i < 0) return { error: 'no-existe' };
           if ((s.points || 0) < RECOVER_PRICE) return { error: 'faltan-chispas', left: RECOVER_PRICE - (s.points || 0) };
           var back = album[i], cur = snapOf(s);
-          album[i] = cur;
+          if (s.species && s.nameSet !== false) album[i] = cur; else album.splice(i, 1);   // huevo sin elegir: no se guarda
           s.points -= RECOVER_PRICE;
           applySnap(s, back);
+          s.lives = LIVES_MAX; s.lifeAt = Date.now(); delete s.avisosVida;
           s.album = album; s.recovered = (s.recovered || 0) + 1;
           tx.set(ref, s); return { state: s };
         });
@@ -520,6 +576,7 @@
     FOODS: FOODS, FULL_AT: FULL_AT, foodById: foodById, foodOf: foodOf,
     NEEDS: NEEDS, NEED_LABEL: NEED_LABEL, ACTIONS: ACTIONS, REWARDS: REWARDS, SHOP: SHOP,
     STAGE_XP: STAGE_XP, STAGE_TEAMDAYS: STAGE_TEAMDAYS, STAGE_MAX: STAGE_MAX, SPECIES: SPECIES, RESET_VER: RESET_VER, RECOVER_PRICE: RECOVER_PRICE, ALBUM_MAX: ALBUM_MAX,
+    LIVES_MAX: LIVES_MAX, LIFE_MS: LIFE_MS, lifeStatus: lifeStatus, applyDeath: applyDeath,
     newState: newState, decay: decay, resolveMood: resolveMood, applyAction: applyAction, award: award,
     cooldownLeft: cooldownLeft, progress: progress, isSick: isSick, logLine: logLine, ago: ago, dayId: dayId,
     PetStore: PetStore

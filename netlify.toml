@@ -19,3 +19,7 @@
 # Llave de deseos: lunes (llave nueva) y sábado (recordatorio). Cada 30 min, avisa una sola vez.
 [functions."deseos-notifier"]
   schedule = "*/30 * * * *"
+
+# Dopi: avisos de "te echa de menos", vidas y despedida. Cada 30 min, solo envía de 09:00 a 22:00 (Madrid).
+[functions."pet-notifier"]
+  schedule = "*/30 * * * *"
